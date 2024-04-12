@@ -35,7 +35,7 @@ export default function Layout(props: { children?: React.ReactNode }) {
         )}
       >
         <a
-          href="https://github.com/hwhang0917/the-button"
+          href="https://github.com/hwhang0917"
           target="_blank"
           className="hover:scale-110 transition-transform"
           onClick={() => playSwitch()}
@@ -99,6 +99,16 @@ export default function Layout(props: { children?: React.ReactNode }) {
           <br />
           <span className={rankColor(starCount)}>{computeRank(starCount)}</span>
         </h2>
+        <p className="text-xs text-gray-500 text-center uppercase pt-4">
+          Copyright &copy; {new Date().getFullYear()}{" "}
+          <a
+            href="https://runfridge.dev"
+            className="underline-offset-2 underline"
+          >
+            RunFridge
+          </a>
+          . All rights reversed.
+        </p>
       </footer>
     </React.Fragment>
   );
