@@ -8,23 +8,23 @@ export default function Button() {
   const {
     successRate,
     starCount,
+    btnStage,
     toggleConfetti,
     increaseStarCount,
     decreaseSuccessRate,
     resetGame,
+    setButtonStage,
   } = useGame();
   const { highStarCount, setHighStarCount } = useHighScore();
+  const [isFail, setIsFail] = React.useState(false);
   const [playClick] = useSound(`${BASE}click.wav`);
   const [playMouseover] = useSound(`${BASE}mouseover.wav`);
-  const [playAchievement] = useSound(`${BASE}achievement.wav`);
+  const [playWin] = useSound(`${BASE}win.wav`);
 
-  const [playSuccess] = useSound(
+  const [playSuccess, { stop: stopSuccess }] = useSound(
     `${BASE}success_${computeRank(starCount)}.wav`,
   );
   const [playFail] = useSound(`${BASE}fail.wav`);
-  const [btnStage, setBtnStage] = React.useState<
-    "standby" | "loading" | "result" | "win"
-  >("standby");
   const disabled = React.useMemo(
     () => btnStage === "loading" || btnStage === "result" || btnStage === "win",
     [btnStage],
@@ -49,10 +49,11 @@ export default function Button() {
   };
 
   const handleClick = async () => {
-    setBtnStage("loading");
+    setButtonStage("loading");
     playClick();
+    stopSuccess();
     const isSuccess = await computeSuccess();
-    setBtnStage("result");
+    setButtonStage("result");
 
     if (isSuccess) {
       playSuccess();
@@ -60,8 +61,9 @@ export default function Button() {
       decreaseSuccessRate(DECREASE_RATE);
 
       if (successRate - DECREASE_RATE <= 0) {
-        setBtnStage("win");
-        playAchievement();
+        stopSuccess();
+        setButtonStage("win");
+        playWin();
         toggleConfetti();
         return;
       }
@@ -72,28 +74,38 @@ export default function Button() {
       await throwConfetti();
     } else {
       playFail();
+      setIsFail(true);
+      setTimeout(() => {
+        setIsFail(false);
+      }, 1_000);
       resetGame();
     }
 
-    setBtnStage("standby");
+    setButtonStage("standby");
   };
 
   return (
     <React.Fragment>
       <button
         className={cn(
-          "glowing-btn uppercase w-96",
-          disabled ? "cursor-wait" : "",
+          "glowing-btn uppercase",
+          "w-1/2 h-14 md:w-1/3 md:h-16",
+          btnStage === "loading" ? "cursor-wait" : "",
+          btnStage === "win" ? "cursor-default" : "",
         )}
         disabled={disabled}
         onClick={handleClick}
         onMouseOver={() => playMouseover()}
       >
-        {btnStage === "loading"
-          ? "로딩중..."
-          : btnStage === "win"
-            ? "🎉 YOU WIN 🎉"
-            : `the button (${successRate} %)`}
+        {isFail
+          ? "😭 실패 😭"
+          : btnStage === "loading"
+            ? "분석중"
+            : btnStage === "result"
+              ? "🌟 성공 🌟"
+              : btnStage === "win"
+                ? "🎉 YOU WIN 🎉"
+                : `THE BUTTON (${successRate} %)`}
       </button>
     </React.Fragment>
   );

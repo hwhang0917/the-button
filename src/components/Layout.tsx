@@ -14,6 +14,16 @@ export default function Layout(props: { children?: React.ReactNode }) {
   const { confettiCount, resetGame } = useGame();
   const [playSwitch] = useSound(`${BASE}switch.wav`);
 
+  const rankColor = React.useCallback((c: number) => {
+    const rank = computeRank(c);
+    if (rank === "unrank") return "text-white/30";
+    else if (rank === "bronze") return "text-[#cd7f32]";
+    else if (rank === "silver") return "text-[#e5e4e2]";
+    else if (rank === "gold") return "text-[#d4af37]";
+    else if (rank === "platinum") return "text-teal-500";
+    else if (rank === "diamond") return "text-blue-500";
+  }, []);
+
   return (
     <React.Fragment>
       <header
@@ -34,7 +44,7 @@ export default function Layout(props: { children?: React.ReactNode }) {
         </a>
         <div>
           <h2>🌟 최고 기록: {highStarCount} 성 🌟</h2>
-          <h2 className="text-center uppercase">
+          <h2 className={cn("text-center uppercase", rankColor(highStarCount))}>
             {computeRank(highStarCount)}
           </h2>
         </div>
@@ -70,10 +80,7 @@ export default function Layout(props: { children?: React.ReactNode }) {
           "text-xl",
         )}
       >
-        <h2 className="w-full text-center uppercase">
-          현재 랭크: {computeRank(starCount)}
-        </h2>
-        <ul className="h-10 flex justify-center items-center">
+        <ul className="min-h-16 flex justify-center items-center flex-wrap py-4">
           {Array.from({ length: starCount })
             .fill(0)
             .map((_, i) => (
@@ -82,11 +89,16 @@ export default function Layout(props: { children?: React.ReactNode }) {
                   href="https://www.flaticon.com/free-icons/star"
                   title="star icons created by Freepik - Flaticon"
                 >
-                  <img src={`${BASE}star.png`} alt="🌟" className="w-5 h-5" />
+                  <img src={`${BASE}star.png`} alt="🌟" className="w-10 h-10" />
                 </a>
               </li>
             ))}
         </ul>
+        <h2 className={cn("w-full text-center uppercase")}>
+          현재 랭크
+          <br />
+          <span className={rankColor(starCount)}>{computeRank(starCount)}</span>
+        </h2>
       </footer>
     </React.Fragment>
   );

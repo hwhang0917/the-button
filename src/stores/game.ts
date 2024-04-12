@@ -2,13 +2,17 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { INITIAL_SUCCESS_RATE, SUCCESS_CONFETTI_COUNT } from "../constants";
 
+type ButtonStage = "standby" | "loading" | "result" | "win";
+
 interface GameStore {
   starCount: number;
   successRate: number;
   confettiCount: number;
+  btnStage: ButtonStage;
   increaseStarCount: () => void;
   toggleConfetti: () => void;
   decreaseSuccessRate: (decreaseRate: number) => void;
+  setButtonStage: (btnStage: ButtonStage) => void;
   resetGame: () => void;
 }
 
@@ -33,7 +37,9 @@ export const useGame = create<GameStore>((set) => ({
   starCount: 0,
   successRate: INITIAL_SUCCESS_RATE,
   confettiCount: 0,
+  btnStage: "standby",
   increaseStarCount: () => set((state) => ({ starCount: state.starCount + 1 })),
+  setButtonStage: (btnStage: ButtonStage) => set({ btnStage }),
   toggleConfetti: () =>
     set((state) =>
       state.confettiCount === 0
@@ -43,7 +49,12 @@ export const useGame = create<GameStore>((set) => ({
   decreaseSuccessRate: (decreaseRate: number) =>
     set((state) => ({ successRate: state.successRate - decreaseRate })),
   resetGame: () =>
-    set({ starCount: 0, successRate: INITIAL_SUCCESS_RATE, confettiCount: 0 }),
+    set({
+      starCount: 0,
+      successRate: INITIAL_SUCCESS_RATE,
+      confettiCount: 0,
+      btnStage: "standby",
+    }),
 }));
 
 export const computeRank = (starCount: number) => {
