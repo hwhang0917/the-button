@@ -4,7 +4,7 @@ import Confetti from "react-confetti";
 import { useWindowSize } from "usehooks-ts";
 import { computeRank, useGame, useHighScore } from "../stores/game";
 import useSound from "../hooks/useSound";
-import { cn } from "../utils";
+import { cn, vibrate } from "../utils";
 import { BASE } from "../constants";
 
 export default function Layout(props: { children?: React.ReactNode }) {
@@ -38,7 +38,10 @@ export default function Layout(props: { children?: React.ReactNode }) {
           href="https://github.com/hwhang0917"
           target="_blank"
           className="hover:scale-110 transition-transform"
-          onClick={() => playSwitch()}
+          onClick={() => {
+            vibrate(10);
+            playSwitch();
+          }}
         >
           <Github />
         </a>
@@ -54,6 +57,7 @@ export default function Layout(props: { children?: React.ReactNode }) {
             "hover:scale-110",
           )}
           onClick={() => {
+            vibrate(10);
             playSwitch();
             resetGame();
           }}
@@ -80,7 +84,7 @@ export default function Layout(props: { children?: React.ReactNode }) {
           "text-xl",
         )}
       >
-        <ul className="min-h-16 flex justify-center items-center flex-wrap py-4">
+        <ul className="min-h-20 flex justify-center items-center flex-wrap py-4">
           {Array.from({ length: starCount })
             .fill(0)
             .map((_, i) => (
@@ -89,7 +93,11 @@ export default function Layout(props: { children?: React.ReactNode }) {
                   href="https://www.flaticon.com/free-icons/star"
                   title="star icons created by Freepik - Flaticon"
                 >
-                  <img src={`${BASE}star.png`} alt="🌟" className="w-10 h-10" />
+                  <img
+                    src={`${BASE}star.png`}
+                    alt="🌟"
+                    className="w-8 h-8 md:w-10 md:h-10"
+                  />
                 </a>
               </li>
             ))}
