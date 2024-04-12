@@ -1,7 +1,12 @@
 import React from "react";
 import useSound from "../hooks/useSound";
 import { computeRank, useGame, useHighScore } from "../stores/game";
-import { BASE, DECREASE_RATE, DEFAULT_DELAY } from "../constants";
+import {
+  BASE,
+  DECREASE_RATE,
+  DEFAULT_DELAY,
+  WINNING_STAR_COUNT,
+} from "../constants";
 import { cn, vibrate } from "../utils";
 
 export default function Button() {
@@ -61,12 +66,14 @@ export default function Button() {
       increaseStarCount();
       decreaseSuccessRate(DECREASE_RATE);
 
-      if (successRate - DECREASE_RATE <= 0) {
+      // WIN
+      if (starCount + 1 >= WINNING_STAR_COUNT) {
         vibrate(1_000);
         stopSuccess();
         setButtonStage("win");
         playWin();
         toggleConfetti();
+        setHighStarCount(20);
         return;
       }
 

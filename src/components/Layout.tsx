@@ -2,6 +2,7 @@ import React from "react";
 import { Github, RotateCcw } from "lucide-react";
 import Confetti from "react-confetti";
 import { useWindowSize } from "usehooks-ts";
+import Win from "./Win";
 import { computeRank, useGame, useHighScore } from "../stores/game";
 import useSound from "../hooks/useSound";
 import { cn, vibrate } from "../utils";
@@ -10,7 +11,7 @@ import { BASE } from "../constants";
 export default function Layout(props: { children?: React.ReactNode }) {
   const { width, height } = useWindowSize();
   const { highStarCount } = useHighScore();
-  const { starCount } = useGame();
+  const { starCount, btnStage } = useGame();
   const { confettiCount, resetGame } = useGame();
   const [playSwitch] = useSound(`${BASE}switch.wav`);
 
@@ -66,6 +67,7 @@ export default function Layout(props: { children?: React.ReactNode }) {
         </button>
       </header>
       <Confetti width={width} height={height} numberOfPieces={confettiCount} />
+      {btnStage === "win" && <Win />}
       <section
         className={cn(
           "absolute inset-0",
