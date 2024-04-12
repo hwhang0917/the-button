@@ -5,13 +5,14 @@ import { useWindowSize } from "usehooks-ts";
 import { computeRank, useGame, useHighScore } from "../stores/game";
 import useSound from "../hooks/useSound";
 import cn from "../utils/cn";
+import { BASE } from "../constants";
 
 export default function Layout(props: { children?: React.ReactNode }) {
   const { width, height } = useWindowSize();
   const { highStarCount } = useHighScore();
   const { starCount } = useGame();
   const { confettiCount, resetGame } = useGame();
-  const [playSwitch] = useSound("/switch.wav");
+  const [playSwitch] = useSound(`${BASE}switch.wav`);
 
   return (
     <React.Fragment>
@@ -55,7 +56,7 @@ export default function Layout(props: { children?: React.ReactNode }) {
         className={cn(
           "absolute inset-0",
           "w-screen h-screen",
-          "bg-[url('/wallpaper.jpg')] bg-cover",
+          "bg-[url('/the-button/wallpaper.jpg')] bg-cover",
           "brightness-50",
         )}
       />
@@ -81,7 +82,7 @@ export default function Layout(props: { children?: React.ReactNode }) {
                   href="https://www.flaticon.com/free-icons/star"
                   title="star icons created by Freepik - Flaticon"
                 >
-                  <img src="/star.png" alt="🌟" className="w-5 h-5" />
+                  <img src={`${BASE}star.png`} alt="🌟" className="w-5 h-5" />
                 </a>
               </li>
             ))}

@@ -1,7 +1,7 @@
 import React from "react";
 import useSound from "../hooks/useSound";
 import { computeRank, useGame, useHighScore } from "../stores/game";
-import { DECREASE_RATE, DEFAULT_DELAY } from "../constants";
+import { BASE, DECREASE_RATE, DEFAULT_DELAY } from "../constants";
 import cn from "../utils/cn";
 
 export default function Button() {
@@ -14,12 +14,14 @@ export default function Button() {
     resetGame,
   } = useGame();
   const { highStarCount, setHighStarCount } = useHighScore();
-  const [playClick] = useSound("/click.wav");
-  const [playMouseover] = useSound("/mouseover.wav");
-  const [playAchievement] = useSound("/achievement.wav");
+  const [playClick] = useSound(`${BASE}click.wav`);
+  const [playMouseover] = useSound(`${BASE}mouseover.wav`);
+  const [playAchievement] = useSound(`${BASE}achievement.wav`);
 
-  const [playSuccess] = useSound(`/success_${computeRank(starCount)}.wav`);
-  const [playFail] = useSound("/fail.wav");
+  const [playSuccess] = useSound(
+    `${BASE}success_${computeRank(starCount)}.wav`,
+  );
+  const [playFail] = useSound(`${BASE}fail.wav`);
   const [btnStage, setBtnStage] = React.useState<
     "standby" | "loading" | "result" | "win"
   >("standby");
