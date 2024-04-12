@@ -2,7 +2,7 @@ import React from "react";
 import useSound from "../hooks/useSound";
 import { computeRank, useGame, useHighScore } from "../stores/game";
 import { BASE, DECREASE_RATE, DEFAULT_DELAY } from "../constants";
-import cn from "../utils/cn";
+import { cn, vibrate } from "../utils";
 
 export default function Button() {
   const {
@@ -49,6 +49,7 @@ export default function Button() {
   };
 
   const handleClick = async () => {
+    vibrate(100);
     setButtonStage("loading");
     playClick();
     stopSuccess();
@@ -61,6 +62,7 @@ export default function Button() {
       decreaseSuccessRate(DECREASE_RATE);
 
       if (successRate - DECREASE_RATE <= 0) {
+        vibrate(1_000);
         stopSuccess();
         setButtonStage("win");
         playWin();

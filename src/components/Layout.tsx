@@ -4,7 +4,7 @@ import Confetti from "react-confetti";
 import { useWindowSize } from "usehooks-ts";
 import { computeRank, useGame, useHighScore } from "../stores/game";
 import useSound from "../hooks/useSound";
-import cn from "../utils/cn";
+import { cn } from "../utils";
 import { BASE } from "../constants";
 
 export default function Layout(props: { children?: React.ReactNode }) {
