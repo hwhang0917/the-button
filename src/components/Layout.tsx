@@ -117,7 +117,7 @@ export default function Layout(props: { children?: React.ReactNode }) {
           >
             RunFridge
           </a>
-          . All rights reversed.
+          . All rights reserved.
         </p>
       </footer>
     </React.Fragment>
