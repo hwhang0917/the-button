@@ -1,0 +1,15 @@
+services:
+  thebutton:
+    image: ghcr.io/hwhang0917/the-button:latest
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      IP_SALT: ${IP_SALT:?IP_SALT is required}
+      QUOTA: ${QUOTA:-5}
+    volumes:
+      - data:/data
+    restart: unless-stopped
+
+volumes:
+  data:
