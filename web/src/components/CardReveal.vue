@@ -32,8 +32,13 @@ function tilt(clientX: number, clientY: number) {
   vars.value = {
     '--rx': `${(px - 0.5) * 24}deg`,
     '--ry': `${(0.5 - py) * 24}deg`,
-    '--gx': `${px * 100}%`,
-    '--gy': `${py * 100}%`,
+    '--px': `${px * 100}%`,
+    '--py': `${py * 100}%`,
+    // background drifts in a narrow band, mirroring the reference's easing
+    '--bx': `${37 + px * 26}%`,
+    '--by': `${33 + py * 34}%`,
+    '--hyp': `${Math.min(1, Math.hypot(px - 0.5, py - 0.5) * 2)}`,
+    '--o': '1',
   }
 }
 
