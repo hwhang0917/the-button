@@ -183,6 +183,9 @@ onMounted(async () => {
   })
   app = a
   host.value!.appendChild(a.canvas)
+  // native listener: some Android browsers ignore vibrate() from Pixi's
+  // synthesized pointer events, but credit a real touchstart as the gesture
+  a.canvas.addEventListener('touchstart', () => vibrate(22), { passive: true })
 
   emberTex = a.renderer.generateTexture(new Graphics().circle(0, 0, 4).fill('#ffffff'))
 

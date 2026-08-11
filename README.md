@@ -24,6 +24,7 @@ go build -o thebutton .
 | `DB_PATH` | no | `./thebutton.db` | SQLite file |
 | `QUOTA` | no | `10` | clicks per player per hour (resets on the clock hour) |
 | `EVENTS_DIR` | no | — | anonymous NDJSON gameplay events for analytics; unset = telemetry off |
+| `DEV_MODE` | no | — | any value forces every roll to succeed (clicks at any risk, card drops) — local testing only |
 
 ## Dev
 

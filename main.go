@@ -89,6 +89,10 @@ type server struct {
 
 func main() {
 	cfg := loadConfig()
+	if os.Getenv("DEV_MODE") != "" {
+		devMode = true
+		log.Println("DEV_MODE: every roll succeeds — do not run in production")
+	}
 	st, err := openStore(cfg.DBPath)
 	if err != nil {
 		log.Fatalf("open db: %v", err)

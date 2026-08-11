@@ -269,9 +269,16 @@ func gainFor(chance, risk int) int {
 	return max(1, (100+chance/2)/chance)
 }
 
+// devMode forces every percentage roll to succeed (clicks at any risk level,
+// card drops). Set from the DEV_MODE env var at startup; never for production.
+var devMode bool
+
 // rollPct returns true with pct% probability, using crypto/rand so results
 // cannot be predicted or replayed by clients.
 func rollPct(pct int) bool {
+	if devMode {
+		return true
+	}
 	n, err := rand.Int(rand.Reader, big.NewInt(100))
 	if err != nil {
 		// crypto/rand failing means the OS entropy source is broken; nothing
