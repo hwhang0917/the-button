@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { saveNickname, loadLeaderboard } from '../useGame'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ close: [] }>()
 const name = ref('')
 const saving = ref(false)
+// mirrors nicknameRe in main.go
+const valid = computed(() => /^[A-Za-z0-9_]{3,16}$/.test(name.value.trim()))
 
 async function submit() {
   const n = name.value.trim()
-  if (!n || saving.value) return
+  if (!valid.value || saving.value) return
   saving.value = true
   if (await saveNickname(n)) {
     await loadLeaderboard()
@@ -43,7 +45,7 @@ async function submit() {
         </button>
         <button
           type="submit"
-          :disabled="!name.trim() || saving"
+          :disabled="!valid || saving"
           class="flex-1 rounded-lg bg-yellow-400 py-2 text-sm font-bold text-slate-900 hover:bg-yellow-300 disabled:opacity-40"
         >
           {{ t('save') }}

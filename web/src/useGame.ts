@@ -104,10 +104,3 @@ export async function deletePlayer(): Promise<boolean> {
   const res = await fetch('/api/player', { method: 'DELETE' })
   return res.ok
 }
-
-/** Arcade rule: prompt for a name only when the current streak would rank. */
-export function wouldRank(stars: number): boolean {
-  if (stars < 1) return false
-  const board = leaderboard.value
-  return board.length < 20 || stars > board[board.length - 1].stars
-}

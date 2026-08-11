@@ -10,7 +10,6 @@ import {
   loadState,
   MAX_RISK,
   state,
-  wouldRank,
   type Card,
 } from './useGame'
 import { t, lang, toggleLang } from './i18n'
@@ -34,7 +33,6 @@ const messageColor = ref('text-slate-300')
 const droppedCard = ref<Card | null>(null)
 const viewedCard = ref<Card | null>(null)
 const showNickname = ref(false)
-const nicknameDismissed = ref(false)
 const menuOpen = ref(false)
 
 async function onDelete() {
@@ -80,9 +78,6 @@ async function onPress(center: { x: number; y: number }) {
     burst(center.x, center.y, [TIER_COLORS[result.tier], '#ffffff', '#facc15'], result.tierUp ? 120 : 60)
     play(result.win ? 'win' : `success_${result.tier}`)
     if (result.win) confetti()
-    if (!state.value?.nickname && !nicknameDismissed.value && wouldRank(result.stars)) {
-      showNickname.value = true
-    }
   } else {
     message.value = t('fail')
     messageColor.value = 'text-rose-400'
@@ -102,7 +97,9 @@ async function onPress(center: { x: number; y: number }) {
 }
 
 onMounted(() => {
-  loadState()
+  loadState().then(() => {
+    if (state.value && !state.value.nickname) showNickname.value = true
+  })
   loadLeaderboard()
   loadCards()
   let lastHour = new Date().getHours()
@@ -151,6 +148,13 @@ onMounted(() => {
             </div>
           </template>
         </div>
+        <button
+          v-else-if="state"
+          class="text-sm text-slate-400 hover:text-slate-200"
+          @click="showNickname = true"
+        >
+          ✏️ {{ t('setName') }}
+        </button>
         <button
           class="rounded-full border border-slate-600 px-3 py-1 text-xs font-bold text-slate-300 hover:bg-slate-800"
           @click="toggleLang(); play('switch')"
@@ -234,9 +238,6 @@ onMounted(() => {
 
     <CardReveal v-if="droppedCard" :card="droppedCard" @close="droppedCard = null" />
     <CardReveal v-if="viewedCard" :card="viewedCard" :drop="false" @close="viewedCard = null" />
-    <NicknameModal
-      v-if="showNickname"
-      @close="showNickname = false; nicknameDismissed = true"
-    />
+    <NicknameModal v-if="showNickname" @close="showNickname = false" />
   </div>
 </template>

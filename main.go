@@ -7,14 +7,15 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
-	"unicode"
 )
 
 //go:embed all:web/dist
@@ -23,8 +24,12 @@ var distFS embed.FS
 const (
 	sessionCookie   = "bt_token"
 	leaderboardSize = 20
+	minNicknameLen  = 3
 	maxNicknameLen  = 16
 )
+
+// English letters, digits, and underscore only; mirrored in NicknameModal.vue.
+var nicknameRe = regexp.MustCompile(fmt.Sprintf(`^[A-Za-z0-9_]{%d,%d}$`, minNicknameLen, maxNicknameLen))
 
 type config struct {
 	Port   string
@@ -252,15 +257,9 @@ func (s *server) handleNickname(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name := strings.TrimSpace(body.Name)
-	if name == "" || len([]rune(name)) > maxNicknameLen {
+	if !nicknameRe.MatchString(name) {
 		writeError(w, http.StatusBadRequest, "bad_nickname")
 		return
-	}
-	for _, r := range name {
-		if unicode.IsControl(r) {
-			writeError(w, http.StatusBadRequest, "bad_nickname")
-			return
-		}
 	}
 	if err := s.store.setNickname(p.Token, name); err != nil {
 		writeError(w, http.StatusInternalServerError, "db")
