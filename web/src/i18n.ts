@@ -74,6 +74,9 @@ const dict = {
     fuse: '합성',
     flip: '뒤집기',
     offline: '서버가 오프라인이에요 — 재연결 중',
+    scratchAll: '한번에 긁기',
+    scratchAgain: '다시 긁기',
+    openAnother: '한 장 더 열기',
     talEffect: {
       common: '부적: 해당 티어에서 다음 클릭 확률 +5% (보상 그대로)',
       rare: '부적: 해당 티어에서 다음 클릭 확률 +10% (보상 그대로)',
@@ -197,6 +200,9 @@ const dict = {
     fuse: 'Fuse',
     flip: 'Flip',
     offline: 'Server offline — reconnecting',
+    scratchAll: 'Scratch it all',
+    scratchAgain: 'Scratch again',
+    openAnother: 'Open another',
     talEffect: {
       common: 'Talisman: +5% roll chance on your next click in this tier (reward unchanged)',
       rare: 'Talisman: +10% roll chance on your next click in this tier (reward unchanged)',

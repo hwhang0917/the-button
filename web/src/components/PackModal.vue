@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import type { Card } from '../useGame'
+import { computed, ref } from 'vue'
+import { PACK_PRICE, state, type Card } from '../useGame'
 import { t } from '../i18n'
 import { play, vibrate } from '../audio'
 import { burst, confetti } from '../particles'
@@ -8,7 +8,9 @@ import { COIN_COLORS } from '../useCoinCounter'
 import CardReveal from './CardReveal.vue'
 
 const props = defineProps<{ card: Card }>()
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: []; again: [] }>()
+
+const canAgain = computed(() => (state.value?.coins ?? 0) >= PACK_PRICE)
 
 // sealed -> tearing (brief burst animation) -> revealed (CardReveal takes over)
 const stage = ref<'sealed' | 'tearing' | 'revealed'>('sealed')
@@ -34,7 +36,13 @@ function tear() {
 </script>
 
 <template>
-  <CardReveal v-if="stage === 'revealed'" :card="card" @close="emit('close')" />
+  <CardReveal
+    v-if="stage === 'revealed'"
+    :card="card"
+    :again-label="canAgain ? `${t('openAnother')} (💰${PACK_PRICE})` : ''"
+    @again="emit('again')"
+    @close="emit('close')"
+  />
   <div
     v-else
     class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-black/80 backdrop-blur-sm"

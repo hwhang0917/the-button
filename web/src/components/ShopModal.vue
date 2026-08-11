@@ -61,6 +61,18 @@ async function onLottery() {
   }
 }
 
+// null first so the v-if remounts the modal with fresh scratch/tear state
+async function onLotteryAgain() {
+  ticket.value = null
+  await onLottery()
+}
+
+async function onPackAgain() {
+  pack.value = null
+  await loadCards()
+  await onPack()
+}
+
 const sellValue = computed(() =>
   state.value ? streakValue(state.value.stars, state.value.headstartLevel) : 0,
 )
@@ -233,8 +245,9 @@ async function onBuy(key: SkillKey) {
       v-if="ticket"
       :prize="ticket.prize"
       :final-coins="ticket.coins"
+      @again="onLotteryAgain"
       @close="ticket = null"
     />
-    <PackModal v-if="pack" :card="pack" @close="pack = null; loadCards()" />
+    <PackModal v-if="pack" :card="pack" @again="onPackAgain" @close="pack = null; loadCards()" />
   </div>
 </template>

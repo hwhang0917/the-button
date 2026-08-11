@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { LOTTERY_PRIZES, state } from '../useGame'
+import { LOTTERY_PRICE, LOTTERY_PRIZES, state } from '../useGame'
 import { t } from '../i18n'
 import { play, scratchTick, vibrate } from '../audio'
 import { burst, confetti } from '../particles'
 import { COIN_COLORS } from '../useCoinCounter'
 
 const props = defineProps<{ prize: number; finalCoins: number }>()
-defineEmits<{ close: [] }>()
+defineEmits<{ close: []; again: [] }>()
+
+const canAgain = computed(() => (state.value?.coins ?? 0) >= LOTTERY_PRICE)
 
 const CW = 256
 const CH = 112
@@ -157,13 +159,29 @@ function onMove(e: PointerEvent) {
       </div>
     </div>
 
-    <button
-      v-if="revealed"
-      class="rounded-full border border-slate-600 px-6 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
-      @click="$emit('close')"
-    >
-      OK
-    </button>
-    <p v-else class="text-xs text-slate-400">{{ t('lotteryScratch') }}</p>
+    <div v-if="revealed" class="flex gap-3">
+      <button
+        v-if="canAgain"
+        class="rounded-full border border-amber-400/70 px-6 py-1.5 text-sm font-bold text-amber-300 hover:bg-amber-500/20"
+        @click="$emit('again')"
+      >
+        🎫 {{ t('scratchAgain') }} (💰{{ LOTTERY_PRICE }})
+      </button>
+      <button
+        class="rounded-full border border-slate-600 px-6 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
+        @click="$emit('close')"
+      >
+        OK
+      </button>
+    </div>
+    <div v-else class="flex flex-col items-center gap-2">
+      <p class="text-xs text-slate-400">{{ t('lotteryScratch') }}</p>
+      <button
+        class="rounded-full border border-slate-600 px-4 py-1 text-xs text-slate-300 hover:bg-slate-800"
+        @click="finish"
+      >
+        ⚡ {{ t('scratchAll') }}
+      </button>
+    </div>
   </div>
 </template>
