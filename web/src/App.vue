@@ -15,9 +15,11 @@ import {
   loadState,
   MAX_RISK,
   nextRarity,
+  offline,
   prevRarity,
   PRESTIGE_REWARDS,
   prestigeStreak,
+  startHealthCheck,
   state,
   talismanBonus,
   type Card,
@@ -357,6 +359,7 @@ onMounted(async () => {
     lastHour = new Date().getHours()
     loadState()
   })
+  startHealthCheck()
   await boot
   ready.value = true
 })
@@ -371,6 +374,14 @@ onMounted(async () => {
       class="fixed inset-x-0 top-0 z-50 bg-amber-400 py-0.5 text-center text-[11px] font-black tracking-widest text-slate-900"
     >
       ⚠ DEV MODE — 100% SUCCESS
+    </div>
+
+    <div
+      v-if="offline"
+      class="fixed inset-x-0 top-0 z-50 flex items-center justify-center gap-2 bg-rose-600 py-1 text-center text-xs font-bold text-white"
+    >
+      <span class="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>
+      {{ t('offline') }}
     </div>
 
     <header class="flex items-center justify-between px-4 py-3 sm:px-8">

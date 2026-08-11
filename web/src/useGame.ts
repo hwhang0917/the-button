@@ -60,6 +60,22 @@ export const state = ref<GameState | null>(null)
 export const leaderboard = ref<RankEntry[]>([])
 export const cards = ref<OwnedCard[]>([])
 
+/* liveness probe: HEAD on an existing endpoint, no dedicated health route */
+const HEALTH_INTERVAL_MS = 5000
+export const offline = ref(false)
+
+export function startHealthCheck() {
+  setInterval(async () => {
+    const wasOffline = offline.value
+    try {
+      offline.value = !(await fetch('/api/state', { method: 'HEAD' })).ok
+    } catch {
+      offline.value = true
+    }
+    if (wasOffline && !offline.value) loadState() // resync after an outage
+  }, HEALTH_INTERVAL_MS)
+}
+
 export async function loadState() {
   state.value = await (await fetch('/api/state')).json()
 }
