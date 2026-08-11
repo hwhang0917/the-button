@@ -253,6 +253,66 @@ func TestSkillStore(t *testing.T) {
 	}
 }
 
+func TestPrestigeReward(t *testing.T) {
+	cases := map[int]int{0: 300, 1: 450, 2: 600, 3: 600} // 3 = repeat at the prismatic cap
+	for level, want := range cases {
+		if got := prestigeRewardFor(level); got != want {
+			t.Errorf("prestigeRewardFor(%d) = %d, want %d", level, got, want)
+		}
+	}
+}
+
+func TestPrestigeStore(t *testing.T) {
+	s, err := openStore(t.TempDir() + "/test.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.getOrCreatePlayer("a"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.savePlayerStars("a", maxStars); err != nil {
+		t.Fatal(err)
+	}
+
+	if ok, _ := s.prestigeStreak("a", 300, 0, maxStars); !ok {
+		t.Fatal("prestige at max stars failed")
+	}
+	if ok, _ := s.prestigeStreak("a", 300, 0, maxStars); ok {
+		t.Fatal("stale stars pin must reject a repeat prestige")
+	}
+	p, _ := s.getOrCreatePlayer("a")
+	if p.Prestige != 1 || p.Coins != 300 || p.Earned != 300 || p.Stars != 0 {
+		t.Fatalf("after prestige: %+v", p)
+	}
+
+	// climb to the cap and one repeat beyond: level stays 3, payout still lands
+	for i := 0; i < 3; i++ {
+		if err := s.savePlayerStars("a", maxStars); err != nil {
+			t.Fatal(err)
+		}
+		if ok, _ := s.prestigeStreak("a", prestigeRewardFor(p.Prestige), 0, maxStars); !ok {
+			t.Fatalf("prestige round %d failed", i)
+		}
+		p, _ = s.getOrCreatePlayer("a")
+	}
+	if p.Prestige != prestigeCap {
+		t.Fatalf("prestige must cap at %d, got %d", prestigeCap, p.Prestige)
+	}
+
+	// selling also accumulates lifetime points
+	if err := s.savePlayerStars("a", 5); err != nil {
+		t.Fatal(err)
+	}
+	before := p.Earned
+	if ok, _ := s.sellStreak("a", 15, 0, 5); !ok {
+		t.Fatal("sell failed")
+	}
+	p, _ = s.getOrCreatePlayer("a")
+	if p.Earned != before+15 {
+		t.Fatalf("earned = %d, want %d", p.Earned, before+15)
+	}
+}
+
 func TestNicknameUnique(t *testing.T) {
 	s, err := openStore(t.TempDir() + "/test.db")
 	if err != nil {

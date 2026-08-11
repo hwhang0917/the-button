@@ -66,13 +66,13 @@ async function onBuy(key: SkillKey) {
 
       <button
         class="flex items-center justify-between rounded-lg border border-yellow-500/40 bg-yellow-400/10 px-4 py-2 text-sm font-bold text-yellow-300 hover:bg-yellow-400/20 disabled:opacity-40"
-        :disabled="!sellValue"
+        :disabled="!sellValue || state.win"
         @click="onSell"
       >
         <span>⭐ {{ t('sellStreak') }} (★{{ state.stars }})</span>
         <span class="font-mono">+{{ sellValue }}💰</span>
       </button>
-      <p class="text-center text-xs text-slate-500">{{ t('sellDesc') }}</p>
+      <p class="text-center text-xs text-slate-500">{{ state.win ? t('sellAtWin') : t('sellDesc') }}</p>
 
       <div class="flex flex-col gap-2">
         <div

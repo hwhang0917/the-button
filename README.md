@@ -38,7 +38,8 @@ cd web && npm run dev       # Vite on :5173, proxies /api
 - RISK IT levels 1–3: odds ÷(level+1), success pays the odds back (★+round(100/chance)), card-drop odds ×(level+1).
 - Tiers: Unrank → Bronze → Silver → Gold → Platinum → Diamond. First climb past your best tier refunds clicks equal to its rank.
 - Successful clicks can drop collectible cards (common/rare/holo/prismatic) — tap owned cards to view them.
-- **Skill shop**: sell your streak for coins (triangle value — deep streaks pay disproportionately; selling at ★15 restarts a won game) and buy skills: 🛡️ protection scroll (keep stars on a fail, consumable), 🍀 lucky charm (+2% success/level, cap 5), 🚀 head start (resets land at ★level, cap 3).
+- **Skill shop**: sell your streak for coins (triangle value — deep streaks pay disproportionately) and buy skills: 🛡️ protection scroll (keep stars on a fail, consumable), 🍀 lucky charm (+2% success/level, cap 5), 🚀 head start (resets land at ★level, cap 3).
+- **Prestige**: at ★15 the plain sell is disabled — PRESTIGE instead converts the streak to 300/450/600 points and promotes your star tier common → rare → holo → prismatic (repeats at prismatic still pay 600). The leaderboard orders prestige tier → stars → lifetime points, so maxed prismatic ★15 players compete on points.
 - Unique nicknames (3–16 chars, `a-z 0-9 _`, case-insensitive), asked on first visit.
 - Accounts are anonymous cookie tokens — zero PII, no IPs stored. Link another device via a one-time 8-char code (player menu → link device, valid 10 minutes).
 

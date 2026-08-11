@@ -5,12 +5,16 @@ import { TIER_COLORS, type Tier } from '../tiers'
 import { t, lang } from '../i18n'
 import { play } from '../audio'
 
-const props = defineProps<{
-  tier: Tier
-  chance: number
-  risky: boolean
-  disabled: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    tier: Tier
+    chance: number
+    risky: boolean
+    disabled: boolean
+    prestige?: number
+  }>(),
+  { prestige: 0 },
+)
 const emit = defineEmits<{ press: [center: { x: number; y: number }] }>()
 
 const host = ref<HTMLDivElement | null>(null)
@@ -54,6 +58,23 @@ const freeSprites: Sprite[] = []
 
 // amber → deep red; hotter picks shift right
 const EMBER_COLORS = [0xfcd34d, 0xfb923c, 0xf87171, 0xef4444]
+// rare-prestige embers burn cold blue instead
+const EMBER_COLORS_RARE = [0xbae6fd, 0x7dd3fc, 0x38bdf8, 0x0ea5e9]
+
+let hue = 0
+let sparkles: Sprite[] = []
+
+// hsl(h, 85%, 60%) → rgb int, for the prestige rainbow tints
+function hslTint(h: number): number {
+  const s = 0.85
+  const l = 0.6
+  const c = (1 - Math.abs(2 * l - 1)) * s
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1))
+  const m = l - c / 2
+  const [r, g, b] =
+    h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x]
+  return (Math.round((r + m) * 255) << 16) | (Math.round((g + m) * 255) << 8) | Math.round((b + m) * 255)
+}
 
 // 0..1: embers start under ~60% odds and rage as the odds shrink
 function heat(): number {
@@ -62,10 +83,18 @@ function heat(): number {
 
 function drawButton() {
   const color = TIER_COLORS[props.tier]
-  const edge = props.risky ? '#f43f5e' : color
+  // holo/prismatic prestige draws the edge white and hue-cycles it via .tint;
+  // rare prestige is a fixed cool blue; risky red wins below that
+  const rainbow = props.prestige >= 2
+  const edge = rainbow ? '#ffffff' : props.risky ? '#f43f5e' : props.prestige === 1 ? '#38bdf8' : color
+  if (!rainbow) {
+    rim.tint = 0xffffff
+    halo.tint = 0xffffff
+  }
   halo.clear()
+  const haloAlpha = props.prestige >= 3 ? 0.075 : 0.045
   for (let i = 3; i >= 1; i--) {
-    halo.circle(0, 0, R + i * 13).fill({ color: edge, alpha: 0.045 * (4 - i) })
+    halo.circle(0, 0, R + i * 13).fill({ color: edge, alpha: haloAlpha * (4 - i) })
   }
   base.clear()
   base.circle(0, 0, R).fill(color)
@@ -96,8 +125,13 @@ function spawnEmber() {
   const rr = R * (0.9 + Math.random() * 0.25) * scale
   sp.position.set(btn.position.x + Math.cos(a) * rr, btn.position.y + Math.sin(a) * rr)
   const h = heat()
-  const hot = Math.random() * 2 + (props.risky ? 2 : h * 2)
-  sp.tint = EMBER_COLORS[Math.min(EMBER_COLORS.length - 1, Math.floor(hot))]
+  if (props.prestige >= 2) {
+    sp.tint = hslTint(Math.random() * 360)
+  } else {
+    const palette = props.prestige === 1 && !props.risky ? EMBER_COLORS_RARE : EMBER_COLORS
+    const hot = Math.random() * 2 + (props.risky ? 2 : h * 2)
+    sp.tint = palette[Math.min(palette.length - 1, Math.floor(hot))]
+  }
   sp.alpha = 1
   const max = 30 + Math.random() * 30
   embers.push({
@@ -208,6 +242,38 @@ onMounted(async () => {
     btn.position.set(SIZE / 2 + ox, SIZE / 2 + oy)
     btn.rotation = Math.sin(phase * 0.9) * 0.02
 
+    // prestige flair: hue-cycled rim/halo for holo+, orbiting sparkles for prismatic
+    if (props.prestige >= 2) {
+      hue = (hue + dt * (props.prestige >= 3 ? 2.4 : 0.8)) % 360
+      const tint = hslTint(hue)
+      rim.tint = tint
+      halo.tint = tint
+    }
+    if (props.prestige >= 3) {
+      if (!sparkles.length) {
+        for (let i = 0; i < 4; i++) {
+          const sp = new Sprite(emberTex)
+          sp.anchor.set(0.5)
+          sp.blendMode = 'add'
+          fx.addChild(sp)
+          sparkles.push(sp)
+        }
+      }
+      sparkles.forEach((sp, i) => {
+        const ang = phase * 0.8 + (i * Math.PI * 2) / sparkles.length
+        sp.visible = true
+        sp.position.set(
+          btn.position.x + Math.cos(ang) * (R + 16) * scale,
+          btn.position.y + Math.sin(ang) * (R + 16) * scale,
+        )
+        sp.tint = hslTint((hue + i * 90) % 360)
+        sp.alpha = 0.7 + Math.sin(phase * 3 + i) * 0.3
+        sp.scale.set(0.5 + 0.2 * Math.sin(phase * 2 + i))
+      })
+    } else {
+      sparkles.forEach((sp) => (sp.visible = false))
+    }
+
     // ember emission scales with how bad the odds are
     if (!props.disabled) {
       emberAcc += dt * heat() * (props.risky ? 0.9 : 0.55)
@@ -234,7 +300,7 @@ onMounted(async () => {
   })
 })
 
-watch(() => [props.tier, props.risky], () => app && drawButton())
+watch(() => [props.tier, props.risky, props.prestige], () => app && drawButton())
 watch(() => [props.chance, props.risky, lang.value], () => app && syncTexts())
 watch(() => props.disabled, () => app && applyDisabled())
 

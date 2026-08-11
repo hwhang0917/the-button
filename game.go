@@ -32,6 +32,18 @@ var (
 	headstartPrices = [headstartCap]int{20, 100, 400}
 )
 
+// Prestige: a maxed streak converts to points and promotes the player's star
+// tier along the card-rarity ladder (0=common .. 3=prismatic). Repeats at the
+// cap still pay the top reward; rank orders prestige, then stars, then points.
+const prestigeCap = 3
+
+var prestigeRewards = [prestigeCap]int{300, 450, 600}
+
+// prestigeRewardFor is the payout for prestiging from the given level.
+func prestigeRewardFor(prestige int) int {
+	return prestigeRewards[min(prestige, prestigeCap-1)]
+}
+
 type skills struct {
 	Charm     int
 	Headstart int

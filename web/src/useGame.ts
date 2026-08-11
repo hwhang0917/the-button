@@ -14,6 +14,7 @@ export interface GameState {
   shieldCharges: number
   charmLevel: number
   headstartLevel: number
+  prestige: number
 }
 
 export interface Card {
@@ -45,6 +46,8 @@ export interface RankEntry {
   stars: number
   bestStars: number
   tier: Tier
+  prestige: number
+  earned: number
 }
 
 export const state = ref<GameState | null>(null)
@@ -91,6 +94,28 @@ export const SKILLS: Record<SkillKey, { prices: number[]; cap: number }> = {
   shield: { prices: [25], cap: Infinity }, // flat price, uncapped charges
   charm: { prices: [10, 30, 90, 270, 810], cap: 5 },
   headstart: { prices: [20, 100, 400], cap: 3 },
+}
+
+/** Mirrors prestigeRewards in game.go; index = current prestige (capped). */
+export const PRESTIGE_REWARDS = [300, 450, 600]
+export const PRESTIGE_CAP = 3
+
+/** Converts a maxed streak to points + a star-tier promotion. Returns points gained. */
+export async function prestigeStreak(): Promise<number | null> {
+  const res = await fetch('/api/prestige', { method: 'POST' })
+  if (!res.ok) return null
+  const d = await res.json()
+  if (state.value) {
+    Object.assign(state.value, {
+      coins: d.coins,
+      stars: d.stars,
+      tier: d.tier,
+      chance: d.chance,
+      prestige: d.prestige,
+      win: false,
+    })
+  }
+  return d.gained
 }
 
 /** Sells the whole streak; returns coins gained, or null when rejected. */

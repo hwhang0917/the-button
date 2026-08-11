@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{ stars: number }>()
+withDefaults(defineProps<{ stars: number; prestige?: number }>(), { prestige: 0 })
 const MAX = 15
 </script>
 
@@ -11,7 +11,11 @@ const MAX = 15
       src="/star.png"
       alt="★"
       class="h-5 w-5 transition-all"
-      :class="i <= stars ? 'star-pop drop-shadow-[0_0_6px_#facc15]' : 'opacity-15 grayscale'"
+      :class="
+        i <= stars
+          ? ['star-pop', prestige > 0 ? `star-r${prestige}` : 'drop-shadow-[0_0_6px_#facc15]']
+          : 'opacity-15 grayscale'
+      "
     />
   </div>
 </template>

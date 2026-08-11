@@ -37,7 +37,9 @@ func openStore(path string) (*store, error) {
 			coins           INTEGER NOT NULL DEFAULT 0,
 			shield_charges  INTEGER NOT NULL DEFAULT 0,
 			charm_level     INTEGER NOT NULL DEFAULT 0,
-			headstart_level INTEGER NOT NULL DEFAULT 0
+			headstart_level INTEGER NOT NULL DEFAULT 0,
+			prestige        INTEGER NOT NULL DEFAULT 0,
+			earned          INTEGER NOT NULL DEFAULT 0
 		);
 		CREATE TABLE IF NOT EXISTS player_quota (
 			player_token TEXT NOT NULL,
@@ -65,7 +67,7 @@ func openStore(path string) (*store, error) {
 	}
 	// bring pre-skill-shop DBs up to the canonical schema; sqlite has no
 	// ADD COLUMN IF NOT EXISTS, so ignore the duplicate-column error
-	for _, col := range []string{"coins", "shield_charges", "charm_level", "headstart_level"} {
+	for _, col := range []string{"coins", "shield_charges", "charm_level", "headstart_level", "prestige", "earned"} {
 		_, err := db.Exec("ALTER TABLE players ADD COLUMN " + col + " INTEGER NOT NULL DEFAULT 0")
 		if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
 			return nil, err
@@ -83,6 +85,8 @@ type player struct {
 	ShieldCharges  int
 	CharmLevel     int
 	HeadstartLevel int
+	Prestige       int
+	Earned         int
 }
 
 func (s *store) getOrCreatePlayer(token string) (*player, error) {
@@ -92,9 +96,9 @@ func (s *store) getOrCreatePlayer(token string) (*player, error) {
 		return nil, err
 	}
 	p := &player{Token: token}
-	err = s.db.QueryRow(`SELECT nickname, stars, best_stars, coins, shield_charges, charm_level, headstart_level
+	err = s.db.QueryRow(`SELECT nickname, stars, best_stars, coins, shield_charges, charm_level, headstart_level, prestige, earned
 		FROM players WHERE token = ?`, token).
-		Scan(&p.Nickname, &p.Stars, &p.BestStars, &p.Coins, &p.ShieldCharges, &p.CharmLevel, &p.HeadstartLevel)
+		Scan(&p.Nickname, &p.Stars, &p.BestStars, &p.Coins, &p.ShieldCharges, &p.CharmLevel, &p.HeadstartLevel, &p.Prestige, &p.Earned)
 	if err != nil {
 		return nil, err
 	}
@@ -128,10 +132,26 @@ func (s *store) consumeShield(token string) (bool, error) {
 }
 
 // sellStreak converts the streak to coins; the stars pin rejects a stale sell
-// when another request already changed the streak.
+// when another request already changed the streak. `earned` tracks lifetime
+// points for ranking, so spending coins never drops a player on the board.
 func (s *store) sellStreak(token string, gain, toStars, fromStars int) (bool, error) {
-	res, err := s.db.Exec(`UPDATE players SET coins = coins + ?, stars = ?, updated_at = ?
-		WHERE token = ? AND stars = ?`, gain, toStars, time.Now(), token, fromStars)
+	res, err := s.db.Exec(`UPDATE players SET coins = coins + ?, earned = earned + ?, stars = ?, updated_at = ?
+		WHERE token = ? AND stars = ?`, gain, gain, toStars, time.Now(), token, fromStars)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n == 1, err
+}
+
+// prestigeStreak cashes a maxed streak: big payout, star-tier promotion up to
+// the prismatic cap (repeats at the cap still pay), reset to the floor.
+func (s *store) prestigeStreak(token string, reward, toStars, fromStars int) (bool, error) {
+	res, err := s.db.Exec(`UPDATE players SET coins = coins + ?, earned = earned + ?,
+		prestige = CASE WHEN prestige < ? THEN prestige + 1 ELSE prestige END,
+		stars = ?, updated_at = ?
+		WHERE token = ? AND stars = ?`,
+		reward, reward, prestigeCap, toStars, time.Now(), token, fromStars)
 	if err != nil {
 		return false, err
 	}
@@ -258,11 +278,14 @@ type rankEntry struct {
 	Stars     int    `json:"stars"`
 	BestStars int    `json:"bestStars"`
 	Tier      string `json:"tier"`
+	Prestige  int    `json:"prestige"`
+	Earned    int    `json:"earned"`
 }
 
 func (s *store) leaderboard(limit int) ([]rankEntry, error) {
-	rows, err := s.db.Query(`SELECT nickname, stars, best_stars FROM players
-		WHERE nickname != '' ORDER BY stars DESC, best_stars DESC, best_at ASC LIMIT ?`, limit)
+	rows, err := s.db.Query(`SELECT nickname, stars, best_stars, prestige, earned FROM players
+		WHERE nickname != ''
+		ORDER BY prestige DESC, stars DESC, earned DESC, best_at ASC LIMIT ?`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +293,7 @@ func (s *store) leaderboard(limit int) ([]rankEntry, error) {
 	entries := []rankEntry{}
 	for rows.Next() {
 		var e rankEntry
-		if err := rows.Scan(&e.Nickname, &e.Stars, &e.BestStars); err != nil {
+		if err := rows.Scan(&e.Nickname, &e.Stars, &e.BestStars, &e.Prestige, &e.Earned); err != nil {
 			return nil, err
 		}
 		e.Tier = tierFor(e.Stars)

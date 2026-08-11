@@ -103,6 +103,7 @@ func main() {
 	mux.HandleFunc("POST /api/nickname", srv.handleNickname)
 	mux.HandleFunc("DELETE /api/player", srv.handleDeletePlayer)
 	mux.HandleFunc("POST /api/sell", srv.handleSell)
+	mux.HandleFunc("POST /api/prestige", srv.handlePrestige)
 	mux.HandleFunc("POST /api/buy", srv.handleBuy)
 	mux.HandleFunc("POST /api/link/new", srv.handleLinkNew)
 	mux.HandleFunc("POST /api/link/claim", srv.handleLinkClaim)
@@ -198,6 +199,7 @@ type stateResponse struct {
 	ShieldCharges  int    `json:"shieldCharges"`
 	CharmLevel     int    `json:"charmLevel"`
 	HeadstartLevel int    `json:"headstartLevel"`
+	Prestige       int    `json:"prestige"`
 }
 
 func (s *server) stateFor(p *player, quotaLeft int) stateResponse {
@@ -214,6 +216,7 @@ func (s *server) stateFor(p *player, quotaLeft int) stateResponse {
 		ShieldCharges:  p.ShieldCharges,
 		CharmLevel:     p.CharmLevel,
 		HeadstartLevel: p.HeadstartLevel,
+		Prestige:       p.Prestige,
 	}
 }
 
@@ -312,6 +315,11 @@ func (s *server) handleSell(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if p.Stars >= maxStars {
+		// a maxed streak must go through prestige, not the plain sell
+		writeError(w, http.StatusConflict, "prestige_instead")
+		return
+	}
 	gain := streakValue(p.Stars, p.HeadstartLevel)
 	if gain <= 0 {
 		writeError(w, http.StatusConflict, "nothing_to_sell")
@@ -333,6 +341,38 @@ func (s *server) handleSell(w http.ResponseWriter, r *http.Request) {
 		"stars":  floor,
 		"tier":   tierFor(floor),
 		"chance": chanceFor(floor, 0),
+	})
+}
+
+// handlePrestige converts a maxed streak into a big point payout and a star-tier
+// promotion (common → rare → holo → prismatic; repeats at the cap still pay).
+func (s *server) handlePrestige(w http.ResponseWriter, r *http.Request) {
+	p, ok := s.player(w, r)
+	if !ok {
+		return
+	}
+	if p.Stars < maxStars {
+		writeError(w, http.StatusConflict, "not_won")
+		return
+	}
+	reward := prestigeRewardFor(p.Prestige)
+	floor := min(p.HeadstartLevel, maxStars)
+	done, err := s.store.prestigeStreak(p.Token, reward, floor, p.Stars)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "db")
+		return
+	}
+	if !done {
+		writeError(w, http.StatusConflict, "retry")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"coins":    p.Coins + reward,
+		"gained":   reward,
+		"prestige": min(p.Prestige+1, prestigeCap),
+		"stars":    floor,
+		"tier":     tierFor(floor),
+		"chance":   chanceFor(floor, 0),
 	})
 }
 

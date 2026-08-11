@@ -10,6 +10,8 @@ import {
   loadLeaderboard,
   loadState,
   MAX_RISK,
+  PRESTIGE_REWARDS,
+  prestigeStreak,
   state,
   type Card,
 } from './useGame'
@@ -113,6 +115,19 @@ const modalOpen = computed(() =>
 watch(modalOpen, (open) => {
   document.body.style.overflow = open ? 'hidden' : ''
 })
+
+const prestigeReward = computed(() =>
+  state.value ? PRESTIGE_REWARDS[Math.min(state.value.prestige, PRESTIGE_REWARDS.length - 1)] : 0,
+)
+
+async function onPrestige() {
+  const gained = await prestigeStreak()
+  if (gained === null) return
+  message.value = `${t('prestigeDone')} +${gained}💰`
+  messageColor.value = 'text-fuchsia-300'
+  play('win')
+  confetti()
+}
 
 async function onDelete() {
   menuOpen.value = false
@@ -298,7 +313,7 @@ onMounted(async () => {
 
         <template v-if="state">
           <TierBadge :tier="state.tier" />
-          <StarRow :stars="state.stars" />
+          <StarRow :stars="state.stars" :prestige="state.prestige" />
           <span v-if="state.shieldCharges > 0" class="text-xs font-bold text-sky-300">
             🛡️×{{ state.shieldCharges }}
           </span>
@@ -309,11 +324,20 @@ onMounted(async () => {
               :chance="displayChance"
               :risky="risk > 0"
               :disabled="disabled"
+              :prestige="state.prestige"
               @press="onPress"
             />
           </div>
 
           <p class="h-6 text-center font-bold" :class="messageColor">{{ message }}</p>
+
+          <button
+            v-if="state.win"
+            class="animate-pulse rounded-full border-2 border-fuchsia-400 bg-fuchsia-500/20 px-8 py-3 text-lg font-black tracking-widest text-fuchsia-200 hover:bg-fuchsia-500/30"
+            @click="onPrestige"
+          >
+            ✨ {{ t('prestige') }} +{{ prestigeReward }}💰
+          </button>
 
           <div id="tut-risk" class="flex flex-col items-center gap-1 select-none">
             <div class="flex items-center gap-2 whitespace-nowrap">

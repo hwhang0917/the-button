@@ -108,3 +108,16 @@ body::before {
 .holo-card.rarity-prismatic {
   animation: prisma-spin 4s linear infinite;
 }
+
+/* prestige star skins: rare / holo / prismatic tiers on the star sprites */
+.star-r1 {
+  filter: hue-rotate(170deg) drop-shadow(0 0 6px #38bdf8);
+}
+.star-r2 {
+  filter: drop-shadow(0 0 6px #f0abfc);
+  animation: prisma-spin 6s linear infinite;
+}
+.star-r3 {
+  filter: saturate(1.6) drop-shadow(0 0 10px #a78bfa);
+  animation: prisma-spin 2s linear infinite;
+}
