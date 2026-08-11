@@ -239,6 +239,7 @@ type stateResponse struct {
 	BestStars      int    `json:"bestStars"`
 	Tier           string `json:"tier"`
 	Chance         int    `json:"chance"`
+	MaxStars       int    `json:"maxStars"`
 	QuotaLeft      int    `json:"quotaLeft"`
 	Quota          int    `json:"quota"`
 	Nickname       string `json:"nickname"`
@@ -255,15 +256,17 @@ type stateResponse struct {
 }
 
 func (s *server) stateFor(p *player, quotaLeft int) stateResponse {
+	cap := maxStarsFor(p.Prestige)
 	return stateResponse{
 		Stars:          p.Stars,
 		BestStars:      p.BestStars,
 		Tier:           tierFor(p.Stars),
-		Chance:         chanceFor(p.Stars, 0),
+		Chance:         chanceFor(p.Stars, 0, cap),
+		MaxStars:       cap,
 		QuotaLeft:      quotaLeft,
 		Quota:          s.cfg.Quota,
 		Nickname:       p.Nickname,
-		Win:            p.Stars >= maxStars,
+		Win:            p.Stars >= cap,
 		Coins:          p.Coins,
 		ShieldCharges:  p.ShieldCharges,
 		CharmLevel:     p.CharmLevel,
@@ -294,7 +297,8 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if p.Stars >= maxStars {
+	cap := maxStarsFor(p.Prestige)
+	if p.Stars >= cap {
 		writeError(w, http.StatusConflict, "already_won")
 		return
 	}
@@ -333,7 +337,7 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 			sk.TalDouble = true
 		}
 	}
-	res := resolveClick(p.Stars, body.Risk, sk)
+	res := resolveClick(p.Stars, body.Risk, sk, cap)
 	if res.TalismanUsed {
 		if err := s.store.clearTalisman(p.Token); err != nil {
 			writeError(w, http.StatusInternalServerError, "db")
@@ -346,11 +350,12 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 		"stars_before": p.Stars,
 		"stars_after":  res.Stars,
 		"risk":         body.Risk,
-		"chance":       effChanceFor(p.Stars, body.Risk, p.CharmLevel),
+		"chance":       effChanceFor(p.Stars, body.Risk, p.CharmLevel, cap),
 		"success":      res.Success,
 		"shield_used":  res.ShieldUsed,
 		"tier_up":      res.TierUp,
 		"win":          res.Win,
+		"jackpot":      res.Jackpot,
 		"card":         res.Card != nil,
 		"charm":        p.CharmLevel,
 		"headstart":    p.HeadstartLevel,
@@ -382,7 +387,7 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if err := s.store.savePlayerStars(p.Token, res.Stars); err != nil {
+	if err := s.store.savePlayerStars(p.Token, res.Stars, res.Jackpot); err != nil {
 		writeError(w, http.StatusInternalServerError, "db")
 		return
 	}
@@ -400,7 +405,8 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 		ShieldCharges  int    `json:"shieldCharges"`
 		TalismanTier   string `json:"talismanTier"`
 		TalismanRarity string `json:"talismanRarity"`
-	}{res, chanceFor(res.Stars, 0), quotaLeft + bonus, bonus, shieldCharges, p.TalismanTier, p.TalismanRarity})
+		Coins          int    `json:"coins"`
+	}{res, chanceFor(res.Stars, 0, cap), quotaLeft + bonus, bonus, shieldCharges, p.TalismanTier, p.TalismanRarity, p.Coins + res.Jackpot})
 }
 
 // handleSell converts the whole streak to coins and drops stars to the
@@ -410,7 +416,7 @@ func (s *server) handleSell(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if p.Stars >= maxStars {
+	if p.Stars >= maxStarsFor(p.Prestige) {
 		// a maxed streak must go through prestige, not the plain sell
 		writeError(w, http.StatusConflict, "prestige_instead")
 		return
@@ -436,7 +442,7 @@ func (s *server) handleSell(w http.ResponseWriter, r *http.Request) {
 		"gained": gain,
 		"stars":  floor,
 		"tier":   tierFor(floor),
-		"chance": chanceFor(floor, 0),
+		"chance": chanceFor(floor, 0, maxStarsFor(p.Prestige)),
 	})
 }
 
@@ -447,12 +453,12 @@ func (s *server) handlePrestige(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if p.Stars < maxStars {
+	if p.Stars < maxStarsFor(p.Prestige) {
 		writeError(w, http.StatusConflict, "not_won")
 		return
 	}
 	reward := prestigeRewardFor(p.Prestige)
-	floor := min(p.HeadstartLevel, maxStars)
+	floor := min(p.HeadstartLevel, p.Stars)
 	done, err := s.store.prestigeStreak(p.Token, reward, floor, p.Stars)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "db")
@@ -469,7 +475,8 @@ func (s *server) handlePrestige(w http.ResponseWriter, r *http.Request) {
 		"prestige": p.Prestige + 1,
 		"stars":    floor,
 		"tier":     tierFor(floor),
-		"chance":   chanceFor(floor, 0),
+		// the cap the player will roll against after this prestige
+		"chance": chanceFor(floor, 0, maxStarsFor(p.Prestige+1)),
 	})
 }
 

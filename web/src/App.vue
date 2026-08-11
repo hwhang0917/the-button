@@ -297,8 +297,16 @@ async function onPress(center: { x: number; y: number }) {
   if (!result) return
 
   if (result.success) {
-    message.value = result.win ? t('win') : result.tierUp ? t('tierUp') : t('success')
+    message.value = result.win
+      ? t('win').replace('{n}', String(state.value?.maxStars ?? 15))
+      : result.tierUp
+        ? t('tierUp')
+        : t('success')
     if (result.bonusClicks > 0) message.value += ` 🎟️+${result.bonusClicks}`
+    if (result.jackpot > 0) {
+      message.value += ` 💰+${result.jackpot}`
+      burst(center.x, center.y - 60, COIN_COLORS, 80)
+    }
     messageColor.value = result.win ? 'text-yellow-300' : 'text-emerald-400'
     burst(center.x, center.y, [TIER_COLORS[result.tier], '#ffffff', '#facc15'], result.tierUp ? 120 : 60)
     play(result.win ? 'win' : `success_${result.tier}`)
@@ -468,7 +476,7 @@ onMounted(async () => {
           <!-- one compact status row keeps the core info above the fold on phones -->
           <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
             <TierBadge :tier="state.tier" />
-            <StarRow :stars="state.stars" :prestige="state.prestige" />
+            <StarRow :stars="state.stars" :prestige="state.prestige" :max="state.maxStars" />
             <!-- stays mounted at 0 while flashing so the burn is visible -->
             <span
               v-if="state.shieldCharges > 0 || shieldFlash"

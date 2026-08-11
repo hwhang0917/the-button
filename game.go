@@ -10,6 +10,16 @@ var chanceTable = [16]int{100, 90, 81, 72, 63, 55, 48, 41, 35, 29, 24, 19, 15, 1
 
 const maxStars = 15
 
+// maxStarsFor is the star cap at a prestige level: +5 per prestige, clamped
+// at 30 to match the prestige skin ladder and keep the star row renderable.
+func maxStarsFor(prestige int) int {
+	return maxStars + 5*min(prestige, 3)
+}
+
+// overflowCoinPer prices stars rolled past the cap. Kept below the 15💰/star
+// marginal sell value so deep risk stays a gamble, not income.
+const overflowCoinPer = 5
+
 // Risk levels 0 (safe) through maxRisk: odds ÷(level+1), card-drop odds
 // ×(level+1), and the star payout scales with the odds taken (see gainFor).
 const maxRisk = 3
@@ -182,11 +192,11 @@ type skills struct {
 }
 
 // effChanceFor is the roll chance after risk division and charm bonus.
-func effChanceFor(stars, risk, charm int) int {
-	if stars >= maxStars {
+func effChanceFor(stars, risk, charm, cap int) int {
+	if stars >= cap {
 		return 0
 	}
-	return min(100, chanceFor(stars, risk)+charmBonusPct*charm)
+	return min(100, chanceFor(stars, risk, cap)+charmBonusPct*charm)
 }
 
 func tri(n int) int { return n * (n + 1) / 2 }
@@ -252,11 +262,12 @@ func tierFor(stars int) string {
 }
 
 // chanceFor returns the success % for the next click at the given star count.
-func chanceFor(stars, risk int) int {
-	if stars >= maxStars {
+// Stars past the table (prestige-raised caps) roll at the 5% floor.
+func chanceFor(stars, risk, cap int) int {
+	if stars >= cap {
 		return 0
 	}
-	return chanceTable[stars] / (risk + 1)
+	return chanceTable[min(stars, len(chanceTable)-1)] / (risk + 1)
 }
 
 // gainFor is the stars won on a successful click: safe mode always steps one
@@ -338,18 +349,19 @@ type clickResult struct {
 	Card         *cardDrop `json:"card"`
 	ShieldUsed   bool      `json:"shieldUsed"`
 	TalismanUsed bool      `json:"talismanUsed"`
+	Jackpot      int       `json:"jackpot"` // coins for stars rolled past the cap
 }
 
 // resolveClick runs one enchant attempt: roll, apply gain or reset, then roll
 // the card drop on success. A shield keeps the stars on fail; otherwise the
 // reset lands at the head-start floor — but never above where the streak was,
 // so failing below the floor is never profitable.
-func resolveClick(stars, risk int, sk skills) clickResult {
+func resolveClick(stars, risk int, sk skills, cap int) clickResult {
 	prevTier := tierFor(stars)
 	// charm feeds both roll and payout (higher chance, lower reward), but the
 	// talisman bonus boosts ONLY the roll — the consumed card is its price,
 	// so it must not shrink the risk-mode star reward
-	payChance := effChanceFor(stars, risk, sk.Charm)
+	payChance := effChanceFor(stars, risk, sk.Charm, cap)
 	chance := payChance
 	if payChance > 0 && sk.TalBonus > 0 {
 		chance = min(100, payChance+sk.TalBonus)
@@ -372,15 +384,16 @@ func resolveClick(stars, risk int, sk skills) clickResult {
 		gain *= 2
 		talUsed = true
 	}
-	newStars := min(stars+gain, maxStars)
+	newStars := min(stars+gain, cap)
 	return clickResult{
 		Success:      true,
 		Stars:        newStars,
 		Gained:       newStars - stars,
 		Tier:         tierFor(newStars),
 		TierUp:       tierFor(newStars) != prevTier,
-		Win:          newStars == maxStars,
+		Win:          newStars == cap,
 		Card:         rollCard(newStars, risk),
 		TalismanUsed: talUsed,
+		Jackpot:      overflowCoinPer * max(0, stars+gain-cap),
 	}
 }

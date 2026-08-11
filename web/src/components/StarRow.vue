@@ -2,8 +2,10 @@
 import { computed } from 'vue'
 import { PRESTIGE_SKIN_CAP } from '../useGame'
 
-const props = withDefaults(defineProps<{ stars: number; prestige?: number }>(), { prestige: 0 })
-const MAX = 15
+const props = withDefaults(defineProps<{ stars: number; prestige?: number; max?: number }>(), {
+  prestige: 0,
+  max: 15,
+})
 const GROUP = 5
 
 // visuals cap at prismatic even though prestige keeps counting
@@ -15,7 +17,7 @@ const filledClass = computed(() =>
 // groups of 5: complete and untouched groups collapse into one big "5"-star so
 // the row never wraps on narrow screens; only the active group shows singles
 const groups = computed(() =>
-  Array.from({ length: MAX / GROUP }, (_, i) =>
+  Array.from({ length: Math.ceil(props.max / GROUP) }, (_, i) =>
     Math.max(0, Math.min(GROUP, props.stars - i * GROUP)),
   ),
 )

@@ -18,20 +18,43 @@ func TestChanceTableMonotonic(t *testing.T) {
 }
 
 func TestResolveClickBounds(t *testing.T) {
-	for stars := 0; stars < maxStars; stars++ {
-		for risk := 0; risk <= maxRisk; risk++ {
-			res := resolveClick(stars, risk, skills{})
-			if res.Success {
-				if res.Stars <= stars || res.Stars > maxStars {
-					t.Errorf("stars=%d risk=%d: success moved to %d", stars, risk, res.Stars)
+	for _, cap := range []int{maxStars, 30} {
+		for stars := 0; stars < cap; stars++ {
+			for risk := 0; risk <= maxRisk; risk++ {
+				res := resolveClick(stars, risk, skills{}, cap)
+				if res.Success {
+					if res.Stars <= stars || res.Stars > cap {
+						t.Errorf("cap=%d stars=%d risk=%d: success moved to %d", cap, stars, risk, res.Stars)
+					}
+					gain := gainFor(chanceFor(stars, risk, cap), risk)
+					if want := min(stars+gain, cap); res.Stars != want {
+						t.Errorf("cap=%d stars=%d risk=%d: gained to %d, want %d", cap, stars, risk, res.Stars, want)
+					}
+					if want := overflowCoinPer * max(0, stars+gain-cap); res.Jackpot != want {
+						t.Errorf("cap=%d stars=%d risk=%d: jackpot %d, want %d", cap, stars, risk, res.Jackpot, want)
+					}
+				} else if res.Stars != 0 {
+					t.Errorf("cap=%d stars=%d risk=%d: fail must reset to 0, got %d", cap, stars, risk, res.Stars)
 				}
-				if want := min(stars+gainFor(chanceFor(stars, risk), risk), maxStars); res.Stars != want {
-					t.Errorf("stars=%d risk=%d: gained to %d, want %d", stars, risk, res.Stars, want)
-				}
-			} else if res.Stars != 0 {
-				t.Errorf("stars=%d risk=%d: fail must reset to 0, got %d", stars, risk, res.Stars)
 			}
 		}
+	}
+}
+
+func TestMaxStarsFor(t *testing.T) {
+	for prestige, want := range map[int]int{0: 15, 1: 20, 2: 25, 3: 30, 9: 30} {
+		if got := maxStarsFor(prestige); got != want {
+			t.Errorf("maxStarsFor(%d) = %d, want %d", prestige, got, want)
+		}
+	}
+	// veteran zone rolls at the table's 5%% floor, never 0, until the cap
+	for stars := 15; stars < 30; stars++ {
+		if got := chanceFor(stars, 0, 30); got != 5 {
+			t.Errorf("chanceFor(%d, 0, 30) = %d, want 5", stars, got)
+		}
+	}
+	if got := chanceFor(30, 0, 30); got != 0 {
+		t.Errorf("chance at the cap must be 0, got %d", got)
 	}
 }
 
@@ -54,7 +77,7 @@ func TestGainForPaysTheOddsBack(t *testing.T) {
 
 func TestFirstClickAlwaysSucceeds(t *testing.T) {
 	for i := 0; i < 50; i++ {
-		if res := resolveClick(0, 0, skills{}); !res.Success || res.Stars != 1 {
+		if res := resolveClick(0, 0, skills{}, maxStars); !res.Success || res.Stars != 1 {
 			t.Fatalf("100%% click failed: %+v", res)
 		}
 	}
@@ -136,7 +159,7 @@ func TestStreakValue(t *testing.T) {
 func TestResolveClickShield(t *testing.T) {
 	fails := 0
 	for i := 0; i < 200; i++ {
-		res := resolveClick(14, 0, skills{Shield: true}) // 8% base: fails dominate
+		res := resolveClick(14, 0, skills{Shield: true}, maxStars) // 8% base: fails dominate
 		if res.Success {
 			if res.ShieldUsed {
 				t.Fatal("success must not consume a shield")
@@ -157,14 +180,14 @@ func TestHeadstartFloor(t *testing.T) {
 	sawFail := false
 	for i := 0; i < 100; i++ {
 		// risk 3 at ★14 → 2% odds: fails are near-certain
-		if res := resolveClick(14, maxRisk, skills{Headstart: 3}); !res.Success {
+		if res := resolveClick(14, maxRisk, skills{Headstart: 3}, maxStars); !res.Success {
 			sawFail = true
 			if res.Stars != 3 {
 				t.Fatalf("fail should land at the floor, got %d", res.Stars)
 			}
 		}
 		// below the floor a fail must never gain stars
-		if res := resolveClick(1, maxRisk, skills{Headstart: 3}); !res.Success && res.Stars > 1 {
+		if res := resolveClick(1, maxRisk, skills{Headstart: 3}, maxStars); !res.Success && res.Stars > 1 {
 			t.Fatalf("fail below floor gained stars: %d", res.Stars)
 		}
 	}
@@ -174,10 +197,10 @@ func TestHeadstartFloor(t *testing.T) {
 }
 
 func TestEffChance(t *testing.T) {
-	if got := effChanceFor(0, 0, charmCap); got != 100 {
+	if got := effChanceFor(0, 0, charmCap, maxStars); got != 100 {
 		t.Errorf("charm must cap at 100, got %d", got)
 	}
-	base, charmed := effChanceFor(9, 1, 0), effChanceFor(9, 1, charmCap)
+	base, charmed := effChanceFor(9, 1, 0, maxStars), effChanceFor(9, 1, charmCap, maxStars)
 	if charmed <= base {
 		t.Fatalf("charm should raise chance: %d vs %d", charmed, base)
 	}
@@ -238,7 +261,7 @@ func TestSkillStore(t *testing.T) {
 		t.Fatal("consume with a charge failed")
 	}
 
-	if err := s.savePlayerStars("a", 5); err != nil {
+	if err := s.savePlayerStars("a", 5, 0); err != nil {
 		t.Fatal(err)
 	}
 	if ok, _ := s.sellStreak("a", 15, 0, 5); !ok {
@@ -413,7 +436,7 @@ func TestPrestigeStore(t *testing.T) {
 	if _, err := s.getOrCreatePlayer("a"); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.savePlayerStars("a", maxStars); err != nil {
+	if err := s.savePlayerStars("a", maxStars, 0); err != nil {
 		t.Fatal(err)
 	}
 
@@ -430,7 +453,7 @@ func TestPrestigeStore(t *testing.T) {
 
 	// prestige is unbounded: prismatic laps keep counting past the skin cap
 	for i := 0; i < 4; i++ {
-		if err := s.savePlayerStars("a", maxStars); err != nil {
+		if err := s.savePlayerStars("a", maxStars, 0); err != nil {
 			t.Fatal(err)
 		}
 		if ok, _ := s.prestigeStreak("a", prestigeRewardFor(p.Prestige), 0, maxStars); !ok {
@@ -519,9 +542,9 @@ func TestNextRarity(t *testing.T) {
 func TestResolveClickTalisman(t *testing.T) {
 	// chance talisman burns on the click regardless of outcome, boosts only the
 	// roll, and must NOT shrink the risk-mode payout
-	base := gainFor(chanceFor(5, 1), 1)
+	base := gainFor(chanceFor(5, 1, maxStars), 1)
 	for i := 0; i < 100; i++ {
-		res := resolveClick(5, 1, skills{TalBonus: talRarePct})
+		res := resolveClick(5, 1, skills{TalBonus: talRarePct}, maxStars)
 		if !res.TalismanUsed {
 			t.Fatal("chance talisman must burn on any outcome")
 		}
@@ -532,7 +555,7 @@ func TestResolveClickTalisman(t *testing.T) {
 	// holo talisman saves before the purchased shield
 	sawFail := false
 	for i := 0; i < 200; i++ {
-		res := resolveClick(14, maxRisk, skills{TalShield: true, Shield: true})
+		res := resolveClick(14, maxRisk, skills{TalShield: true, Shield: true}, maxStars)
 		if !res.Success {
 			sawFail = true
 			if !res.TalismanUsed || res.ShieldUsed || res.Stars != 14 {
@@ -545,7 +568,7 @@ func TestResolveClickTalisman(t *testing.T) {
 	}
 	// prismatic doubles the gain, clamped at maxStars
 	for i := 0; i < 200; i++ {
-		res := resolveClick(0, 0, skills{TalDouble: true})
+		res := resolveClick(0, 0, skills{TalDouble: true}, maxStars)
 		if !res.Success {
 			t.Fatal("100% click failed")
 		}

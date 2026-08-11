@@ -6,6 +6,7 @@ export interface GameState {
   bestStars: number
   tier: Tier
   chance: number
+  maxStars: number
   quotaLeft: number
   quota: number
   nickname: string
@@ -42,6 +43,8 @@ export interface ClickResult {
   talismanUsed: boolean
   talismanTier: Tier | ''
   talismanRarity: Rarity | ''
+  jackpot: number
+  coins: number
 }
 
 export interface OwnedCard extends Card {
@@ -309,6 +312,7 @@ export async function click(risk: number): Promise<ClickResult | null> {
     state.value.shieldCharges = result.shieldCharges
     state.value.talismanTier = result.talismanTier
     state.value.talismanRarity = result.talismanRarity
+    state.value.coins = result.coins
     if (result.stars > state.value.bestStars) state.value.bestStars = result.stars
   }
   return result

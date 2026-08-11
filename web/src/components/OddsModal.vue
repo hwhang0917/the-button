@@ -8,7 +8,7 @@ const CHANCE_TABLE = [100, 90, 81, 72, 63, 55, 48, 41, 35, 29, 24, 19, 15, 11, 8
 
 // equations pre-rendered by KaTeX at build time (vite.config.ts); mirrors
 // game.go: effChanceFor + talisman bonus, rollPct, gainFor, fail chain
-const { chance: eqChance, roll: eqRoll, gain: eqGain, next: eqNext, fail: eqFail } = __ODDS_MATH__
+const { chance: eqChance, roll: eqRoll, gain: eqGain, next: eqNext, jackpot: eqJackpot, fail: eqFail } = __ODDS_MATH__
 </script>
 
 <template>
@@ -53,6 +53,7 @@ const { chance: eqChance, roll: eqRoll, gain: eqGain, next: eqNext, fail: eqFail
 
           <div class="odds-math" v-html="eqGain"></div>
           <div class="odds-math" v-html="eqNext"></div>
+          <div class="odds-math" v-html="eqJackpot"></div>
           <p class="text-xs text-slate-500">{{ t('oddsGainDesc') }}</p>
 
           <div class="odds-math" v-html="eqFail"></div>

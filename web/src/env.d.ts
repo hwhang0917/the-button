@@ -4,5 +4,6 @@ declare const __ODDS_MATH__: {
   roll: string
   gain: string
   next: string
+  jackpot: string
   fail: string
 }

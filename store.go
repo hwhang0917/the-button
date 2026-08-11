@@ -251,12 +251,15 @@ func (s *store) deletePlayer(token string) error {
 	return nil
 }
 
-func (s *store) savePlayerStars(token string, stars int) error {
+// savePlayerStars persists a roll result; coinDelta credits an overflow
+// jackpot in the same write.
+func (s *store) savePlayerStars(token string, stars, coinDelta int) error {
 	now := time.Now()
 	_, err := s.db.Exec(`UPDATE players SET stars = ?, updated_at = ?,
+		coins = coins + ?,
 		best_stars = MAX(best_stars, ?),
 		best_at = CASE WHEN ? > best_stars THEN ? ELSE best_at END
-		WHERE token = ?`, stars, now, stars, stars, now, token)
+		WHERE token = ?`, stars, now, coinDelta, stars, stars, now, token)
 	return err
 }
 
