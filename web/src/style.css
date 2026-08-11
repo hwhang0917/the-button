@@ -26,11 +26,13 @@ body::before {
     url('/wallpaper.jpg') center / cover no-repeat;
 }
 
+/* vertical offsets stay ≤0: downward translate extends the page bottom and
+   flashes a vertical scrollbar; upward overflow never does */
 @keyframes shake {
   0%, 100% { transform: translate(0, 0); }
-  20% { transform: translate(-10px, 4px); }
+  20% { transform: translate(-10px, -4px); }
   40% { transform: translate(9px, -5px); }
-  60% { transform: translate(-7px, 3px); }
+  60% { transform: translate(-7px, -3px); }
   80% { transform: translate(6px, -2px); }
 }
 .shake {
