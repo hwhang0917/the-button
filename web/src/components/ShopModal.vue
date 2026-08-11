@@ -12,11 +12,20 @@ import {
 } from '../useGame'
 import { t } from '../i18n'
 import { play, vibrate } from '../audio'
+import { burst } from '../particles'
+import { COIN_COLORS, useCoinCounter } from '../useCoinCounter'
 import LotteryModal from './LotteryModal.vue'
 
 defineEmits<{ close: [] }>()
 
 const ticket = ref<{ prize: number; coins: number } | null>(null)
+const coinEl = ref<HTMLElement | null>(null)
+const shownCoins = useCoinCounter(() => state.value?.coins ?? 0)
+
+function coinBurst(count: number) {
+  const r = coinEl.value?.getBoundingClientRect()
+  if (r) burst(r.left + r.width / 2, r.top + r.height / 2, COIN_COLORS, count)
+}
 
 async function onLottery() {
   const bought = await buyLottery()
@@ -69,9 +78,12 @@ const rows = computed(() => {
 
 async function onSell() {
   if (!sellValue.value) return
-  if (await sellStreak()) {
+  const gained = await sellStreak()
+  if (gained) {
     play('switch')
     vibrate([15, 20, 35]) // coins clattering in
+    // more coins, bigger shower
+    coinBurst(Math.min(30 + Math.floor(gained / 2), 90))
   }
 }
 
@@ -91,7 +103,7 @@ async function onBuy(key: SkillKey) {
     <div v-if="state" class="flex w-full max-w-sm flex-col gap-4 rounded-xl border border-slate-700 bg-slate-900 p-6">
       <h2 class="text-center text-lg font-bold text-slate-100">
         🛒 {{ t('shop') }}
-        <span class="ml-2 font-mono text-yellow-300">💰 {{ state.coins }}</span>
+        <span ref="coinEl" class="ml-2 font-mono text-yellow-300">💰 {{ shownCoins }}</span>
       </h2>
 
       <button

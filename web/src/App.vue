@@ -28,6 +28,7 @@ import 'driver.js/dist/driver.css'
 import { t, lang, toggleLang } from './i18n'
 import { play, preloadAudio, soundCount, vibrate } from './audio'
 import { burst, confetti } from './particles'
+import { COIN_COLORS, useCoinCounter } from './useCoinCounter'
 import { TIER_COLORS, type Rarity } from './tiers'
 import TheButton from './components/TheButton.vue'
 import StarRow from './components/StarRow.vue'
@@ -215,6 +216,8 @@ watch(modalOpen, (open) => {
   document.body.style.overflow = open ? 'hidden' : ''
 })
 
+const shownCoins = useCoinCounter(() => state.value?.coins ?? 0)
+
 const prestigeReward = computed(() =>
   state.value ? PRESTIGE_REWARDS[Math.min(state.value.prestige, PRESTIGE_REWARDS.length - 1)] : 0,
 )
@@ -226,6 +229,7 @@ async function onPrestige() {
   messageColor.value = 'text-fuchsia-300'
   play('win')
   confetti()
+  burst(window.innerWidth / 2, window.innerHeight / 2, COIN_COLORS, 80)
 }
 
 async function onDelete() {
@@ -500,7 +504,7 @@ onMounted(async () => {
             class="rounded-full border border-yellow-500/40 bg-yellow-400/10 px-4 py-1 text-sm font-bold text-yellow-300 hover:bg-yellow-400/20"
             @click="showShop = true; play('switch')"
           >
-            🛒 {{ t('shop') }} · 💰 {{ state.coins }}
+            🛒 {{ t('shop') }} · 💰 {{ shownCoins }}
           </button>
 
           <p id="tut-quota" class="text-sm text-slate-400">
