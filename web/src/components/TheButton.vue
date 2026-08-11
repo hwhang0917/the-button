@@ -3,7 +3,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Application, Container, Graphics, Sprite, Text, Texture } from 'pixi.js'
 import { TIER_COLORS, type Tier } from '../tiers'
 import { t, lang } from '../i18n'
-import { play } from '../audio'
+import { play, vibrate } from '../audio'
 
 const props = withDefaults(
   defineProps<{
@@ -241,7 +241,9 @@ onMounted(async () => {
     holdFrames = 0
     targetScale = 0.82
     play('click')
+    vibrate(22) // punchy press-down thunk (overrides the click sound's buzz)
     vy += 1.5
+    for (let i = 0; i < 6; i++) spawnEmber() // impact sparks
   })
   const release = () => {
     const charge = Math.min(holdFrames / CHARGE_FRAMES, 1)
@@ -250,9 +252,12 @@ onMounted(async () => {
     holdFrames = 0
     vScale += 0.06 + 0.2 * charge // bigger pop the longer the hold
     if (charge > 0.15) {
-      navigator.vibrate?.(Math.round(8 + 30 * charge))
-      for (let i = Math.round(charge * 14); i > 0; i--) spawnEmber()
+      vibrate(Math.round(8 + 30 * charge))
+    } else {
+      vibrate(6) // light tick even on a quick tap
     }
+    // release always sparks; a charged hold erupts
+    for (let i = Math.max(4, Math.round(charge * 20)); i > 0; i--) spawnEmber()
   }
   btn.on('pointerupoutside', release)
   btn.on('pointerup', () => {
