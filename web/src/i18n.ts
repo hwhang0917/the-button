@@ -33,6 +33,14 @@ const dict = {
     linkBadCode: '코드가 올바르지 않거나 만료되었어요',
     linkReplaceWarn: '연결하면 이 기기의 현재 진행 상황을 대체해요',
     linkHave: '연결 코드가 있나요?',
+    privacy: '개인정보 처리방침',
+    privacyBody:
+      '이 게임은 개인정보를 수집하지 않습니다.\n\n' +
+      '• 계정은 무작위 익명 토큰 쿠키(bt_token)가 전부입니다 — 이메일·비밀번호·실명 없이 동작해요.\n' +
+      '• 서버에는 진행 상황(별, 카드, 직접 정한 닉네임)만 이 토큰에 묶여 저장됩니다.\n' +
+      '• 게임 서버는 IP 주소를 저장하지 않습니다.\n' +
+      '• 유일한 개인정보 접점: 앞단의 리버스 프록시가 과도한 요청을 막기 위해 IP 기준 속도 제한을 수행하며, IP는 그곳에서만 잠시 처리됩니다.\n' +
+      '• 플레이어 메뉴의 "기록 삭제"로 언제든 모든 데이터를 지울 수 있습니다.',
     tier: { unrank: '언랭', bronze: '브론즈', silver: '실버', gold: '골드', platinum: '플래티넘', diamond: '다이아몬드' },
     rarity: { common: '커먼', rare: '레어', holo: '홀로', prismatic: '프리즘' },
   },
@@ -68,6 +76,14 @@ const dict = {
     linkBadCode: 'Code is wrong or expired',
     linkReplaceWarn: 'Linking replaces this device’s current progress',
     linkHave: 'Have a link code?',
+    privacy: 'Privacy policy',
+    privacyBody:
+      'This game collects no personal data.\n\n' +
+      '• Your account is nothing but a random anonymous token cookie (bt_token) — no email, password, or real name.\n' +
+      '• The server stores only game progress (stars, cards, a nickname you choose) keyed to that token.\n' +
+      '• The game server never stores IP addresses.\n' +
+      '• The only PII touchpoint: the reverse proxy in front rate-limits requests per IP, so IPs are briefly processed there and nowhere else.\n' +
+      '• "Delete data" in the player menu erases everything, any time.',
     tier: { unrank: 'Unrank', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum', diamond: 'Diamond' },
     rarity: { common: 'Common', rare: 'Rare', holo: 'Holo', prismatic: 'Prismatic' },
   },
