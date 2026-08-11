@@ -470,6 +470,12 @@ func (s *server) handleTalisman(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_card")
 		return
 	}
+	// arming is restricted to the tier you're standing in: the effect only
+	// fires in-tier anyway, and this keeps the mental model obvious
+	if tierFor(p.Stars) != body.Tier {
+		writeError(w, http.StatusConflict, "wrong_tier")
+		return
+	}
 	armed, err := s.store.armTalisman(p.Token, body.Tier, body.Rarity)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "db")

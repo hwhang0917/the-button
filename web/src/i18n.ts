@@ -57,6 +57,7 @@ const dict = {
     lotteryTiers: ['1등', '2등', '3등', '4등'],
     talismanUse: '부적으로 사용',
     talismanArmedHint: '이미 부적이 활성화되어 있어요 — 발동 후 다시 사용하세요',
+    talismanWrongTier: '현재 티어에서만 사용할 수 있어요',
     talismanSaved: '🃏 부적이 별을 지켰어요!',
     fuse: '합성',
     talEffect: {
@@ -163,6 +164,7 @@ const dict = {
     lotteryTiers: ['1st prize', '2nd prize', '3rd prize', '4th prize'],
     talismanUse: 'Use as talisman',
     talismanArmedHint: 'A talisman is already armed — use it up first',
+    talismanWrongTier: 'Not available in your current tier',
     talismanSaved: '🃏 The talisman saved your stars!',
     fuse: 'Fuse',
     talEffect: {

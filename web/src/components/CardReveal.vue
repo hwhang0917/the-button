@@ -12,6 +12,8 @@ defineEmits<{ close: []; arm: []; fuse: [] }>()
 
 const fuseTarget = computed(() => nextRarity(props.card.rarity))
 const talismanBusy = computed(() => state.value?.talismanTier !== '')
+// arming only works while standing in the card's tier (mirrors the server)
+const inTier = computed(() => state.value?.tier === props.card.tier)
 
 const el = ref<HTMLDivElement | null>(null)
 const vars = ref<Record<string, string>>({})
@@ -92,7 +94,7 @@ function onTouch(e: TouchEvent) {
       <div class="flex gap-2">
         <button
           class="flex-1 rounded-lg bg-amber-400 py-2 text-xs font-bold text-slate-900 hover:bg-amber-300 disabled:opacity-40"
-          :disabled="count < 1 || talismanBusy"
+          :disabled="count < 1 || talismanBusy || !inTier"
           @click="$emit('arm')"
         >
           {{ t('talismanUse') }}
@@ -106,7 +108,8 @@ function onTouch(e: TouchEvent) {
           {{ t('fuse') }} ×3 → {{ t('rarity')[fuseTarget] }}
         </button>
       </div>
-      <p v-if="talismanBusy" class="text-center text-[10px] text-slate-500">{{ t('talismanArmedHint') }}</p>
+      <p v-if="!inTier" class="text-center text-[10px] text-rose-400/80">{{ t('talismanWrongTier') }}</p>
+      <p v-else-if="talismanBusy" class="text-center text-[10px] text-slate-500">{{ t('talismanArmedHint') }}</p>
     </div>
 
     <button
