@@ -99,6 +99,21 @@ watch([ready, showNickname], async () => {
 })
 const menuOpen = ref(false)
 
+const modalOpen = computed(() =>
+  Boolean(
+    droppedCard.value ||
+      viewedCard.value ||
+      showNickname.value ||
+      showLink.value ||
+      showShop.value ||
+      showPrivacy.value,
+  ),
+)
+// modals cover the page; freeze the body so the background can't scroll under them
+watch(modalOpen, (open) => {
+  document.body.style.overflow = open ? 'hidden' : ''
+})
+
 async function onDelete() {
   menuOpen.value = false
   if (!confirm(t('deleteConfirm'))) return
