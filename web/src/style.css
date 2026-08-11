@@ -70,8 +70,9 @@ body::before {
   overflow: hidden;
 }
 /* plain alpha gradients, no mix-blend-mode: blend modes inside a transformed
-   rounded overflow-hidden card render half-clipped on Android compositors */
-.holo-card::after {
+   rounded overflow-hidden card render half-clipped on Android compositors.
+   commons stay plain: the shine starts at rare */
+.holo-card.rarity-rare::after {
   content: '';
   position: absolute;
   inset: 0;
