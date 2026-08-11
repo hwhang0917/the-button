@@ -87,6 +87,7 @@ function onPointerUp(e: PointerEvent) {
 <template>
   <div
     class="fixed inset-0 z-40 flex touch-none select-none flex-col items-center justify-center gap-6 overscroll-contain bg-black/80 backdrop-blur-sm"
+    @click.self="$emit('close')"
   >
     <p v-if="drop" class="text-xl font-black tracking-widest text-yellow-300">✨ {{ t('cardDrop') }}</p>
     <!-- rect is measured on this untransformed wrapper: measuring the tilted
