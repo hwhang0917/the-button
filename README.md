@@ -54,7 +54,7 @@ Telemetry is off unless `EVENTS_DIR` is set, and dropped (never blocking) under 
 - Successful clicks can drop collectible cards (common/rare/holo/prismatic) — tap owned cards to view them.
 - **Skill shop**: sell your streak for coins (triangle value — deep streaks pay disproportionately) and buy skills: 🛡️ protection scroll (keep stars on a fail, consumable), 🍀 lucky charm (+2% success/level, cap 5), 🚀 head start (resets land at ★level, cap 3), 🎟️ 복권 (15💰 scratch ticket, up to 500💰 at ~61% payback; winnings don't count toward rank points).
 - **Prestige**: at ★15 the plain sell is disabled — PRESTIGE instead converts the streak to 300/450/600 coins and promotes your star tier common → rare → holo → prismatic, then keeps counting forever (prismatic-2, prismatic-3, …) at 600 per lap. The leaderboard orders prestige tier → stars; coins are purely shop currency.
-- Unique nicknames (3–16 chars, `a-z 0-9 _`, case-insensitive), asked on first visit.
+- Unique nicknames (2–16 chars, 한글/`a-z 0-9 _`, case-insensitive), asked on first visit.
 - Accounts are anonymous cookie tokens — zero PII, no IPs stored. Link another device via a one-time 8-char code (player menu → link device, valid 10 minutes).
 
 ## Frontend niceties

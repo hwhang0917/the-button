@@ -25,7 +25,7 @@ const (
 	sessionCookie   = "bt_token"
 	sessionMaxAge   = 365 * 24 * 60 * 60
 	leaderboardSize = 20
-	minNicknameLen  = 3
+	minNicknameLen  = 2
 	maxNicknameLen  = 16
 	linkTTL         = 10 * time.Minute
 	linkCodeLen     = 8
@@ -36,8 +36,8 @@ const (
 // no I/O/0/1 lookalikes; exactly 32 chars so a byte &31 picks without modulo bias
 const linkAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
-// English letters, digits, and underscore only; mirrored in NicknameModal.vue.
-var nicknameRe = regexp.MustCompile(fmt.Sprintf(`^[A-Za-z0-9_]{%d,%d}$`, minNicknameLen, maxNicknameLen))
+// Hangul syllables, English letters, digits, and underscore; mirrored in NicknameModal.vue.
+var nicknameRe = regexp.MustCompile(fmt.Sprintf(`^[A-Za-z0-9_가-힣]{%d,%d}$`, minNicknameLen, maxNicknameLen))
 
 type config struct {
 	Port      string

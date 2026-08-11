@@ -353,6 +353,21 @@ func TestPrestigeStore(t *testing.T) {
 	}
 }
 
+func TestNicknameRule(t *testing.T) {
+	ok := []string{"철수", "김밥왕", "Hero_1", "버튼장인_99", "ab"}
+	for _, n := range ok {
+		if !nicknameRe.MatchString(n) {
+			t.Errorf("%q should be allowed", n)
+		}
+	}
+	bad := []string{"a", "한", "hello world", "ㅋㅋㅋ", "가나다라마바사아자차카타파하가나다"}
+	for _, n := range bad {
+		if nicknameRe.MatchString(n) {
+			t.Errorf("%q should be rejected", n)
+		}
+	}
+}
+
 func TestNicknameUnique(t *testing.T) {
 	s, err := openStore(t.TempDir() + "/test.db")
 	if err != nil {

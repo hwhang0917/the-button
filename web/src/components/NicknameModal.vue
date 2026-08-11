@@ -8,7 +8,7 @@ const name = ref('')
 const saving = ref(false)
 const taken = ref(false)
 // mirrors nicknameRe in main.go
-const valid = computed(() => /^[A-Za-z0-9_]{3,16}$/.test(name.value.trim()))
+const valid = computed(() => /^[A-Za-z0-9_가-힣]{2,16}$/.test(name.value.trim()))
 
 async function submit() {
   const n = name.value.trim()
