@@ -121,7 +121,13 @@ function onPointerUp(e: PointerEvent) {
             <span class="self-end rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-200">
               {{ t('rarity')[card.rarity] }}
             </span>
-            <span class="text-7xl drop-shadow-[0_0_20px_#facc15]">{{ CARD_EMOJI[card.tier][card.rarity] }}</span>
+            <!-- dark disc keeps the emoji legible: the color-dodge foil stays
+                 dark over dark pixels, so the art pops even on bright washes -->
+            <span
+              class="flex h-28 w-28 items-center justify-center rounded-full bg-black/40 text-7xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
+            >
+              {{ CARD_EMOJI[card.tier][card.rarity] }}
+            </span>
             <div class="text-center">
               <p class="text-lg font-black uppercase tracking-widest" :style="{ color: TIER_COLORS[card.tier] }">
                 {{ t('tier')[card.tier] }}

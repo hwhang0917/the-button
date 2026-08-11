@@ -117,10 +117,10 @@ body::before {
 .card-face {
   position: absolute;
   inset: 0;
-  backface-visibility: hidden;
-  /* backface-visibility silently fails on some compositors (the reference
-     css warns about this) — swap the faces outright at mid-rotation so the
-     hidden side can never show mirrored */
+  /* no backface-visibility here on purpose: where preserve-3d silently
+     flattens, it hides the back face permanently (blank card). The
+     visibility swap below picks the face instead, and the double mirror
+     (flipper 180° × back face 180°) reads correctly flattened or not */
   visibility: visible;
   transition: visibility 0s 0.2s;
 }
