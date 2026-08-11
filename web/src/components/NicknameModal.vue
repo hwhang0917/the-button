@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { saveNickname, loadLeaderboard } from '../useGame'
 import { t } from '../i18n'
 
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: []; link: [] }>()
 const name = ref('')
 const saving = ref(false)
 // mirrors nicknameRe in main.go
@@ -51,6 +51,13 @@ async function submit() {
           {{ t('save') }}
         </button>
       </div>
+      <button
+        type="button"
+        class="text-center text-xs text-slate-500 underline hover:text-slate-300"
+        @click="$emit('link')"
+      >
+        🔗 {{ t('linkHave') }}
+      </button>
     </form>
   </div>
 </template>

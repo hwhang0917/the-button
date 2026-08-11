@@ -30,12 +30,13 @@ func openStore(path string) (*store, error) {
 			best_at    TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL
 		);
-		CREATE TABLE IF NOT EXISTS quota (
-			ip_hash TEXT NOT NULL,
-			day     TEXT NOT NULL,
-			count   INTEGER NOT NULL DEFAULT 0,
-			PRIMARY KEY (ip_hash, day)
+		CREATE TABLE IF NOT EXISTS player_quota (
+			player_token TEXT NOT NULL,
+			day          TEXT NOT NULL,
+			count        INTEGER NOT NULL DEFAULT 0,
+			PRIMARY KEY (player_token, day)
 		);
+		DROP TABLE IF EXISTS quota; -- old IP-keyed quota; hourly data, disposable, no-op after first boot
 		CREATE TABLE IF NOT EXISTS cards (
 			player_token TEXT NOT NULL,
 			tier         TEXT NOT NULL,
@@ -71,13 +72,19 @@ func (s *store) getOrCreatePlayer(token string) (*player, error) {
 	return p, nil
 }
 
-// deletePlayer wipes the player row and cards; the per-IP quota is left alone.
+// deletePlayer wipes the player row, cards, and quota. A recreated account
+// starts with fresh clicks — accepted; there is nothing else to key quota on.
 func (s *store) deletePlayer(token string) error {
-	if _, err := s.db.Exec(`DELETE FROM cards WHERE player_token = ?`, token); err != nil {
-		return err
+	for _, q := range []string{
+		`DELETE FROM cards WHERE player_token = ?`,
+		`DELETE FROM player_quota WHERE player_token = ?`,
+		`DELETE FROM players WHERE token = ?`,
+	} {
+		if _, err := s.db.Exec(q, token); err != nil {
+			return err
+		}
 	}
-	_, err := s.db.Exec(`DELETE FROM players WHERE token = ?`, token)
-	return err
+	return nil
 }
 
 func (s *store) savePlayerStars(token string, stars int) error {
@@ -103,17 +110,17 @@ func bucketKey(t time.Time) string {
 
 // consumeQuota spends one click for the current hour, or errQuotaExceeded if none left.
 // Returns clicks remaining after the spend.
-func (s *store) consumeQuota(ipHash string, limit int) (int, error) {
-	res, err := s.db.Exec(`INSERT INTO quota (ip_hash, day, count) VALUES (?, ?, 1)
-		ON CONFLICT (ip_hash, day) DO UPDATE SET count = count + 1 WHERE count < ?`,
-		ipHash, bucketKey(time.Now()), limit)
+func (s *store) consumeQuota(token string, limit int) (int, error) {
+	res, err := s.db.Exec(`INSERT INTO player_quota (player_token, day, count) VALUES (?, ?, 1)
+		ON CONFLICT (player_token, day) DO UPDATE SET count = count + 1 WHERE count < ?`,
+		token, bucketKey(time.Now()), limit)
 	if err != nil {
 		return 0, err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		return 0, errQuotaExceeded
 	}
-	used, err := s.quotaUsed(ipHash)
+	used, err := s.quotaUsed(token)
 	if err != nil {
 		return 0, err
 	}
@@ -122,16 +129,16 @@ func (s *store) consumeQuota(ipHash string, limit int) (int, error) {
 
 // grantQuota hands back bonus clicks in the current hour bucket; the count may
 // go negative, which just means extra headroom until the next refill.
-func (s *store) grantQuota(ipHash string, n int) error {
-	_, err := s.db.Exec(`UPDATE quota SET count = count - ? WHERE ip_hash = ? AND day = ?`,
-		n, ipHash, bucketKey(time.Now()))
+func (s *store) grantQuota(token string, n int) error {
+	_, err := s.db.Exec(`UPDATE player_quota SET count = count - ? WHERE player_token = ? AND day = ?`,
+		n, token, bucketKey(time.Now()))
 	return err
 }
 
-func (s *store) quotaUsed(ipHash string) (int, error) {
+func (s *store) quotaUsed(token string) (int, error) {
 	var used int
-	err := s.db.QueryRow(`SELECT count FROM quota WHERE ip_hash = ? AND day = ?`,
-		ipHash, bucketKey(time.Now())).Scan(&used)
+	err := s.db.QueryRow(`SELECT count FROM player_quota WHERE player_token = ? AND day = ?`,
+		token, bucketKey(time.Now())).Scan(&used)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, nil
 	}

@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
 	"embed"
 	"encoding/hex"
 	"encoding/json"
@@ -10,12 +9,13 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 )
 
 //go:embed all:web/dist
@@ -23,10 +23,18 @@ var distFS embed.FS
 
 const (
 	sessionCookie   = "bt_token"
+	sessionMaxAge   = 365 * 24 * 60 * 60
 	leaderboardSize = 20
 	minNicknameLen  = 3
 	maxNicknameLen  = 16
+	linkTTL         = 10 * time.Minute
+	linkCodeLen     = 8
+	// failed claim attempts tolerated per minute before the endpoint locks
+	claimFailLimit = 20
 )
+
+// no I/O/0/1 lookalikes; exactly 32 chars so a byte &31 picks without modulo bias
+const linkAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
 // English letters, digits, and underscore only; mirrored in NicknameModal.vue.
 var nicknameRe = regexp.MustCompile(fmt.Sprintf(`^[A-Za-z0-9_]{%d,%d}$`, minNicknameLen, maxNicknameLen))
@@ -34,19 +42,14 @@ var nicknameRe = regexp.MustCompile(fmt.Sprintf(`^[A-Za-z0-9_]{%d,%d}$`, minNick
 type config struct {
 	Port   string
 	DBPath string
-	IPSalt string
-	Quota  int // clicks per IP per hour
+	Quota  int // clicks per player per hour
 }
 
 func loadConfig() config {
 	cfg := config{
 		Port:   envOr("PORT", "8080"),
 		DBPath: envOr("DB_PATH", "./thebutton.db"),
-		IPSalt: os.Getenv("IP_SALT"),
 		Quota:  5,
-	}
-	if cfg.IPSalt == "" {
-		log.Fatal("IP_SALT is required (used to hash client IPs for the hourly quota)")
 	}
 	if q := os.Getenv("QUOTA"); q != "" {
 		n, err := strconv.Atoi(q)
@@ -65,9 +68,20 @@ func envOr(key, fallback string) string {
 	return fallback
 }
 
+type linkCode struct {
+	token   string
+	expires time.Time
+}
+
 type server struct {
 	cfg   config
 	store *store
+
+	// ponytail: in-memory link codes — lost on restart, single process only
+	mu          sync.Mutex
+	linkCodes   map[string]linkCode
+	claimFails  int
+	claimWindow time.Time
 }
 
 func main() {
@@ -76,7 +90,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("open db: %v", err)
 	}
-	srv := &server{cfg: cfg, store: st}
+	srv := &server{cfg: cfg, store: st, linkCodes: map[string]linkCode{}}
 
 	dist, err := fs.Sub(distFS, "web/dist")
 	if err != nil {
@@ -88,12 +102,25 @@ func main() {
 	mux.HandleFunc("POST /api/click", srv.handleClick)
 	mux.HandleFunc("POST /api/nickname", srv.handleNickname)
 	mux.HandleFunc("DELETE /api/player", srv.handleDeletePlayer)
+	mux.HandleFunc("POST /api/link/new", srv.handleLinkNew)
+	mux.HandleFunc("POST /api/link/claim", srv.handleLinkClaim)
 	mux.HandleFunc("GET /api/leaderboard", srv.handleLeaderboard)
 	mux.HandleFunc("GET /api/cards", srv.handleCards)
 	mux.Handle("/", http.FileServerFS(dist))
 
 	log.Printf("the button listening on :%s", cfg.Port)
 	log.Fatal(http.ListenAndServe(":"+cfg.Port, mux))
+}
+
+func setTokenCookie(w http.ResponseWriter, token string, maxAge int) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookie,
+		Value:    token,
+		Path:     "/",
+		MaxAge:   maxAge,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
 }
 
 // sessionToken returns the player token from the cookie, minting one if absent.
@@ -106,27 +133,8 @@ func sessionToken(w http.ResponseWriter, r *http.Request) (string, error) {
 		return "", err
 	}
 	token := hex.EncodeToString(buf)
-	http.SetCookie(w, &http.Cookie{
-		Name:     sessionCookie,
-		Value:    token,
-		Path:     "/",
-		MaxAge:   365 * 24 * 60 * 60,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-	})
+	setTokenCookie(w, token, sessionMaxAge)
 	return token, nil
-}
-
-// ipHash hashes the client IP with the server salt; the raw IP is never stored.
-func (s *server) ipHash(r *http.Request) string {
-	ip := r.Header.Get("X-Forwarded-For")
-	if ip != "" {
-		ip = strings.TrimSpace(strings.Split(ip, ",")[0])
-	} else {
-		ip, _, _ = net.SplitHostPort(r.RemoteAddr)
-	}
-	sum := sha256.Sum256([]byte(s.cfg.IPSalt + ip))
-	return hex.EncodeToString(sum[:])
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -182,7 +190,7 @@ func (s *server) handleState(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	used, err := s.store.quotaUsed(s.ipHash(r))
+	used, err := s.store.quotaUsed(p.Token)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "db")
 		return
@@ -206,7 +214,7 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 		json.NewDecoder(r.Body).Decode(&body) // empty body = normal click
 	}
 	body.Risk = min(max(body.Risk, 0), maxRisk)
-	quotaLeft, err := s.store.consumeQuota(s.ipHash(r), s.cfg.Quota)
+	quotaLeft, err := s.store.consumeQuota(p.Token, s.cfg.Quota)
 	if errors.Is(err, errQuotaExceeded) {
 		writeError(w, http.StatusTooManyRequests, "quota_exceeded")
 		return
@@ -221,7 +229,7 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 	bonus := 0
 	if res.TierUp && tierRank(res.Tier) > tierRank(tierFor(p.BestStars)) {
 		bonus = tierRank(res.Tier)
-		if err := s.store.grantQuota(s.ipHash(r), bonus); err != nil {
+		if err := s.store.grantQuota(p.Token, bonus); err != nil {
 			writeError(w, http.StatusInternalServerError, "db")
 			return
 		}
@@ -278,15 +286,73 @@ func (s *server) handleDeletePlayer(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "db")
 		return
 	}
-	http.SetCookie(w, &http.Cookie{
-		Name:     sessionCookie,
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-	})
+	setTokenCookie(w, "", -1)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// handleLinkNew mints a one-time code another device can claim to log into
+// this account. One live code per player; expired entries are swept here.
+func (s *server) handleLinkNew(w http.ResponseWriter, r *http.Request) {
+	p, ok := s.player(w, r)
+	if !ok {
+		return
+	}
+	buf := make([]byte, linkCodeLen)
+	if _, err := rand.Read(buf); err != nil {
+		writeError(w, http.StatusInternalServerError, "rand")
+		return
+	}
+	code := make([]byte, linkCodeLen)
+	for i, b := range buf {
+		code[i] = linkAlphabet[b&31]
+	}
+	now := time.Now()
+	s.mu.Lock()
+	for c, lc := range s.linkCodes {
+		if now.After(lc.expires) || lc.token == p.Token {
+			delete(s.linkCodes, c)
+		}
+	}
+	s.linkCodes[string(code)] = linkCode{token: p.Token, expires: now.Add(linkTTL)}
+	s.mu.Unlock()
+	writeJSON(w, http.StatusOK, map[string]string{"code": string(code)})
+}
+
+// handleLinkClaim swaps this device's session cookie for the account behind a
+// valid code. The code is consumed on success.
+func (s *server) handleLinkClaim(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Code string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_json")
+		return
+	}
+	code := strings.ToUpper(strings.TrimSpace(body.Code))
+
+	s.mu.Lock()
+	now := time.Now()
+	if now.Sub(s.claimWindow) > time.Minute {
+		s.claimWindow, s.claimFails = now, 0
+	}
+	if s.claimFails >= claimFailLimit {
+		s.mu.Unlock()
+		writeError(w, http.StatusTooManyRequests, "slow_down")
+		return
+	}
+	lc, found := s.linkCodes[code]
+	if !found || now.After(lc.expires) {
+		// ponytail: global fail counter; per-IP buckets if lockouts ever matter
+		s.claimFails++
+		s.mu.Unlock()
+		writeError(w, http.StatusNotFound, "bad_code")
+		return
+	}
+	delete(s.linkCodes, code)
+	s.mu.Unlock()
+
+	setTokenCookie(w, lc.token, sessionMaxAge)
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
 func (s *server) handleLeaderboard(w http.ResponseWriter, r *http.Request) {

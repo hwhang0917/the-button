@@ -23,6 +23,7 @@ import Leaderboard from './components/Leaderboard.vue'
 import CardCollection from './components/CardCollection.vue'
 import CardReveal from './components/CardReveal.vue'
 import NicknameModal from './components/NicknameModal.vue'
+import LinkModal from './components/LinkModal.vue'
 
 const risk = ref(0)
 const busy = ref(false)
@@ -33,6 +34,7 @@ const messageColor = ref('text-slate-300')
 const droppedCard = ref<Card | null>(null)
 const viewedCard = ref<Card | null>(null)
 const showNickname = ref(false)
+const showLink = ref(false)
 const menuOpen = ref(false)
 
 async function onDelete() {
@@ -140,6 +142,12 @@ onMounted(() => {
                 ✏️ {{ t('changeName') }}
               </button>
               <button
+                class="block w-full px-3 py-2 text-left text-slate-300 hover:bg-slate-800"
+                @click="menuOpen = false; showLink = true"
+              >
+                🔗 {{ t('linkDevice') }}
+              </button>
+              <button
                 class="block w-full px-3 py-2 text-left text-rose-400 hover:bg-slate-800"
                 @click="onDelete"
               >
@@ -238,6 +246,11 @@ onMounted(() => {
 
     <CardReveal v-if="droppedCard" :card="droppedCard" @close="droppedCard = null" />
     <CardReveal v-if="viewedCard" :card="viewedCard" :drop="false" @close="viewedCard = null" />
-    <NicknameModal v-if="showNickname" @close="showNickname = false" />
+    <NicknameModal
+      v-if="showNickname"
+      @close="showNickname = false"
+      @link="showNickname = false; showLink = true"
+    />
+    <LinkModal v-if="showLink" @close="showLink = false" />
   </div>
 </template>

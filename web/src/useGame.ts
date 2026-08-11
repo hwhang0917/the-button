@@ -99,8 +99,25 @@ export async function saveNickname(name: string): Promise<boolean> {
   return res.ok
 }
 
-/** Wipes rank and cards server-side; the hourly click quota is per-IP and survives. */
+/** Wipes rank, cards, and quota server-side; the session cookie is cleared. */
 export async function deletePlayer(): Promise<boolean> {
   const res = await fetch('/api/player', { method: 'DELETE' })
+  return res.ok
+}
+
+/** Mints a one-time code (valid 10 min) another device can claim to log into this account. */
+export async function newLinkCode(): Promise<string | null> {
+  const res = await fetch('/api/link/new', { method: 'POST' })
+  if (!res.ok) return null
+  return (await res.json()).code
+}
+
+/** Swaps this device's session for the account behind the code. Caller reloads on true. */
+export async function claimLinkCode(code: string): Promise<boolean> {
+  const res = await fetch('/api/link/claim', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  })
   return res.ok
 }

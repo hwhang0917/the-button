@@ -73,25 +73,25 @@ func TestQuota(t *testing.T) {
 	}
 	const limit = 3
 	for i := 0; i < limit; i++ {
-		if _, err := s.consumeQuota("hash", limit); err != nil {
+		if _, err := s.consumeQuota("tok", limit); err != nil {
 			t.Fatalf("click %d rejected: %v", i+1, err)
 		}
 	}
-	if _, err := s.consumeQuota("hash", limit); err != errQuotaExceeded {
+	if _, err := s.consumeQuota("tok", limit); err != errQuotaExceeded {
 		t.Fatalf("expected quota exceeded, got %v", err)
 	}
-	if _, err := s.consumeQuota("otherhash", limit); err != nil {
-		t.Fatalf("other IP should have its own quota: %v", err)
+	if _, err := s.consumeQuota("othertok", limit); err != nil {
+		t.Fatalf("other player should have their own quota: %v", err)
 	}
-	if err := s.grantQuota("hash", 2); err != nil {
+	if err := s.grantQuota("tok", 2); err != nil {
 		t.Fatalf("grant failed: %v", err)
 	}
 	for i := 0; i < 2; i++ {
-		if _, err := s.consumeQuota("hash", limit); err != nil {
+		if _, err := s.consumeQuota("tok", limit); err != nil {
 			t.Fatalf("granted click %d rejected: %v", i+1, err)
 		}
 	}
-	if _, err := s.consumeQuota("hash", limit); err != errQuotaExceeded {
+	if _, err := s.consumeQuota("tok", limit); err != errQuotaExceeded {
 		t.Fatalf("expected quota exceeded after spending grant, got %v", err)
 	}
 }
