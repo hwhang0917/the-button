@@ -67,6 +67,11 @@ const buzz: Partial<Record<Sound, number | number[]>> = {
   win: [50, 50, 50, 50, 150],
 }
 
+// roll-result jingles are long: a fresh button press (click) or the next
+// result cancels the one still playing, so spam-rolling doesn't stack fanfares
+const resultSounds = new Set<Sound>(files.filter((f) => f === 'fail' || f === 'win' || f.startsWith('success_')))
+let playingResult: HTMLAudioElement | null = null
+
 export function play(name: Sound) {
   const pattern = buzz[name] ?? (name.startsWith('success_') ? 30 : undefined)
   if (pattern) navigator.vibrate?.(pattern)
@@ -75,5 +80,9 @@ export function play(name: Sound) {
   // clone so rapid replays overlap instead of cutting off
   const a = base.cloneNode() as HTMLAudioElement
   a.volume = 0.6
+  if (name === 'click' || resultSounds.has(name)) {
+    playingResult?.pause()
+    playingResult = resultSounds.has(name) ? a : null
+  }
   a.play().catch(() => {}) // autoplay restrictions before first interaction
 }
