@@ -71,6 +71,19 @@ function onMove(e: MouseEvent) {
 function onTouch(e: TouchEvent) {
   tilt(e.touches[0].clientX, e.touches[0].clientY)
 }
+
+// flip on tap/click via pointer events: a native click never fires on touch
+// here (touchstart.prevent cancels its synthesis) and can be swallowed by
+// tiny drags while tilting
+let down = { x: 0, y: 0, t: 0 }
+function onPointerDown(e: PointerEvent) {
+  down = { x: e.clientX, y: e.clientY, t: e.timeStamp }
+}
+function onPointerUp(e: PointerEvent) {
+  if (Math.hypot(e.clientX - down.x, e.clientY - down.y) < 10 && e.timeStamp - down.t < 500) {
+    flipped.value = !flipped.value
+  }
+}
 </script>
 
 <template>
@@ -91,13 +104,14 @@ function onTouch(e: TouchEvent) {
       @touchstart.prevent="onTouch"
       @touchmove.prevent="onTouch"
       @touchend="vars = {}"
+      @pointerdown="onPointerDown"
+      @pointerup="onPointerUp"
     >
       <div class="flipper card-in" :class="{ flipped }">
         <div
           class="card card-tilt h-80 w-56"
           :data-rarity="DATA_RARITY[card.rarity]"
           :style="vars"
-          @click="flipped = !flipped"
         >
           <div
             class="card-face flex flex-col items-center justify-between rounded-2xl border-2 p-5"
@@ -130,18 +144,18 @@ function onTouch(e: TouchEvent) {
         </div>
       </div>
     </div>
-    <div v-if="!drop" class="flex w-64 flex-col gap-2">
+    <div v-if="!drop" class="flex w-72 flex-col gap-2">
+      <button
+        class="rounded-lg bg-amber-400 py-2 text-xs font-bold text-slate-900 hover:bg-amber-300 disabled:opacity-40"
+        :disabled="count < 1 || talismanBusy || !inTier"
+        @click="$emit('arm')"
+      >
+        {{ t('talismanUse') }}
+      </button>
       <div class="flex gap-2">
         <button
-          class="flex-1 rounded-lg bg-amber-400 py-2 text-xs font-bold text-slate-900 hover:bg-amber-300 disabled:opacity-40"
-          :disabled="count < 1 || talismanBusy || !inTier"
-          @click="$emit('arm')"
-        >
-          {{ t('talismanUse') }}
-        </button>
-        <button
           v-if="fuseTarget"
-          class="flex-1 rounded-lg border border-fuchsia-400/60 py-2 text-xs font-bold text-fuchsia-300 hover:bg-fuchsia-500/20 disabled:opacity-40"
+          class="flex-1 whitespace-nowrap rounded-lg border border-fuchsia-400/60 py-2 text-xs font-bold text-fuchsia-300 hover:bg-fuchsia-500/20 disabled:opacity-40"
           :disabled="count < 3"
           @click="$emit('fuse')"
         >
@@ -149,7 +163,7 @@ function onTouch(e: TouchEvent) {
         </button>
         <button
           v-if="defuseTarget"
-          class="flex-1 rounded-lg border border-slate-500/60 py-2 text-xs font-bold text-slate-400 hover:bg-slate-700/40 disabled:opacity-40"
+          class="flex-1 whitespace-nowrap rounded-lg border border-slate-500/60 py-2 text-xs font-bold text-slate-400 hover:bg-slate-700/40 disabled:opacity-40"
           :disabled="count < 1"
           @click="$emit('defuse')"
         >
