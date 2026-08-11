@@ -1,7 +1,6 @@
 services:
   thebutton:
     image: ghcr.io/hwhang0917/the-button:latest
-    build: .
     ports:
       - "8080:8080"
     environment:
