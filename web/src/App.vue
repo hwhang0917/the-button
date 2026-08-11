@@ -29,6 +29,7 @@ const flashing = ref(false)
 const message = ref('')
 const messageColor = ref('text-slate-300')
 const droppedCard = ref<Card | null>(null)
+const viewedCard = ref<Card | null>(null)
 const showNickname = ref(false)
 const nicknameDismissed = ref(false)
 
@@ -158,7 +159,7 @@ onMounted(() => {
         </template>
       </div>
 
-      <CardCollection class="order-3" :key="cards.length" />
+      <CardCollection class="order-3" :key="cards.length" @view="viewedCard = $event" />
     </main>
 
     <img
@@ -169,6 +170,7 @@ onMounted(() => {
     />
 
     <CardReveal v-if="droppedCard" :card="droppedCard" @close="droppedCard = null" />
+    <CardReveal v-if="viewedCard" :card="viewedCard" :drop="false" @close="viewedCard = null" />
     <NicknameModal
       v-if="showNickname"
       @close="showNickname = false; nicknameDismissed = true"

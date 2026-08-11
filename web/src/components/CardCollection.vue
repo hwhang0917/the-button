@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { cards } from '../useGame'
+import { cards, type Card } from '../useGame'
 import { RARITIES, TIERS, TIER_COLORS } from '../tiers'
 import { t } from '../i18n'
+
+defineEmits<{ view: [Card] }>()
 
 const owned = computed(() => {
   const m = new Map<string, number>()
@@ -22,7 +24,8 @@ const owned = computed(() => {
           v-for="rarity in RARITIES"
           :key="rarity"
           class="relative flex aspect-[3/4] flex-col items-center justify-center rounded-md border text-center"
-          :class="owned.has(`${tier}/${rarity}`) ? '' : 'border-slate-800 bg-slate-950/60'"
+          :class="owned.has(`${tier}/${rarity}`) ? 'cursor-pointer' : 'border-slate-800 bg-slate-950/60'"
+          @click="owned.has(`${tier}/${rarity}`) && $emit('view', { tier, rarity })"
           :style="
             owned.has(`${tier}/${rarity}`)
               ? {

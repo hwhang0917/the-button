@@ -4,7 +4,7 @@ import type { Card } from '../useGame'
 import { TIER_COLORS } from '../tiers'
 import { t } from '../i18n'
 
-defineProps<{ card: Card }>()
+withDefaults(defineProps<{ card: Card; drop?: boolean }>(), { drop: true })
 defineEmits<{ close: [] }>()
 
 const el = ref<HTMLDivElement | null>(null)
@@ -28,7 +28,7 @@ function onMove(e: MouseEvent) {
     class="fixed inset-0 z-40 flex flex-col items-center justify-center gap-6 bg-black/80 backdrop-blur-sm"
     @click.self="$emit('close')"
   >
-    <p class="text-xl font-black tracking-widest text-yellow-300">✨ {{ t('cardDrop') }}</p>
+    <p v-if="drop" class="text-xl font-black tracking-widest text-yellow-300">✨ {{ t('cardDrop') }}</p>
     <div
       ref="el"
       class="holo-card card-in flex h-80 w-56 flex-col items-center justify-between rounded-2xl border-2 p-5"
