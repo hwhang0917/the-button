@@ -28,6 +28,18 @@ body::before {
 
 /* vertical offsets stay ≤0: downward translate extends the page bottom and
    flashes a vertical scrollbar; upward overflow never does */
+/* reduced motion: collapse every css animation/transition; canvas and pixi
+   effects check the same media query in js */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @keyframes shake {
   0%, 100% { transform: translate(0, 0); }
   20% { transform: translate(-10px, -4px); }

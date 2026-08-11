@@ -15,6 +15,9 @@ let ctx: CanvasRenderingContext2D | null = null
 const particles: Particle[] = []
 let running = false
 
+/** Live media query — pixi/canvas effects check .matches per use. */
+export const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
+
 function ensureCanvas() {
   if (canvas) return
   canvas = document.createElement('canvas')
@@ -62,6 +65,7 @@ function pump() {
 }
 
 export function burst(x: number, y: number, colors: string[], count = 60) {
+  if (reducedMotion.matches) return
   ensureCanvas()
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2
@@ -82,6 +86,7 @@ export function burst(x: number, y: number, colors: string[], count = 60) {
 }
 
 export function confetti() {
+  if (reducedMotion.matches) return
   ensureCanvas()
   const colors = ['#f43f5e', '#facc15', '#4ade80', '#38bdf8', '#a78bfa', '#fb923c']
   for (let i = 0; i < 220; i++) {

@@ -4,6 +4,7 @@ import { Application, Container, Graphics, Sprite, Text, Texture } from 'pixi.js
 import { TIER_COLORS, type Tier } from '../tiers'
 import { t, lang } from '../i18n'
 import { play, vibrate } from '../audio'
+import { reducedMotion } from '../particles'
 
 const props = withDefaults(
   defineProps<{
@@ -145,6 +146,7 @@ function applyDisabled() {
 }
 
 function spawnEmber() {
+  if (reducedMotion.matches) return
   const sp = freeSprites.pop() ?? new Sprite(emberTex)
   sp.anchor.set(0.5)
   sp.blendMode = 'add'
@@ -295,19 +297,21 @@ onMounted(async () => {
       charge = Math.min(holdFrames / CHARGE_FRAMES, 1)
       targetScale = 0.82 - 0.12 * charge
     }
-    const tremX = (Math.random() - 0.5) * 3 * charge
-    const tremY = (Math.random() - 0.5) * 3 * charge
+    // reduced motion: press response stays, ambient wobble/orbits/embers stop
+    const m = reducedMotion.matches ? 0 : 1
+    const tremX = (Math.random() - 0.5) * 3 * charge * m
+    const tremY = (Math.random() - 0.5) * 3 * charge * m
 
-    const breath = 1 + Math.sin(phase * 1.7) * 0.012
+    const breath = 1 + Math.sin(phase * 1.7) * 0.012 * m
     btn.scale.set(scale * breath)
     btn.position.set(SIZE / 2 + ox + tremX, SIZE / 2 + oy + tremY)
-    btn.rotation = Math.sin(phase * 0.9) * 0.02
+    btn.rotation = Math.sin(phase * 0.9) * 0.02 * m
 
     // consumable auras: counter-rotating pulsing rings while attached
-    auraShield.rotation = phase * 0.6
-    auraShield.alpha = props.shield ? 0.4 + Math.sin(phase * 2.2) * 0.2 : 0
-    auraTalisman.rotation = -phase * 0.8
-    auraTalisman.alpha = props.talisman ? 0.4 + Math.sin(phase * 2.6 + 1) * 0.2 : 0
+    auraShield.rotation = phase * 0.6 * m
+    auraShield.alpha = props.shield ? 0.4 + Math.sin(phase * 2.2) * 0.2 * m : 0
+    auraTalisman.rotation = -phase * 0.8 * m
+    auraTalisman.alpha = props.talisman ? 0.4 + Math.sin(phase * 2.6 + 1) * 0.2 * m : 0
 
     // prestige flair: hue-cycled rim/halo for holo+, orbiting sparkles for prismatic
     if (props.prestige >= 2) {
@@ -316,7 +320,7 @@ onMounted(async () => {
       rim.tint = tint
       halo.tint = tint
     }
-    if (props.prestige >= 3) {
+    if (props.prestige >= 3 && m > 0) {
       if (!sparkles.length) {
         for (let i = 0; i < 4; i++) {
           const sp = new Sprite(emberTex)
