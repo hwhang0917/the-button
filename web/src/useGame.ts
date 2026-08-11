@@ -56,8 +56,14 @@ export async function loadCards() {
   cards.value = await (await fetch('/api/cards')).json()
 }
 
-/** Risk levels 0 (safe) to 3: odds ÷(level+1), star gain ×(level+1). Mirrors maxRisk in game.go. */
+/** Risk levels 0 (safe) to 3: odds ÷(level+1); success pays the odds back. Mirrors game.go. */
 export const MAX_RISK = 3
+
+/** Stars won on success — round(100/chance), matching gainFor in game.go. */
+export function gainFor(chance: number, risk: number): number {
+  if (risk <= 0 || chance <= 0) return 1
+  return Math.max(1, Math.round(100 / chance))
+}
 
 /** Returns the roll result, or null when out of quota / already won. */
 export async function click(risk: number): Promise<ClickResult | null> {

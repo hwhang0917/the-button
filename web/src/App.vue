@@ -4,6 +4,7 @@ import {
   cards,
   click,
   deletePlayer,
+  gainFor,
   loadCards,
   loadLeaderboard,
   loadState,
@@ -58,6 +59,7 @@ const disabled = computed(
 const displayChance = computed(() =>
   state.value ? Math.floor(state.value.chance / (risk.value + 1)) : 0,
 )
+const displayGain = computed(() => gainFor(displayChance.value, risk.value))
 
 function setRisk(lvl: number) {
   risk.value = lvl
@@ -199,7 +201,7 @@ onMounted(() => {
               </div>
             </div>
             <span class="h-4 text-xs whitespace-nowrap text-slate-500">
-              <template v-if="risk">{{ t('chance') }} 1/{{ risk + 1 }} · ★+{{ risk + 1 }}</template>
+              <template v-if="risk">{{ t('chance') }} 1/{{ risk + 1 }} · ★+{{ displayGain }}</template>
             </span>
           </div>
 

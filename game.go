@@ -10,8 +10,8 @@ var chanceTable = [16]int{100, 90, 81, 72, 63, 55, 48, 41, 35, 29, 24, 19, 15, 1
 
 const maxStars = 15
 
-// Risk levels 0 (safe) through maxRisk: odds ÷(level+1), star gain and
-// card-drop odds ×(level+1). Level 1 matches the old on/off risky mode.
+// Risk levels 0 (safe) through maxRisk: odds ÷(level+1), card-drop odds
+// ×(level+1), and the star payout scales with the odds taken (see gainFor).
 const maxRisk = 3
 
 const baseCardDropPct = 5
@@ -44,6 +44,16 @@ func chanceFor(stars, risk int) int {
 		return 0
 	}
 	return chanceTable[stars] / (risk + 1)
+}
+
+// gainFor is the stars won on a successful click: safe mode always steps one
+// star; risk mode pays the odds back — round(100/chance) — so the longer the
+// shot, the bigger the payout, and the expected gain per click stays flat.
+func gainFor(chance, risk int) int {
+	if risk <= 0 || chance <= 0 {
+		return 1
+	}
+	return max(1, (100+chance/2)/chance)
 }
 
 // rollPct returns true with pct% probability, using crypto/rand so results
@@ -112,13 +122,11 @@ type clickResult struct {
 // then roll the card drop on success.
 func resolveClick(stars, risk int) clickResult {
 	prevTier := tierFor(stars)
-	if !rollPct(chanceFor(stars, risk)) {
+	chance := chanceFor(stars, risk)
+	if !rollPct(chance) {
 		return clickResult{Stars: 0, Tier: tierFor(0)}
 	}
-	newStars := stars + 1 + risk
-	if newStars > maxStars {
-		newStars = maxStars
-	}
+	newStars := min(stars+gainFor(chance, risk), maxStars)
 	return clickResult{
 		Success: true,
 		Stars:   newStars,

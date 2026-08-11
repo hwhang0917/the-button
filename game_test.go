@@ -21,12 +21,29 @@ func TestResolveClickBounds(t *testing.T) {
 				if res.Stars <= stars || res.Stars > maxStars {
 					t.Errorf("stars=%d risk=%d: success moved to %d", stars, risk, res.Stars)
 				}
-				if want := min(stars+1+risk, maxStars); res.Stars != want {
+				if want := min(stars+gainFor(chanceFor(stars, risk), risk), maxStars); res.Stars != want {
 					t.Errorf("stars=%d risk=%d: gained to %d, want %d", stars, risk, res.Stars, want)
 				}
 			} else if res.Stars != 0 {
 				t.Errorf("stars=%d risk=%d: fail must reset to 0, got %d", stars, risk, res.Stars)
 			}
+		}
+	}
+}
+
+func TestGainForPaysTheOddsBack(t *testing.T) {
+	cases := []struct{ chance, risk, want int }{
+		{100, 0, 1}, // safe mode is always one star
+		{5, 0, 1},
+		{50, 1, 2},
+		{33, 2, 3},
+		{25, 3, 4},
+		{10, 1, 10},
+		{1, 3, 100},
+	}
+	for _, c := range cases {
+		if got := gainFor(c.chance, c.risk); got != c.want {
+			t.Errorf("gainFor(%d, %d) = %d, want %d", c.chance, c.risk, got, c.want)
 		}
 	}
 }
