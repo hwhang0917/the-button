@@ -22,6 +22,10 @@ const dict = {
     later: '나중에',
     best: '최고 기록',
     empty: '아직 아무도 없어요',
+    changeName: '이름 변경',
+    deleteData: '기록 삭제',
+    deleteConfirm:
+      '정말 삭제할까요? 랭킹 기록과 카드가 모두 사라집니다. 남은 시도 횟수는 IP 기준이라 초기화되지 않아요.',
     tier: { unrank: '언랭', bronze: '브론즈', silver: '실버', gold: '골드', platinum: '플래티넘', diamond: '다이아몬드' },
     rarity: { common: '커먼', rare: '레어', holo: '홀로', prismatic: '프리즘' },
   },
@@ -46,6 +50,10 @@ const dict = {
     later: 'Later',
     best: 'Best',
     empty: 'Nobody yet',
+    changeName: 'Change name',
+    deleteData: 'Delete data',
+    deleteConfirm:
+      'Really delete? Your rank and cards will be gone. Remaining clicks are per-IP and will NOT reset.',
     tier: { unrank: 'Unrank', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum', diamond: 'Diamond' },
     rarity: { common: 'Common', rare: 'Rare', holo: 'Holo', prismatic: 'Prismatic' },
   },

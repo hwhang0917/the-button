@@ -82,6 +82,7 @@ func main() {
 	mux.HandleFunc("GET /api/state", srv.handleState)
 	mux.HandleFunc("POST /api/click", srv.handleClick)
 	mux.HandleFunc("POST /api/nickname", srv.handleNickname)
+	mux.HandleFunc("DELETE /api/player", srv.handleDeletePlayer)
 	mux.HandleFunc("GET /api/leaderboard", srv.handleLeaderboard)
 	mux.HandleFunc("GET /api/cards", srv.handleCards)
 	mux.Handle("/", http.FileServerFS(dist))
@@ -254,6 +255,27 @@ func (s *server) handleNickname(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"nickname": name})
+}
+
+func (s *server) handleDeletePlayer(w http.ResponseWriter, r *http.Request) {
+	c, err := r.Cookie(sessionCookie)
+	if err != nil {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	if err := s.store.deletePlayer(c.Value); err != nil {
+		writeError(w, http.StatusInternalServerError, "db")
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookie,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *server) handleLeaderboard(w http.ResponseWriter, r *http.Request) {

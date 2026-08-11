@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import {
   cards,
   click,
+  deletePlayer,
   loadCards,
   loadLeaderboard,
   loadState,
@@ -32,6 +33,13 @@ const droppedCard = ref<Card | null>(null)
 const viewedCard = ref<Card | null>(null)
 const showNickname = ref(false)
 const nicknameDismissed = ref(false)
+const menuOpen = ref(false)
+
+async function onDelete() {
+  menuOpen.value = false
+  if (!confirm(t('deleteConfirm'))) return
+  if (await deletePlayer()) location.reload()
+}
 
 const now = ref(Date.now())
 
@@ -113,13 +121,33 @@ onMounted(() => {
     <header class="flex items-center justify-between px-4 py-3 sm:px-8">
       <h1 class="text-xl font-black tracking-[0.2em] text-white sm:text-2xl">THE BUTTON</h1>
       <div class="flex items-center gap-3">
-        <button
-          v-if="state?.nickname"
-          class="max-w-32 truncate text-sm text-slate-400 hover:text-slate-200"
-          @click="showNickname = true"
-        >
-          {{ state.nickname }}
-        </button>
+        <div v-if="state?.nickname" class="relative">
+          <button
+            class="max-w-32 truncate text-sm text-slate-400 hover:text-slate-200"
+            @click="menuOpen = !menuOpen"
+          >
+            {{ state.nickname }} ▾
+          </button>
+          <template v-if="menuOpen">
+            <div class="fixed inset-0 z-40" @click="menuOpen = false"></div>
+            <div
+              class="absolute right-0 top-full z-50 mt-1 w-40 overflow-hidden rounded-lg border border-slate-700 bg-slate-900 text-sm shadow-xl"
+            >
+              <button
+                class="block w-full px-3 py-2 text-left text-slate-300 hover:bg-slate-800"
+                @click="menuOpen = false; showNickname = true"
+              >
+                ✏️ {{ t('changeName') }}
+              </button>
+              <button
+                class="block w-full px-3 py-2 text-left text-rose-400 hover:bg-slate-800"
+                @click="onDelete"
+              >
+                🗑️ {{ t('deleteData') }}
+              </button>
+            </div>
+          </template>
+        </div>
         <button
           class="rounded-full border border-slate-600 px-3 py-1 text-xs font-bold text-slate-300 hover:bg-slate-800"
           @click="toggleLang(); play('switch')"

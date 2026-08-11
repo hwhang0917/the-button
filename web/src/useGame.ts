@@ -89,6 +89,12 @@ export async function saveNickname(name: string): Promise<boolean> {
   return res.ok
 }
 
+/** Wipes rank and cards server-side; the hourly click quota is per-IP and survives. */
+export async function deletePlayer(): Promise<boolean> {
+  const res = await fetch('/api/player', { method: 'DELETE' })
+  return res.ok
+}
+
 /** Arcade rule: prompt for a name only when the current streak would rank. */
 export function wouldRank(stars: number): boolean {
   if (stars < 1) return false

@@ -71,6 +71,15 @@ func (s *store) getOrCreatePlayer(token string) (*player, error) {
 	return p, nil
 }
 
+// deletePlayer wipes the player row and cards; the per-IP quota is left alone.
+func (s *store) deletePlayer(token string) error {
+	if _, err := s.db.Exec(`DELETE FROM cards WHERE player_token = ?`, token); err != nil {
+		return err
+	}
+	_, err := s.db.Exec(`DELETE FROM players WHERE token = ?`, token)
+	return err
+}
+
 func (s *store) savePlayerStars(token string, stars int) error {
 	now := time.Now()
 	_, err := s.db.Exec(`UPDATE players SET stars = ?, updated_at = ?,
