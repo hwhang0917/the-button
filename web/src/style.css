@@ -96,43 +96,13 @@ body::before {
   --background-y: 50%;
 }
 
-/* flip + tilt live on separate wrappers so each keeps its own duration:
-   a 0.5s flip would make the tilt float, a 0.1s tilt would snap the flip */
+/* pointer tilt under the scene's perspective */
 .flip-scene {
   perspective: 600px;
 }
-.flipper {
-  transform-style: preserve-3d;
-  /* springy overshoot, like the reference's clicked-card pop */
-  transition: transform 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-.flipper.flipped {
-  transform: rotateY(180deg);
-}
 .card-tilt {
-  transform-style: preserve-3d;
   transform: rotateX(var(--ry, 0deg)) rotateY(var(--rx, 0deg));
   transition: transform 0.1s ease-out;
-}
-.card-face {
-  position: absolute;
-  inset: 0;
-  /* no backface-visibility here on purpose: where preserve-3d silently
-     flattens, it hides the back face permanently (blank card). The
-     visibility swap below picks the face instead, and the double mirror
-     (flipper 180° × back face 180°) reads correctly flattened or not */
-  visibility: visible;
-  transition: visibility 0s 0.2s;
-}
-.card-back {
-  transform: rotateY(180deg);
-  visibility: hidden;
-}
-.flipper.flipped .card-face {
-  visibility: hidden;
-}
-.flipper.flipped .card-back {
-  visibility: visible;
 }
 /* poke-holo active pop: clicking the card springs it up like the reference's
    clicked card */

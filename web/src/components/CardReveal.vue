@@ -21,7 +21,7 @@ const wrongTierHint = computed(() =>
 
 const el = ref<HTMLDivElement | null>(null)
 const vars = ref<Record<string, string>>({})
-const flipped = ref(false)
+const active = ref(false)
 
 // our rarities → the reference's data-rarity values its CSS keys off
 const DATA_RARITY: Record<string, string> = {
@@ -47,12 +47,9 @@ function tilt(clientX: number, clientY: number) {
   const r = el.value!.getBoundingClientRect()
   const px = (clientX - r.left) / r.width
   const py = (clientY - r.top) / r.height
-  // the 180° flip mirrors both tilt axes, so invert to keep the card
-  // leaning toward the pointer
-  const s = flipped.value ? -1 : 1
   vars.value = {
-    '--rx': `${(px - 0.5) * 24 * s}deg`,
-    '--ry': `${(0.5 - py) * 24 * s}deg`,
+    '--rx': `${(px - 0.5) * 24}deg`,
+    '--ry': `${(0.5 - py) * 24}deg`,
     // the reference's pointer/background spring vars, same names and ranges
     '--pointer-x': `${px * 100}%`,
     '--pointer-y': `${py * 100}%`,
@@ -73,16 +70,16 @@ function onTouch(e: TouchEvent) {
   tilt(e.touches[0].clientX, e.touches[0].clientY)
 }
 
-// flip on tap/click via pointer events: a native click never fires on touch
-// here (touchstart.prevent cancels its synthesis) and can be swallowed by
-// tiny drags while tilting
+// zoom pop on tap/click via pointer events: a native click never fires on
+// touch here (touchstart.prevent cancels its synthesis) and can be swallowed
+// by tiny drags while tilting
 let down = { x: 0, y: 0, t: 0 }
 function onPointerDown(e: PointerEvent) {
   down = { x: e.clientX, y: e.clientY, t: e.timeStamp }
 }
 function onPointerUp(e: PointerEvent) {
   if (Math.hypot(e.clientX - down.x, e.clientY - down.y) < 10 && e.timeStamp - down.t < 500) {
-    flipped.value = !flipped.value
+    active.value = !active.value
   }
 }
 </script>
@@ -99,7 +96,7 @@ function onPointerUp(e: PointerEvent) {
     <div
       ref="el"
       class="flip-scene"
-      :class="{ active: flipped }"
+      :class="{ active }"
       @mousemove="onMove"
       @mouseleave="vars = {}"
       @touchstart.prevent="onTouch"
@@ -108,46 +105,32 @@ function onPointerUp(e: PointerEvent) {
       @pointerdown="onPointerDown"
       @pointerup="onPointerUp"
     >
-      <div class="flipper card-in" :class="{ flipped }">
-        <div
-          class="card card-tilt h-80 w-56"
-          :data-rarity="DATA_RARITY[card.rarity]"
-          :style="vars"
+      <div
+        class="card card-tilt card-in relative flex h-80 w-56 flex-col items-center justify-between rounded-2xl border-2 p-5"
+        :data-rarity="DATA_RARITY[card.rarity]"
+        :style="{ ...vars, ...faceStyle }"
+      >
+        <span class="self-end rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-200">
+          {{ t('rarity')[card.rarity] }}
+        </span>
+        <!-- dark disc keeps the emoji legible: the color-dodge foil stays
+             dark over dark pixels, so the art pops even on bright washes -->
+        <span
+          class="flex h-24 w-24 items-center justify-center rounded-full bg-black/40 text-6xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
         >
-          <div
-            class="card-face flex flex-col items-center justify-between rounded-2xl border-2 p-5"
-            :style="faceStyle"
-          >
-            <span class="self-end rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-200">
-              {{ t('rarity')[card.rarity] }}
-            </span>
-            <!-- dark disc keeps the emoji legible: the color-dodge foil stays
-                 dark over dark pixels, so the art pops even on bright washes -->
-            <span
-              class="flex h-28 w-28 items-center justify-center rounded-full bg-black/40 text-7xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
-            >
-              {{ CARD_EMOJI[card.tier][card.rarity] }}
-            </span>
-            <div class="text-center">
-              <p class="text-lg font-black uppercase tracking-widest" :style="{ color: TIER_COLORS[card.tier] }">
-                {{ t('tier')[card.tier] }}
-              </p>
-              <p class="text-[10px] uppercase tracking-[0.3em] text-slate-400">the button</p>
-            </div>
-            <div class="card__shine"></div>
-            <div class="card__glare"></div>
-          </div>
-          <div
-            class="card-face card-back flex flex-col items-center justify-center gap-4 rounded-2xl border-2 p-5"
-            :style="faceStyle"
-          >
-            <p class="text-4xl">🃏</p>
-            <p class="text-center text-sm font-bold leading-relaxed text-slate-100">
-              {{ t('talEffect')[card.rarity] }}
-            </p>
-            <p class="text-[10px] uppercase tracking-[0.3em] text-slate-400">the button</p>
-          </div>
+          {{ CARD_EMOJI[card.tier][card.rarity] }}
+        </span>
+        <p class="rounded-lg bg-black/30 px-2 py-1 text-center text-[11px] leading-snug text-slate-100">
+          🃏 {{ t('talEffect')[card.rarity] }}
+        </p>
+        <div class="text-center">
+          <p class="text-lg font-black uppercase tracking-widest" :style="{ color: TIER_COLORS[card.tier] }">
+            {{ t('tier')[card.tier] }}
+          </p>
+          <p class="text-[10px] uppercase tracking-[0.3em] text-slate-400">the button</p>
         </div>
+        <div class="card__shine"></div>
+        <div class="card__glare"></div>
       </div>
     </div>
     <div v-if="!drop" class="flex w-72 flex-col gap-2">
