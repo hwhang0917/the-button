@@ -16,25 +16,16 @@ import TierBadge from './TierBadge.vue'
         :key="e.nickname + i"
         class="flex items-center gap-2 rounded-md px-2 py-1 text-sm"
         :class="i === 0 ? 'bg-yellow-400/10' : 'odd:bg-slate-800/40'"
-        :title="`💰${e.earned}`"
       >
         <span class="w-6 text-right font-mono text-slate-500">{{ i + 1 }}</span>
         <span class="flex-1 truncate font-medium text-slate-200">{{ e.nickname }}</span>
-        <img
-          v-if="e.prestige > 0"
-          src="/star.png"
-          alt=""
-          class="h-4 w-4"
-          :class="`star-r${e.prestige}`"
-        />
-        <TierBadge :tier="e.tier" small />
-        <span
-          v-if="e.prestige >= 3 && e.stars >= 15"
-          class="text-right font-mono text-xs text-yellow-500/80"
-        >
-          💰{{ e.earned }}
+        <span class="flex items-center" v-if="e.prestige > 0">
+          <img src="/star.png" alt="" class="h-4 w-4" :class="`star-r${Math.min(e.prestige, 3)}`" />
+          <!-- prismatic laps keep counting: prestige 4 = prismatic-2 -->
+          <span v-if="e.prestige > 3" class="font-mono text-[10px] text-fuchsia-300">-{{ e.prestige - 2 }}</span>
         </span>
-        <span v-else class="w-10 text-right font-mono text-yellow-400">★{{ e.stars }}</span>
+        <TierBadge :tier="e.tier" small />
+        <span class="w-10 text-right font-mono text-yellow-400">★{{ e.stars }}</span>
       </li>
     </ol>
     <p class="mt-3 text-center text-[10px] text-slate-600">{{ t('rankOrder') }}</p>

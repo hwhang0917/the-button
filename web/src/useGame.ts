@@ -47,7 +47,6 @@ export interface RankEntry {
   bestStars: number
   tier: Tier
   prestige: number
-  earned: number
 }
 
 export const state = ref<GameState | null>(null)
@@ -98,7 +97,8 @@ export const SKILLS: Record<SkillKey, { prices: number[]; cap: number }> = {
 
 /** Mirrors prestigeRewards in game.go; index = current prestige (capped). */
 export const PRESTIGE_REWARDS = [300, 450, 600]
-export const PRESTIGE_CAP = 3
+/** Last distinct star skin (prismatic); prestige itself is unbounded. */
+export const PRESTIGE_SKIN_CAP = 3
 
 /** Converts a maxed streak to points + a star-tier promotion. Returns points gained. */
 export async function prestigeStreak(): Promise<number | null> {

@@ -32,16 +32,16 @@ var (
 	headstartPrices = [headstartCap]int{20, 100, 400}
 )
 
-// Prestige: a maxed streak converts to points and promotes the player's star
-// tier along the card-rarity ladder (0=common .. 3=prismatic). Repeats at the
-// cap still pay the top reward; rank orders prestige, then stars, then points.
-const prestigeCap = 3
+// Prestige: a maxed streak converts to coins and promotes the player's star
+// tier along the card-rarity ladder (0=common, 1=rare, 2=holo, 3+=prismatic).
+// Levels are unbounded — prestige 4 is prismatic-2, 5 is prismatic-3, and so
+// on — and rank orders prestige, then stars. Coins are shop currency only.
+var prestigeRewards = [3]int{300, 450, 600}
 
-var prestigeRewards = [prestigeCap]int{300, 450, 600}
-
-// prestigeRewardFor is the payout for prestiging from the given level.
+// prestigeRewardFor is the payout for prestiging from the given level; every
+// prismatic lap pays the top reward.
 func prestigeRewardFor(prestige int) int {
-	return prestigeRewards[min(prestige, prestigeCap-1)]
+	return prestigeRewards[min(prestige, len(prestigeRewards)-1)]
 }
 
 // Lottery: a 15-coin scratch ticket. The outcome is rolled server-side at

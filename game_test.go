@@ -304,9 +304,6 @@ func TestPlayLottery(t *testing.T) {
 	if p.Coins != 20-lotteryPrice+30 {
 		t.Fatalf("coins = %d after win", p.Coins)
 	}
-	if p.Earned != 0 {
-		t.Fatalf("lottery winnings must not feed earned, got %d", p.Earned)
-	}
 }
 
 func TestPrestigeReward(t *testing.T) {
@@ -337,12 +334,12 @@ func TestPrestigeStore(t *testing.T) {
 		t.Fatal("stale stars pin must reject a repeat prestige")
 	}
 	p, _ := s.getOrCreatePlayer("a")
-	if p.Prestige != 1 || p.Coins != 300 || p.Earned != 300 || p.Stars != 0 {
+	if p.Prestige != 1 || p.Coins != 300 || p.Stars != 0 {
 		t.Fatalf("after prestige: %+v", p)
 	}
 
-	// climb to the cap and one repeat beyond: level stays 3, payout still lands
-	for i := 0; i < 3; i++ {
+	// prestige is unbounded: prismatic laps keep counting past the skin cap
+	for i := 0; i < 4; i++ {
 		if err := s.savePlayerStars("a", maxStars); err != nil {
 			t.Fatal(err)
 		}
@@ -351,21 +348,8 @@ func TestPrestigeStore(t *testing.T) {
 		}
 		p, _ = s.getOrCreatePlayer("a")
 	}
-	if p.Prestige != prestigeCap {
-		t.Fatalf("prestige must cap at %d, got %d", prestigeCap, p.Prestige)
-	}
-
-	// selling also accumulates lifetime points
-	if err := s.savePlayerStars("a", 5); err != nil {
-		t.Fatal(err)
-	}
-	before := p.Earned
-	if ok, _ := s.sellStreak("a", 15, 0, 5); !ok {
-		t.Fatal("sell failed")
-	}
-	p, _ = s.getOrCreatePlayer("a")
-	if p.Earned != before+15 {
-		t.Fatalf("earned = %d, want %d", p.Earned, before+15)
+	if p.Prestige != 5 {
+		t.Fatalf("prestige must keep counting, got %d", p.Prestige)
 	}
 }
 

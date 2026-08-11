@@ -370,7 +370,7 @@ func (s *server) handlePrestige(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"coins":    p.Coins + reward,
 		"gained":   reward,
-		"prestige": min(p.Prestige+1, prestigeCap),
+		"prestige": p.Prestige + 1,
 		"stars":    floor,
 		"tier":     tierFor(floor),
 		"chance":   chanceFor(floor, 0),
