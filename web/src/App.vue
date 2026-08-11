@@ -177,26 +177,28 @@ onMounted(() => {
 
           <p class="h-6 text-center font-bold" :class="messageColor">{{ message }}</p>
 
-          <div class="flex items-center gap-3 select-none">
-            <span class="text-sm font-bold" :class="risk ? 'text-rose-400' : 'text-slate-400'">
-              🔥 {{ t('riskIt') }}
-            </span>
-            <div class="flex overflow-hidden rounded-full border border-slate-700">
-              <button
-                v-for="lvl in MAX_RISK + 1"
-                :key="lvl - 1"
-                class="px-3 py-1 text-xs font-bold transition-colors"
-                :class="
-                  risk === lvl - 1
-                    ? lvl === 1 ? 'bg-slate-600 text-white' : 'bg-rose-600 text-white'
-                    : 'text-slate-400 hover:bg-slate-800'
-                "
-                @click="setRisk(lvl - 1)"
-              >
-                {{ lvl === 1 ? 'OFF' : '🔥'.repeat(lvl - 1) }}
-              </button>
+          <div class="flex flex-col items-center gap-1 select-none">
+            <div class="flex items-center gap-2 whitespace-nowrap">
+              <span class="text-sm font-bold" :class="risk ? 'text-rose-400' : 'text-slate-400'">
+                🔥 {{ t('riskIt') }}
+              </span>
+              <div class="flex overflow-hidden rounded-full border border-slate-700">
+                <button
+                  v-for="lvl in MAX_RISK + 1"
+                  :key="lvl - 1"
+                  class="px-2.5 py-1 text-xs font-bold transition-colors sm:px-3"
+                  :class="
+                    risk === lvl - 1
+                      ? lvl === 1 ? 'bg-slate-600 text-white' : 'bg-rose-600 text-white'
+                      : 'text-slate-400 hover:bg-slate-800'
+                  "
+                  @click="setRisk(lvl - 1)"
+                >
+                  {{ lvl === 1 ? 'OFF' : '🔥'.repeat(lvl - 1) }}
+                </button>
+              </div>
             </div>
-            <span class="h-4 text-xs text-slate-500">
+            <span class="h-4 text-xs whitespace-nowrap text-slate-500">
               <template v-if="risk">{{ t('chance') }} 1/{{ risk + 1 }} · ★+{{ risk + 1 }}</template>
             </span>
           </div>
