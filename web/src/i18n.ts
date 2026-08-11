@@ -65,6 +65,12 @@ const dict = {
       holo: '부적: 해당 티어에서 실패해도 별 유지 (1회)',
       prismatic: '부적: 해당 티어에서 다음 성공 시 별 2배',
     },
+    oddsTitle: '확률 계산법',
+    oddsVars: 's = 현재 별, r = 리스크 레벨(0~3), c = 행운 부적 레벨, T = 부적 보너스(+5/+10)',
+    oddsChanceDesc: '리스크는 기본 확률을 나누고, 행운 부적과 카드 부적은 그 위에 더해져요 (최대 100%).',
+    oddsRollDesc: '서버가 crypto/rand로 0~99 정수를 뽑아 P 미만이면 성공 — 클라이언트는 결과만 그립니다.',
+    oddsGainDesc: '같은 P가 보상도 결정해요. 확률을 올리면 보상은 줄어들어 공짜 이득은 없습니다.',
+    oddsFailDesc: '실패 시: 홀로 부적 → 보호 주문서 → 출발 부스트 바닥 순으로 적용됩니다.',
     privacy: '개인정보 처리방침',
     privacyBody:
       '이 게임은 개인정보를 수집하지 않습니다.\n\n' +
@@ -157,6 +163,12 @@ const dict = {
       holo: 'Talisman: keep your stars on a fail in this tier (once)',
       prismatic: 'Talisman: double stars on your next success in this tier',
     },
+    oddsTitle: 'How the odds are computed',
+    oddsVars: 's = current stars, r = risk level (0-3), c = lucky charm level, T = talisman bonus (+5/+10)',
+    oddsChanceDesc: 'Risk divides the base chance; charm and card talismans add on top (capped at 100%).',
+    oddsRollDesc: 'The server draws an integer 0-99 with crypto/rand; below P wins — the client only renders.',
+    oddsGainDesc: 'The same P sets the payout: raising your chance lowers the reward, so there is no free lunch.',
+    oddsFailDesc: 'On a fail: holo talisman, then protection scroll, then the head-start floor.',
     privacy: 'Privacy policy',
     privacyBody:
       'This game collects no personal data.\n\n' +

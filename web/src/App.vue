@@ -17,7 +17,7 @@ import {
   state,
   type Card,
 } from './useGame'
-import { nextTick, watch } from 'vue'
+import { defineAsyncComponent, nextTick, watch } from 'vue'
 import { driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
 import { t, lang, toggleLang } from './i18n'
@@ -33,6 +33,8 @@ import CardReveal from './components/CardReveal.vue'
 import NicknameModal from './components/NicknameModal.vue'
 import LinkModal from './components/LinkModal.vue'
 import ShopModal from './components/ShopModal.vue'
+// katex is heavy: load it only when the odds popup is actually opened
+const OddsModal = defineAsyncComponent(() => import('./components/OddsModal.vue'))
 
 const IMAGE_ASSETS = ['/wallpaper.jpg', '/star.png', '/stich.gif']
 const AUDIO_PRELOAD_TIMEOUT_MS = 4000
@@ -144,6 +146,7 @@ function closeLink() {
 }
 const showPrivacy = ref(false)
 const showShop = ref(false)
+const showOdds = ref(false)
 const tutorialPending = ref(!localStorage.getItem(TUTORIAL_SEEN_KEY))
 
 // first visit: run the tour once the game is ready and the nickname modal is out of the way
@@ -162,7 +165,8 @@ const modalOpen = computed(() =>
       showNickname.value ||
       showLink.value ||
       showShop.value ||
-      showPrivacy.value,
+      showPrivacy.value ||
+      showOdds.value,
   ),
 )
 // modals cover the page; freeze the body so the background can't scroll under them
@@ -384,7 +388,14 @@ onMounted(async () => {
             🃏 {{ t('tier')[state.talismanTier] }}·{{ t('rarity')[state.talismanRarity as Rarity] }}
           </span>
 
-          <div id="tut-button">
+          <div id="tut-button" class="relative">
+            <button
+              class="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-600 bg-slate-900/70 text-[10px] font-bold text-slate-400 hover:text-slate-200"
+              :aria-label="t('oddsTitle')"
+              @click="showOdds = true; play('switch')"
+            >
+              ℹ
+            </button>
             <TheButton
               :tier="state.tier"
               :chance="displayChance"
@@ -501,6 +512,7 @@ onMounted(async () => {
     />
     <LinkModal v-if="showLink" @close="closeLink" />
     <ShopModal v-if="showShop" @close="showShop = false" />
+    <OddsModal v-if="showOdds" @close="showOdds = false" />
     <div
       v-if="showPrivacy"
       class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"

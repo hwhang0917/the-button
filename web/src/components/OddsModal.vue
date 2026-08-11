@@ -1,0 +1,85 @@
+<script setup lang="ts">
+import katex from 'katex'
+import 'katex/dist/katex.min.css'
+import { t } from '../i18n'
+
+defineEmits<{ close: [] }>()
+
+const CHANCE_TABLE = [100, 90, 81, 72, 63, 55, 48, 41, 35, 29, 24, 19, 15, 11, 8, 5]
+
+const tex = (s: string) =>
+  katex.renderToString(s, { displayMode: true, throwOnError: false })
+
+// mirrors game.go: effChanceFor + talisman bonus, rollPct, gainFor, fail chain
+const eqChance = tex(
+  String.raw`P = \min\!\left(100,\; \left\lfloor \tfrac{\mathrm{base}(s)}{r+1} \right\rfloor + 2c + T\right)`,
+)
+const eqRoll = tex(
+  String.raw`\text{success} \iff U < P,\qquad U \sim \mathcal{U}\{0,\dots,99\}`,
+)
+const eqGain = tex(
+  String.raw`\mathrm{gain} = \begin{cases} 1 & r = 0 \\ \max\!\bigl(1,\ \operatorname{round}(100/P)\bigr) & r \ge 1 \end{cases}`,
+)
+const eqNext = tex(
+  String.raw`s' = \min\!\bigl(s + \mathrm{gain}\cdot D,\ 15\bigr),\qquad D = \begin{cases} 2 & \text{prismatic talisman} \\ 1 & \text{else} \end{cases}`,
+)
+const eqFail = tex(
+  String.raw`s' = \begin{cases} s & \text{holo talisman or }🛡 \\ \min(\mathrm{headstart},\, s) & \text{else} \end{cases}`,
+)
+</script>
+
+<template>
+  <div
+    class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+    @click.self="$emit('close')"
+  >
+    <div class="flex max-h-[85vh] w-full max-w-md flex-col gap-3 overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 p-6">
+      <h2 class="text-center text-lg font-bold text-slate-100">📐 {{ t('oddsTitle') }}</h2>
+
+      <p class="text-xs text-slate-400">{{ t('oddsVars') }}</p>
+
+      <div class="overflow-x-auto rounded-lg bg-slate-800/60 p-2">
+        <table class="mx-auto text-center font-mono text-[10px] text-slate-300">
+          <tr>
+            <td class="pr-2 text-slate-500">★s</td>
+            <td v-for="(_, i) in CHANCE_TABLE" :key="i" class="px-1 text-slate-500">{{ i }}</td>
+          </tr>
+          <tr>
+            <td class="pr-2 text-slate-500">base</td>
+            <td v-for="(v, i) in CHANCE_TABLE" :key="i" class="px-1 text-yellow-300">{{ v }}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="odds-math" v-html="eqChance"></div>
+      <p class="text-xs text-slate-500">{{ t('oddsChanceDesc') }}</p>
+
+      <div class="odds-math" v-html="eqRoll"></div>
+      <p class="text-xs text-slate-500">{{ t('oddsRollDesc') }}</p>
+
+      <div class="odds-math" v-html="eqGain"></div>
+      <div class="odds-math" v-html="eqNext"></div>
+      <p class="text-xs text-slate-500">{{ t('oddsGainDesc') }}</p>
+
+      <div class="odds-math" v-html="eqFail"></div>
+      <p class="text-xs text-slate-500">{{ t('oddsFailDesc') }}</p>
+
+      <button
+        class="rounded-lg border border-slate-600 py-2 text-sm text-slate-300 hover:bg-slate-800"
+        @click="$emit('close')"
+      >
+        OK
+      </button>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.odds-math {
+  overflow-x: auto;
+  color: #e2e8f0;
+}
+.odds-math :deep(.katex-display) {
+  margin: 0.25rem 0;
+}
+</style>
