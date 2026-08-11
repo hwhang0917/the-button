@@ -27,6 +27,7 @@ export interface ClickResult {
   card: Card | null
   chance: number
   quotaLeft: number
+  bonusClicks: number
 }
 
 export interface OwnedCard extends Card {

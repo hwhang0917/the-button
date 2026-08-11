@@ -75,6 +75,7 @@ async function onPress(center: { x: number; y: number }) {
 
   if (result.success) {
     message.value = result.win ? t('win') : result.tierUp ? t('tierUp') : t('success')
+    if (result.bonusClicks > 0) message.value += ` 🎟️+${result.bonusClicks}`
     messageColor.value = result.win ? 'text-yellow-300' : 'text-emerald-400'
     burst(center.x, center.y, [TIER_COLORS[result.tier], '#ffffff', '#facc15'], result.tierUp ? 120 : 60)
     play(result.win ? 'win' : `success_${result.tier}`)

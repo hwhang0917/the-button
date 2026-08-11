@@ -28,6 +28,17 @@ var tiers = []struct {
 	{"diamond", 13},
 }
 
+// tierRank is a tier's position on the ladder: 0 for unrank up to 5 for
+// diamond. Doubles as the bonus-click reward for reaching it.
+func tierRank(name string) int {
+	for i, t := range tiers {
+		if t.Name == name {
+			return i
+		}
+	}
+	return 0
+}
+
 func tierFor(stars int) string {
 	name := tiers[0].Name
 	for _, t := range tiers {

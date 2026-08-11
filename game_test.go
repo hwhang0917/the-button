@@ -83,4 +83,23 @@ func TestQuota(t *testing.T) {
 	if _, err := s.consumeQuota("otherhash", limit); err != nil {
 		t.Fatalf("other IP should have its own quota: %v", err)
 	}
+	if err := s.grantQuota("hash", 2); err != nil {
+		t.Fatalf("grant failed: %v", err)
+	}
+	for i := 0; i < 2; i++ {
+		if _, err := s.consumeQuota("hash", limit); err != nil {
+			t.Fatalf("granted click %d rejected: %v", i+1, err)
+		}
+	}
+	if _, err := s.consumeQuota("hash", limit); err != errQuotaExceeded {
+		t.Fatalf("expected quota exceeded after spending grant, got %v", err)
+	}
+}
+
+func TestTierRankLadder(t *testing.T) {
+	for want, name := range []string{"unrank", "bronze", "silver", "gold", "platinum", "diamond"} {
+		if got := tierRank(name); got != want {
+			t.Errorf("tierRank(%q) = %d, want %d", name, got, want)
+		}
+	}
 }

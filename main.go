@@ -211,6 +211,16 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	res := resolveClick(p.Stars, body.Risk)
+	// first time above the lifetime-best tier: refund clicks equal to the new
+	// tier's rank (gating on best stops farming the free bronze click)
+	bonus := 0
+	if res.TierUp && tierRank(res.Tier) > tierRank(tierFor(p.BestStars)) {
+		bonus = tierRank(res.Tier)
+		if err := s.store.grantQuota(s.ipHash(r), bonus); err != nil {
+			writeError(w, http.StatusInternalServerError, "db")
+			return
+		}
+	}
 	if err := s.store.savePlayerStars(p.Token, res.Stars); err != nil {
 		writeError(w, http.StatusInternalServerError, "db")
 		return
@@ -223,9 +233,10 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, struct {
 		clickResult
-		Chance    int `json:"chance"`
-		QuotaLeft int `json:"quotaLeft"`
-	}{res, chanceFor(res.Stars, 0), quotaLeft})
+		Chance      int `json:"chance"`
+		QuotaLeft   int `json:"quotaLeft"`
+		BonusClicks int `json:"bonusClicks"`
+	}{res, chanceFor(res.Stars, 0), quotaLeft + bonus, bonus})
 }
 
 func (s *server) handleNickname(w http.ResponseWriter, r *http.Request) {

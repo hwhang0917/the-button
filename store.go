@@ -120,6 +120,14 @@ func (s *store) consumeQuota(ipHash string, limit int) (int, error) {
 	return limit - used, nil
 }
 
+// grantQuota hands back bonus clicks in the current hour bucket; the count may
+// go negative, which just means extra headroom until the next refill.
+func (s *store) grantQuota(ipHash string, n int) error {
+	_, err := s.db.Exec(`UPDATE quota SET count = count - ? WHERE ip_hash = ? AND day = ?`,
+		n, ipHash, bucketKey(time.Now()))
+	return err
+}
+
 func (s *store) quotaUsed(ipHash string) (int, error) {
 	var used int
 	err := s.db.QueryRow(`SELECT count FROM quota WHERE ip_hash = ? AND day = ?`,
