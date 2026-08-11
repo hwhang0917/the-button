@@ -131,6 +131,19 @@ func (s *store) consumeShield(token string) (bool, error) {
 	return n == 1, err
 }
 
+// playLottery settles a ticket in one statement: price out, prize in. The
+// prize deliberately never touches `earned` — gross winnings would let bulk
+// tickets buy leaderboard rank while losing coins net.
+func (s *store) playLottery(token string, price, prize int) (bool, error) {
+	res, err := s.db.Exec(`UPDATE players SET coins = coins - ? + ?, updated_at = ?
+		WHERE token = ? AND coins >= ?`, price, prize, time.Now(), token, price)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n == 1, err
+}
+
 // sellStreak converts the streak to coins; the stars pin rejects a stale sell
 // when another request already changed the streak. `earned` tracks lifetime
 // points for ranking, so spending coins never drops a player on the board.

@@ -44,6 +44,34 @@ func prestigeRewardFor(prestige int) int {
 	return prestigeRewards[min(prestige, prestigeCap-1)]
 }
 
+// Lottery: a 15-coin scratch ticket. The outcome is rolled server-side at
+// purchase; the client-side scratching is theater over a printed ticket.
+// EV ≈ 9.2 (61% payback) — a fun coin sink, never an income source.
+const lotteryPrice = 15
+
+var lotteryTable = []struct{ prize, permille int }{
+	{500, 5},   // 1등 0.5%
+	{100, 20},  // 2등 2%
+	{30, 80},   // 3등 8%
+	{15, 150},  // 4등 15% (money back)
+}
+
+// rollLottery returns the prize for one ticket, 0 for 꽝.
+func rollLottery() int {
+	n, err := rand.Int(rand.Reader, big.NewInt(1000))
+	if err != nil {
+		return 0 // broken entropy source: house wins
+	}
+	roll := int(n.Int64())
+	for _, e := range lotteryTable {
+		if roll < e.permille {
+			return e.prize
+		}
+		roll -= e.permille
+	}
+	return 0
+}
+
 type skills struct {
 	Charm     int
 	Headstart int

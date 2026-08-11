@@ -104,6 +104,7 @@ func main() {
 	mux.HandleFunc("DELETE /api/player", srv.handleDeletePlayer)
 	mux.HandleFunc("POST /api/sell", srv.handleSell)
 	mux.HandleFunc("POST /api/prestige", srv.handlePrestige)
+	mux.HandleFunc("POST /api/lottery", srv.handleLottery)
 	mux.HandleFunc("POST /api/buy", srv.handleBuy)
 	mux.HandleFunc("POST /api/link/new", srv.handleLinkNew)
 	mux.HandleFunc("POST /api/link/claim", srv.handleLinkClaim)
@@ -373,6 +374,29 @@ func (s *server) handlePrestige(w http.ResponseWriter, r *http.Request) {
 		"stars":    floor,
 		"tier":     tierFor(floor),
 		"chance":   chanceFor(floor, 0),
+	})
+}
+
+// handleLottery sells one scratch ticket: roll first, settle atomically, and
+// let the client scratch the pre-decided result off at its leisure.
+func (s *server) handleLottery(w http.ResponseWriter, r *http.Request) {
+	p, ok := s.player(w, r)
+	if !ok {
+		return
+	}
+	prize := rollLottery()
+	bought, err := s.store.playLottery(p.Token, lotteryPrice, prize)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "db")
+		return
+	}
+	if !bought {
+		writeError(w, http.StatusConflict, "cannot_buy")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]int{
+		"prize": prize,
+		"coins": p.Coins - lotteryPrice + prize,
 	})
 }
 

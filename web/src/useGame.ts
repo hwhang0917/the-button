@@ -118,6 +118,19 @@ export async function prestigeStreak(): Promise<number | null> {
   return d.gained
 }
 
+/** Mirrors lotteryPrice in game.go. */
+export const LOTTERY_PRICE = 15
+
+/** Buys a scratch ticket. Patches state with the prize still hidden (price
+ * deducted only) — the LotteryModal applies `coins` after the reveal. */
+export async function buyLottery(): Promise<{ prize: number; coins: number } | null> {
+  const res = await fetch('/api/lottery', { method: 'POST' })
+  if (!res.ok) return null
+  const d = await res.json()
+  if (state.value) state.value.coins = d.coins - d.prize
+  return d
+}
+
 /** Sells the whole streak; returns coins gained, or null when rejected. */
 export async function sellStreak(): Promise<number | null> {
   const res = await fetch('/api/sell', { method: 'POST' })

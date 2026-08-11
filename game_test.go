@@ -253,6 +253,62 @@ func TestSkillStore(t *testing.T) {
 	}
 }
 
+func TestLotteryTable(t *testing.T) {
+	total := 0
+	for i, e := range lotteryTable {
+		total += e.permille
+		if i > 0 && e.prize >= lotteryTable[i-1].prize {
+			t.Errorf("prizes must descend: %v", lotteryTable)
+		}
+	}
+	if total >= 1000 {
+		t.Fatalf("win chances must leave room for 꽝, got %d‰", total)
+	}
+	valid := map[int]bool{0: true}
+	for _, e := range lotteryTable {
+		valid[e.prize] = true
+	}
+	jackpots := 0
+	for i := 0; i < 10000; i++ {
+		p := rollLottery()
+		if !valid[p] {
+			t.Fatalf("rolled a prize not in the table: %d", p)
+		}
+		if p == lotteryTable[0].prize {
+			jackpots++
+		}
+	}
+	if jackpots > 500 { // 0.5% expected; 5% is a generous non-flaky bound
+		t.Errorf("jackpot suspiciously common: %d/10000", jackpots)
+	}
+}
+
+func TestPlayLottery(t *testing.T) {
+	s, err := openStore(t.TempDir() + "/test.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.getOrCreatePlayer("a"); err != nil {
+		t.Fatal(err)
+	}
+	if ok, _ := s.playLottery("a", lotteryPrice, 500); ok {
+		t.Fatal("broke player must not buy a ticket")
+	}
+	if _, err := s.db.Exec(`UPDATE players SET coins = 20 WHERE token = 'a'`); err != nil {
+		t.Fatal(err)
+	}
+	if ok, _ := s.playLottery("a", lotteryPrice, 30); !ok {
+		t.Fatal("funded ticket rejected")
+	}
+	p, _ := s.getOrCreatePlayer("a")
+	if p.Coins != 20-lotteryPrice+30 {
+		t.Fatalf("coins = %d after win", p.Coins)
+	}
+	if p.Earned != 0 {
+		t.Fatalf("lottery winnings must not feed earned, got %d", p.Earned)
+	}
+}
+
 func TestPrestigeReward(t *testing.T) {
 	cases := map[int]int{0: 300, 1: 450, 2: 600, 3: 600} // 3 = repeat at the prismatic cap
 	for level, want := range cases {

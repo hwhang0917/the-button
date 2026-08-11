@@ -49,22 +49,54 @@ function preloadImage(src: string): Promise<void> {
 }
 
 const TUTORIAL_SEEN_KEY = 'bt_tutorial_seen'
-// order matches the t('tutorial') steps
-const TUT_SELECTORS = ['#tut-button', '#tut-risk', '#tut-quota', '#tut-shop', '#tut-collection', '#tut-rank']
+// order matches the t('tutorial') steps; indexes 4-8 live inside the shop modal
+const TUT_SELECTORS = [
+  '#tut-button',
+  '#tut-risk',
+  '#tut-quota',
+  '#tut-shop',
+  '#tut-shop-sell',
+  '#tut-shop-lottery',
+  '#tut-shop-shield',
+  '#tut-shop-charm',
+  '#tut-shop-headstart',
+  '#tut-collection',
+  '#tut-rank',
+]
+const TUT_SHOP_FIRST = 4
+const TUT_SHOP_LAST = 8
 
 function startTutorial() {
   localStorage.setItem(TUTORIAL_SEEN_KEY, '1')
   const steps = t('tutorial')
-  driver({
+  // the in-shop steps need the modal mounted before they can be highlighted,
+  // so the boundary steps swap the modal in/out and then advance manually
+  const swapShop = (open: boolean, move: () => void) => async () => {
+    showShop.value = open
+    await nextTick()
+    move()
+  }
+  const d = driver({
     showProgress: true,
     nextBtnText: t('tutNext'),
     prevBtnText: t('tutPrev'),
     doneBtnText: t('tutDone'),
+    onDestroyed: () => {
+      showShop.value = false
+    },
     steps: TUT_SELECTORS.map((element, i) => ({
       element,
-      popover: { title: steps[i].title, description: steps[i].desc },
+      popover: {
+        title: steps[i].title,
+        description: steps[i].desc,
+        ...(i === TUT_SHOP_FIRST - 1 && { onNextClick: swapShop(true, () => d.moveNext()) }),
+        ...(i === TUT_SHOP_FIRST && { onPrevClick: swapShop(false, () => d.movePrevious()) }),
+        ...(i === TUT_SHOP_LAST && { onNextClick: swapShop(false, () => d.moveNext()) }),
+        ...(i === TUT_SHOP_LAST + 1 && { onPrevClick: swapShop(true, () => d.movePrevious()) }),
+      },
     })),
-  }).drive()
+  })
+  d.drive()
 }
 
 const risk = ref(0)

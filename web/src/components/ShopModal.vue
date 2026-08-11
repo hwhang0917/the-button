@@ -1,10 +1,30 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { state, sellStreak, buySkill, streakValue, SKILLS, type SkillKey } from '../useGame'
+import { computed, ref } from 'vue'
+import {
+  state,
+  sellStreak,
+  buySkill,
+  buyLottery,
+  streakValue,
+  LOTTERY_PRICE,
+  SKILLS,
+  type SkillKey,
+} from '../useGame'
 import { t } from '../i18n'
 import { play } from '../audio'
+import LotteryModal from './LotteryModal.vue'
 
 defineEmits<{ close: [] }>()
+
+const ticket = ref<{ prize: number; coins: number } | null>(null)
+
+async function onLottery() {
+  const bought = await buyLottery()
+  if (bought) {
+    play('switch')
+    ticket.value = bought
+  }
+}
 
 const sellValue = computed(() =>
   state.value ? streakValue(state.value.stars, state.value.headstartLevel) : 0,
@@ -14,6 +34,7 @@ const rows = computed(() => {
   const s = state.value!
   return [
     {
+      id: 'tut-shop-shield',
       key: 'shield' as SkillKey,
       icon: '🛡️',
       name: t('shieldName'),
@@ -23,6 +44,7 @@ const rows = computed(() => {
       capped: false,
     },
     {
+      id: 'tut-shop-charm',
       key: 'charm' as SkillKey,
       icon: '🍀',
       name: t('charmName'),
@@ -32,6 +54,7 @@ const rows = computed(() => {
       capped: s.charmLevel >= SKILLS.charm.cap,
     },
     {
+      id: 'tut-shop-headstart',
       key: 'headstart' as SkillKey,
       icon: '🚀',
       name: t('headstartName'),
@@ -65,6 +88,7 @@ async function onBuy(key: SkillKey) {
       </h2>
 
       <button
+        id="tut-shop-sell"
         class="flex items-center justify-between rounded-lg border border-yellow-500/40 bg-yellow-400/10 px-4 py-2 text-sm font-bold text-yellow-300 hover:bg-yellow-400/20 disabled:opacity-40"
         :disabled="!sellValue || state.win"
         @click="onSell"
@@ -74,10 +98,29 @@ async function onBuy(key: SkillKey) {
       </button>
       <p class="text-center text-xs text-slate-500">{{ state.win ? t('sellAtWin') : t('sellDesc') }}</p>
 
+      <div
+        id="tut-shop-lottery"
+        class="flex items-center gap-3 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2"
+      >
+        <span class="text-xl">🎟️</span>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-bold text-slate-200">{{ t('lotteryName') }}</p>
+          <p class="text-xs text-slate-500">{{ t('lotteryDesc') }}</p>
+        </div>
+        <button
+          class="rounded-lg bg-rose-400 px-3 py-1.5 font-mono text-xs font-bold text-slate-900 hover:bg-rose-300 disabled:opacity-40"
+          :disabled="state.coins < LOTTERY_PRICE"
+          @click="onLottery"
+        >
+          {{ LOTTERY_PRICE }}💰
+        </button>
+      </div>
+
       <div class="flex flex-col gap-2">
         <div
           v-for="row in rows"
           :key="row.key"
+          :id="row.id"
           class="flex items-center gap-3 rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2"
         >
           <span class="text-xl">{{ row.icon }}</span>
@@ -105,5 +148,12 @@ async function onBuy(key: SkillKey) {
         OK
       </button>
     </div>
+
+    <LotteryModal
+      v-if="ticket"
+      :prize="ticket.prize"
+      :final-coins="ticket.coins"
+      @close="ticket = null"
+    />
   </div>
 </template>
