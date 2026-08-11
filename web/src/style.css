@@ -67,26 +67,33 @@ body::before {
   animation: card-in 0.6s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
 
-/* poke-holo.simey.me shine + glare: ::before is the rarity foil, ::after the
-   pointer glare, both driven by vars CardReveal sets on pointer move.
-   texture layers (glitter/grain webp) from the original are skipped —
-   gradients only, same blend-mode recipes */
-.holo-card {
-  --px: 50%; /* pointer position over the card */
-  --py: 50%;
-  --bx: 50%; /* eased background position (37–63% while tilting) */
-  --by: 50%;
-  --hyp: 0; /* pointer distance from center, 0–1 */
-  --o: 0.65; /* effect strength; 1 under the pointer */
+/* pokemon-cards-css (poke-holo.simey.me) effect CSS, copied verbatim where
+   possible. Adaptations: selectors keep the reference's .card[data-rarity]
+   shape but shine/glare are absolutely-positioned children of our card-face;
+   pokemon frame clip-paths/masks and the illusion foil texture are dropped.
+   rarity map: rare → "reverse holo", holo → "rare holo", prismatic → "rare rainbow" */
+.card {
+  --grain: none;
+  --glitter: url('/img/glitter.png');
+  --glittersize: 25%;
+  --space: 5%;
+  --angle: 133deg;
+  --imgsize: cover;
   --red: #f80e35;
   --yellow: #eedf10;
   --green: #21e985;
   --blue: #0dbde9;
   --violet: #c929f1;
-  position: relative;
-  overflow: hidden;
-  /* blend layers must composite against the card only, never the page */
-  isolation: isolate;
+  --foil-brightness: 0.55;
+  /* interaction vars, sprung by CardReveal's pointer handlers */
+  --pointer-x: 50%;
+  --pointer-y: 50%;
+  --pointer-from-center: 0;
+  --pointer-from-top: 0.5;
+  --pointer-from-left: 0.5;
+  --card-opacity: 0.8; /* reference idles at 0; keep a baseline so touch users see the foil */
+  --background-x: 50%;
+  --background-y: 50%;
 }
 
 /* flip + tilt live on separate wrappers so each keeps its own duration:
@@ -114,55 +121,118 @@ body::before {
 .card-back {
   transform: rotateY(180deg);
 }
-/* commons stay plain: the shine starts at rare. the shared boilerplate must
-   cover every shiny rarity — a rule without content: renders nothing */
-.holo-card.rarity-rare::before,
-.holo-card.rarity-holo::before,
-.holo-card.rarity-prismatic::before,
-.holo-card.rarity-rare::after,
-.holo-card.rarity-holo::after,
-.holo-card.rarity-prismatic::after {
-  content: '';
+/* poke-holo active pop: clicking the card springs it up like the reference's
+   clicked card */
+.flip-scene {
+  transition: transform 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.flip-scene.active {
+  transform: scale(1.2);
+}
+
+/* shine + glare layers (reference base.css, positioning adapted from its
+   grid layout to absolute children of our card-face) */
+.card__shine,
+.card__glare {
   position: absolute;
   inset: 0;
-  pointer-events: none;
-  /* 3D transforms drop the parent's rounded overflow clip on composited
-     layers — carry the radius on the layer itself, and force the clip with
-     clip-path since some Android compositors paint blend modes square.
-     1rem = the card's rounded-2xl radius */
   border-radius: inherit;
-  clip-path: inset(0 round 1rem);
-  transition: opacity 0.3s ease;
+  pointer-events: none;
+  will-change: transform, opacity, background-image, background-size,
+    background-position, background-blend-mode, filter;
+}
+.card__shine::before,
+.card__shine::after,
+.card__glare::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.card__shine {
+  background: transparent;
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.85) contrast(2.75) saturate(0.65);
+  mix-blend-mode: color-dodge;
+  opacity: var(--card-opacity);
+}
+.card__glare {
+  background-image: radial-gradient(
+    farthest-corner circle at var(--pointer-x) var(--pointer-y),
+    hsla(0, 0%, 100%, 0.8) 10%,
+    hsla(0, 0%, 100%, 0.65) 20%,
+    hsla(0, 0%, 0%, 0.5) 90%
+  );
+  opacity: var(--card-opacity);
+  mix-blend-mode: overlay;
 }
 
-/* rare — reverse-holo: soft foil sheen that dodges under the pointer */
-.holo-card.rarity-rare::before {
+/* ========== REVERSE HOLO (our "rare") — reference reverse-holo.css ========== */
+.card[data-rarity$='reverse holo'] .card__shine {
+  --foil: none; /* unmasked card: no foil texture */
   background-image:
-    radial-gradient(circle at var(--px) var(--py), #fff 5%, #000 50%, #fff 80%),
-    linear-gradient(-45deg, #000 15%, #fff, #000 85%);
-  background-blend-mode: soft-light;
+    radial-gradient(circle at var(--pointer-x) var(--pointer-y), #fff 5%, #000 50%, #fff 80%),
+    linear-gradient(-45deg, #000 15%, #fff, #000 85%),
+    var(--foil);
+  background-blend-mode: soft-light, difference;
   background-size:
     120% 120%,
-    200% 200%;
+    200% 200%,
+    cover;
   background-position:
     center center,
-    var(--px) var(--py);
-  filter: brightness(0.55) contrast(1.5);
+    calc(100% * var(--pointer-from-left)) calc(100% * var(--pointer-from-top)),
+    center center;
+  filter: brightness(var(--foil-brightness)) contrast(1.5) saturate(1);
   mix-blend-mode: color-dodge;
-  opacity: calc(var(--o) * (1.2 - var(--hyp)));
+  opacity: calc((1.5 * var(--card-opacity)) - var(--pointer-from-center));
+}
+.card[data-rarity$='reverse holo'] .card__glare {
+  opacity: var(--card-opacity);
+  background-image: radial-gradient(
+    farthest-corner circle at var(--pointer-x) var(--pointer-y),
+    hsla(0, 0%, 100%, 0.8) 10%,
+    hsla(0, 0%, 100%, 0.5) 20%,
+    hsla(0, 0%, 0%, 0.75) 90%
+  );
+  filter: brightness(0.7) contrast(1.5);
+}
+.card[data-rarity$='reverse holo'] .card__glare::after {
+  content: '';
+  opacity: var(--card-opacity);
+  background-image: radial-gradient(
+    farthest-corner circle at var(--pointer-x) var(--pointer-y),
+    hsl(0, 0%, 100%) 10%,
+    hsla(0, 0%, 100%, 0.5) 20%,
+    hsla(0, 0%, 0%, 0.5) 120%
+  );
+  filter: brightness(1) contrast(1.5);
 }
 
-/* holo — regular-holo: rainbow bands over scanlines, color-dodged */
-.holo-card.rarity-holo::before {
+/* ========== REGULAR HOLO (our "holo") — reference regular-holo.css ========== */
+.card[data-rarity='rare holo'] .card__shine {
+  --scanlines-space: 1px;
+  --scanlines-light: #666;
+  --scanlines-dark: black;
+  --bars: 3%;
+  --bar-color: hsla(0, 0%, 70%, 1);
+  --bar-bg: hsla(0, 0%, 0%, 1);
   background-image:
     repeating-linear-gradient(
       110deg,
       var(--violet), var(--blue), var(--green), var(--yellow), var(--red),
+      var(--violet), var(--blue), var(--green), var(--yellow), var(--red),
       var(--violet), var(--blue), var(--green), var(--yellow), var(--red)
     ),
-    repeating-linear-gradient(90deg, #000 0 2px, #666 2px 4px);
+    repeating-linear-gradient(
+      90deg,
+      var(--scanlines-dark) calc(var(--scanlines-space) * 0),
+      var(--scanlines-dark) calc(var(--scanlines-space) * 2),
+      var(--scanlines-light) calc(var(--scanlines-space) * 2),
+      var(--scanlines-light) calc(var(--scanlines-space) * 4)
+    );
   background-position:
-    calc(((50% - var(--bx)) * 2.6) + 50%) calc(((50% - var(--by)) * 3.5) + 50%),
+    calc(((50% - var(--background-x)) * 2.6) + 50%) calc(((50% - var(--background-y)) * 3.5) + 50%),
     center center;
   background-size:
     400% 400%,
@@ -170,60 +240,135 @@ body::before {
   background-blend-mode: overlay;
   filter: brightness(1.1) contrast(1.1) saturate(1.2);
   mix-blend-mode: color-dodge;
-  opacity: var(--o);
 }
-
-/* prismatic — rainbow (secret) rare: muted spectrum that ignites off-center */
-.holo-card.rarity-prismatic::before {
-  --r1: hsl(0, 57%, 37%);
-  --r2: hsl(40, 53%, 39%);
-  --r3: hsl(90, 60%, 35%);
-  --r4: hsl(180, 60%, 35%);
-  --r5: hsl(210, 57%, 39%);
-  --r6: hsl(280, 55%, 31%);
+.card[data-rarity='rare holo'] .card__shine::before {
+  content: '';
   background-image:
-    linear-gradient(-45deg, var(--r1), var(--r4)),
-    linear-gradient(
-      -30deg,
-      var(--r1), var(--r2), var(--r3), var(--r4), var(--r5), var(--r6),
-      var(--r1), var(--r2), var(--r3), var(--r4), var(--r5), var(--r6),
-      var(--r1)
+    repeating-linear-gradient(
+      90deg,
+      var(--bar-bg) calc(var(--bars) * 2),
+      var(--bar-color) calc(var(--bars) * 3),
+      var(--bar-bg) calc(var(--bars) * 3.5),
+      var(--bar-color) calc(var(--bars) * 4),
+      var(--bar-bg) calc(var(--bars) * 5),
+      var(--bar-bg) calc(var(--bars) * 14)
+    ),
+    repeating-linear-gradient(
+      90deg,
+      var(--bar-bg) calc(var(--bars) * 2),
+      var(--bar-color) calc(var(--bars) * 3),
+      var(--bar-bg) calc(var(--bars) * 3.5),
+      var(--bar-color) calc(var(--bars) * 4),
+      var(--bar-bg) calc(var(--bars) * 5),
+      var(--bar-bg) calc(var(--bars) * 10)
     );
-  background-blend-mode: luminosity;
+  background-position:
+    calc((((50% - var(--background-x)) * 1.65) + 50%) + (var(--background-y) * 0.5)) var(--background-x),
+    calc((((50% - var(--background-x)) * -0.9) + 50%) - (var(--background-y) * 0.75)) var(--background-y);
   background-size:
     200% 200%,
-    400% 400%;
-  background-position:
-    calc(25% + var(--px) / 2) calc(25% + var(--py) / 2),
-    var(--px) var(--py);
-  filter: brightness(calc(0.55 + var(--hyp) * 0.3)) contrast(2) saturate(1);
-  mix-blend-mode: color-dodge;
-  opacity: var(--o);
+    200% 200%;
+  background-blend-mode: screen;
+  filter: brightness(1.15) contrast(1.1);
+  mix-blend-mode: hard-light;
 }
-
-/* glare — radial highlight tracking the pointer */
-.holo-card.rarity-rare::after,
-.holo-card.rarity-holo::after {
+.card[data-rarity='rare holo'] .card__shine::after {
+  content: '';
   background-image: radial-gradient(
-    farthest-corner circle at var(--px) var(--py),
-    hsla(0, 0%, 100%, 0.8) 10%,
-    hsla(0, 0%, 100%, 0.5) 25%,
-    hsla(0, 0%, 0%, 0.6) 90%
+    farthest-corner circle at var(--pointer-x) var(--pointer-y),
+    hsla(0, 0%, 90%, 0.8) 0%,
+    hsla(0, 0%, 78%, 0.1) 25%,
+    hsl(0, 0%, 0%) 90%
   );
+  background-position: center center;
+  background-size: cover;
+  mix-blend-mode: luminosity;
+  filter: brightness(0.6) contrast(4);
+}
+@media screen and (max-width: 900px) {
+  .card[data-rarity='rare holo'] .card__shine {
+    --scanlines-space: 0.5px;
+  }
+}
+.card[data-rarity='rare holo'] .card__glare {
+  opacity: calc(var(--card-opacity) * 0.8);
   filter: brightness(0.8) contrast(1.5);
   mix-blend-mode: overlay;
-  opacity: calc(var(--o) * 0.8);
 }
-.holo-card.rarity-prismatic::after {
+.card[data-rarity='rare holo'] .card__glare::after {
+  content: '';
   background-image: radial-gradient(
-    farthest-corner circle at var(--px) var(--py),
+    farthest-corner circle at var(--pointer-x) var(--pointer-y),
+    hsl(180, 100%, 95%) 5%,
+    hsla(0, 0%, 39%, 0.25) 55%,
+    hsla(0, 0%, 0%, 0.36) 110%
+  );
+  mix-blend-mode: overlay;
+  filter: brightness(0.6) contrast(3);
+}
+
+/* ========== RAINBOW HOLO (our "prismatic") — reference rainbow-holo.css
+   (the illusion-foil layer is pokemon art, dropped) ========== */
+.card[data-rarity='rare rainbow'] .card__shine {
+  --r-clr-1: hsl(0, 57%, 37%);
+  --r-clr-2: hsl(40, 53%, 39%);
+  --r-clr-3: hsl(90, 60%, 35%);
+  --r-clr-4: hsl(180, 60%, 35%);
+  --r-clr-5: hsl(180, 60%, 35%);
+  --r-clr-6: hsl(210, 57%, 39%);
+  --r-clr-7: hsl(280, 55%, 31%);
+  background-image:
+    linear-gradient(-45deg, var(--r-clr-1), var(--r-clr-5)),
+    var(--glitter),
+    linear-gradient(
+      -30deg,
+      var(--r-clr-1), var(--r-clr-2), var(--r-clr-3), var(--r-clr-4), var(--r-clr-5), var(--r-clr-6), var(--r-clr-7),
+      var(--r-clr-1), var(--r-clr-2), var(--r-clr-3), var(--r-clr-4), var(--r-clr-5), var(--r-clr-6), var(--r-clr-7),
+      var(--r-clr-1), var(--r-clr-2), var(--r-clr-3), var(--r-clr-4), var(--r-clr-5), var(--r-clr-6), var(--r-clr-7),
+      var(--r-clr-1)
+    );
+  background-blend-mode: luminosity, soft-light;
+  background-size:
+    200% 200%,
+    var(--glittersize) var(--glittersize),
+    400% 400%;
+  background-position:
+    calc(25% + (50% * var(--pointer-from-left))) calc(25% + (50% * var(--pointer-from-top))),
+    center center,
+    calc(25% + (var(--pointer-x) / 2)) calc(25% + (var(--pointer-y) / 2));
+  filter: brightness(calc((var(--pointer-from-center) * 0.25) + 0.6)) contrast(2.2) saturate(0.75);
+}
+.card[data-rarity='rare rainbow'] .card__shine::after {
+  content: '';
+  background-image:
+    var(--glitter),
+    linear-gradient(
+      -60deg,
+      var(--r-clr-1), var(--r-clr-2), var(--r-clr-3), var(--r-clr-4), var(--r-clr-5), var(--r-clr-6), var(--r-clr-7),
+      var(--r-clr-1), var(--r-clr-2), var(--r-clr-3), var(--r-clr-4), var(--r-clr-5), var(--r-clr-6), var(--r-clr-7),
+      var(--r-clr-1), var(--r-clr-2), var(--r-clr-3), var(--r-clr-4), var(--r-clr-5), var(--r-clr-6), var(--r-clr-7),
+      var(--r-clr-1)
+    );
+  background-blend-mode: soft-light;
+  background-size:
+    var(--glittersize) var(--glittersize),
+    400% 400%;
+  background-position:
+    center center,
+    var(--pointer-x) var(--pointer-y);
+  filter: brightness(calc((var(--pointer-from-center) * 0.3) + 0.55)) contrast(2) saturate(1);
+  mix-blend-mode: color-dodge;
+}
+.card[data-rarity='rare rainbow'] .card__glare {
+  background-image: radial-gradient(
+    farthest-corner circle at var(--pointer-x) var(--pointer-y),
     hsl(0, 0%, 80%),
     hsla(187, 10%, 85%, 0.25) 30%,
     hsl(197, 6%, 25%) 120%
   );
   filter: brightness(0.9) contrast(1.75);
+  opacity: calc(var(--pointer-from-center) * 0.9 + 0.2);
   mix-blend-mode: hard-light;
-  opacity: calc(0.2 + var(--hyp) * 0.7);
 }
 
 @keyframes prisma-spin {

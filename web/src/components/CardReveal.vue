@@ -4,11 +4,11 @@ import { nextRarity, prevRarity, state, type Card } from '../useGame'
 import { TIER_COLORS } from '../tiers'
 import { t } from '../i18n'
 
-const props = withDefaults(defineProps<{ card: Card; drop?: boolean; count?: number }>(), {
-  drop: true,
-  count: 0,
-})
-defineEmits<{ close: []; arm: []; fuse: []; defuse: [] }>()
+const props = withDefaults(
+  defineProps<{ card: Card; drop?: boolean; count?: number; againLabel?: string }>(),
+  { drop: true, count: 0, againLabel: '' },
+)
+defineEmits<{ close: []; arm: []; fuse: []; defuse: []; again: [] }>()
 
 const fuseTarget = computed(() => nextRarity(props.card.rarity))
 const defuseTarget = computed(() => prevRarity(props.card.rarity))
@@ -22,10 +22,21 @@ const wrongTierHint = computed(() =>
 const el = ref<HTMLDivElement | null>(null)
 const vars = ref<Record<string, string>>({})
 const flipped = ref(false)
+const active = ref(false)
+
+// our rarities → the reference's data-rarity values its CSS keys off
+const DATA_RARITY: Record<string, string> = {
+  common: 'common',
+  rare: 'reverse holo',
+  holo: 'rare holo',
+  prismatic: 'rare rainbow',
+}
 
 const faceStyle = computed(() => ({
   borderColor: TIER_COLORS[props.card.tier],
-  background: `linear-gradient(165deg, ${TIER_COLORS[props.card.tier]}55, #0b1120 60%, ${TIER_COLORS[props.card.tier]}22)`,
+  // mid-tone base: the reference foils are color-dodge layers, which stay
+  // black over a near-black card — they need luminance underneath to ignite
+  background: `linear-gradient(165deg, ${TIER_COLORS[props.card.tier]}88, #475569 60%, ${TIER_COLORS[props.card.tier]}44)`,
   boxShadow: `0 0 50px ${TIER_COLORS[props.card.tier]}66`,
 }))
 
@@ -36,16 +47,21 @@ function tilt(clientX: number, clientY: number) {
   const r = el.value!.getBoundingClientRect()
   const px = (clientX - r.left) / r.width
   const py = (clientY - r.top) / r.height
+  // the 180° flip mirrors both tilt axes, so invert to keep the card
+  // leaning toward the pointer
+  const s = flipped.value ? -1 : 1
   vars.value = {
-    '--rx': `${(px - 0.5) * 24}deg`,
-    '--ry': `${(0.5 - py) * 24}deg`,
-    '--px': `${px * 100}%`,
-    '--py': `${py * 100}%`,
-    // background drifts in a narrow band, mirroring the reference's easing
-    '--bx': `${37 + px * 26}%`,
-    '--by': `${33 + py * 34}%`,
-    '--hyp': `${Math.min(1, Math.hypot(px - 0.5, py - 0.5) * 2)}`,
-    '--o': '1',
+    '--rx': `${(px - 0.5) * 24 * s}deg`,
+    '--ry': `${(0.5 - py) * 24 * s}deg`,
+    // the reference's pointer/background spring vars, same names and ranges
+    '--pointer-x': `${px * 100}%`,
+    '--pointer-y': `${py * 100}%`,
+    '--pointer-from-left': `${px}`,
+    '--pointer-from-top': `${py}`,
+    '--pointer-from-center': `${Math.min(1, Math.hypot(px - 0.5, py - 0.5) * 2)}`,
+    '--background-x': `${37 + px * 26}%`,
+    '--background-y': `${33 + py * 34}%`,
+    '--card-opacity': '1',
   }
 }
 
@@ -63,21 +79,29 @@ function onTouch(e: TouchEvent) {
     class="fixed inset-0 z-40 flex touch-none select-none flex-col items-center justify-center gap-6 overscroll-contain bg-black/80 backdrop-blur-sm"
   >
     <p v-if="drop" class="text-xl font-black tracking-widest text-yellow-300">✨ {{ t('cardDrop') }}</p>
-    <div class="flip-scene">
+    <!-- rect is measured on this untransformed wrapper: measuring the tilted
+         element itself feeds its own rotation back into the pointer math.
+         pointer handlers live here too — on the tilted card they flicker at
+         the edges as the rotation moves the card out from under the cursor -->
+    <div
+      ref="el"
+      class="flip-scene"
+      :class="{ active }"
+      @mousemove="onMove"
+      @mouseleave="vars = {}"
+      @touchstart.prevent="onTouch"
+      @touchmove.prevent="onTouch"
+      @touchend="vars = {}"
+    >
       <div class="flipper card-in" :class="{ flipped }">
         <div
-          ref="el"
-          class="card-tilt h-80 w-56"
+          class="card card-tilt h-80 w-56"
+          :data-rarity="DATA_RARITY[card.rarity]"
           :style="vars"
-          @mousemove="onMove"
-          @mouseleave="vars = {}"
-          @touchstart.prevent="onTouch"
-          @touchmove.prevent="onTouch"
-          @touchend="vars = {}"
+          @click="active = !active"
         >
           <div
-            class="holo-card card-face flex flex-col items-center justify-between rounded-2xl border-2 p-5"
-            :class="`rarity-${card.rarity}`"
+            class="card-face flex flex-col items-center justify-between overflow-hidden rounded-2xl border-2 p-5"
             :style="faceStyle"
           >
             <span class="self-end rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-200">
@@ -91,10 +115,11 @@ function onTouch(e: TouchEvent) {
               </p>
               <p class="text-[10px] uppercase tracking-[0.3em] text-slate-400">the button</p>
             </div>
+            <div class="card__shine"></div>
+            <div class="card__glare"></div>
           </div>
           <div
-            class="holo-card card-face card-back flex flex-col items-center justify-center gap-4 rounded-2xl border-2 p-5"
-            :class="`rarity-${card.rarity}`"
+            class="card-face card-back flex flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl border-2 p-5"
             :style="faceStyle"
           >
             <p class="text-4xl">🃏</p>
@@ -137,6 +162,13 @@ function onTouch(e: TouchEvent) {
     </div>
 
     <div class="flex gap-3">
+      <button
+        v-if="againLabel"
+        class="rounded-full border border-amber-400/70 px-6 py-1.5 text-sm font-bold text-amber-300 hover:bg-amber-500/20"
+        @click="$emit('again')"
+      >
+        🎁 {{ againLabel }}
+      </button>
       <button
         class="rounded-full border border-slate-600 px-6 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
         @click="flipped = !flipped"
