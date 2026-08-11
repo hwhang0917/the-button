@@ -1,9 +1,21 @@
 @import 'tailwindcss';
 
+/* solid dark on the root so mobile overscroll never flashes white */
+html,
 body {
+  background: #060814;
+}
+
+/* mobile browsers ignore background-attachment: fixed, so pin the
+   wallpaper with a fixed pseudo-element instead */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
   background:
     linear-gradient(rgba(6, 8, 20, 0.82), rgba(6, 8, 20, 0.92)),
-    url('/wallpaper.jpg') center / cover fixed no-repeat;
+    url('/wallpaper.jpg') center / cover no-repeat;
 }
 
 @keyframes shake {
