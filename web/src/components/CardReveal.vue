@@ -10,10 +10,10 @@ defineEmits<{ close: [] }>()
 const el = ref<HTMLDivElement | null>(null)
 const vars = ref<Record<string, string>>({})
 
-function onMove(e: MouseEvent) {
+function tilt(clientX: number, clientY: number) {
   const r = el.value!.getBoundingClientRect()
-  const px = (e.clientX - r.left) / r.width
-  const py = (e.clientY - r.top) / r.height
+  const px = (clientX - r.left) / r.width
+  const py = (clientY - r.top) / r.height
   vars.value = {
     '--rx': `${(px - 0.5) * 24}deg`,
     '--ry': `${(0.5 - py) * 24}deg`,
@@ -21,12 +21,19 @@ function onMove(e: MouseEvent) {
     '--gy': `${py * 100}%`,
   }
 }
+
+function onMove(e: MouseEvent) {
+  tilt(e.clientX, e.clientY)
+}
+
+function onTouch(e: TouchEvent) {
+  tilt(e.touches[0].clientX, e.touches[0].clientY)
+}
 </script>
 
 <template>
   <div
-    class="fixed inset-0 z-40 flex flex-col items-center justify-center gap-6 bg-black/80 backdrop-blur-sm"
-    @click.self="$emit('close')"
+    class="fixed inset-0 z-40 flex touch-none flex-col items-center justify-center gap-6 overscroll-contain bg-black/80 backdrop-blur-sm"
   >
     <p v-if="drop" class="text-xl font-black tracking-widest text-yellow-300">✨ {{ t('cardDrop') }}</p>
     <div
@@ -41,6 +48,9 @@ function onMove(e: MouseEvent) {
       }"
       @mousemove="onMove"
       @mouseleave="vars = {}"
+      @touchstart.prevent="onTouch"
+      @touchmove.prevent="onTouch"
+      @touchend="vars = {}"
     >
       <span class="self-end rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-200">
         {{ t('rarity')[card.rarity] }}
