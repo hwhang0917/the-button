@@ -13,7 +13,18 @@ for (const f of files) {
   cache.set(f, a)
 }
 
+// haptics piggyback on the sound cues; navigator.vibrate is missing on iOS
+// Safari, so the optional call quietly no-ops there
+const buzz: Partial<Record<Sound, number | number[]>> = {
+  click: 15,
+  switch: 10,
+  fail: [60, 40, 120],
+  win: [50, 50, 50, 50, 150],
+}
+
 export function play(name: Sound) {
+  const pattern = buzz[name] ?? (name.startsWith('success_') ? 30 : undefined)
+  if (pattern) navigator.vibrate?.(pattern)
   const base = cache.get(name)
   if (!base) return
   // clone so rapid replays overlap instead of cutting off

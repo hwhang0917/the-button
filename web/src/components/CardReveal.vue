@@ -10,6 +10,9 @@ defineEmits<{ close: [] }>()
 const el = ref<HTMLDivElement | null>(null)
 const vars = ref<Record<string, string>>({})
 
+// the card drop has no sound cue, so give it its own haptic flourish
+navigator.vibrate?.([20, 30, 80])
+
 function tilt(clientX: number, clientY: number) {
   const r = el.value!.getBoundingClientRect()
   const px = (clientX - r.left) / r.width
