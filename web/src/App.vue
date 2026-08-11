@@ -124,6 +124,14 @@ onMounted(() => {
       if (state.value && state.value.quotaLeft <= 0) loadState()
     }
   }, 1000)
+  // background tabs throttle the interval, so the timer freezes and a missed
+  // hour rollover leaves stale quota — resync clock and server state on return
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return
+    now.value = Date.now()
+    lastHour = new Date().getHours()
+    loadState()
+  })
 })
 </script>
 
