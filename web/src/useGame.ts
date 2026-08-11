@@ -123,6 +123,15 @@ export async function prestigeStreak(): Promise<number | null> {
   return d.gained
 }
 
+/** Chance bonus per talisman rarity; mirrors talCommonPct/talRarePct in game.go. */
+export const TALISMAN_BONUS: Record<Rarity, number> = { common: 5, rare: 10, holo: 0, prismatic: 0 }
+
+/** The armed talisman's chance bonus, when it would actually fire (tier matches). */
+export function talismanBonus(s: GameState): number {
+  if (!s.talismanTier || s.talismanTier !== s.tier || !s.talismanRarity) return 0
+  return TALISMAN_BONUS[s.talismanRarity]
+}
+
 /** Consumes one copy of a card and arms it as the single talisman slot. */
 export async function armTalisman(tier: Tier, rarity: Rarity): Promise<boolean> {
   const res = await fetch('/api/talisman', {

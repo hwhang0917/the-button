@@ -16,6 +16,7 @@ import {
   PRESTIGE_REWARDS,
   prestigeStreak,
   state,
+  talismanBonus,
   type Card,
 } from './useGame'
 import { defineAsyncComponent, nextTick, watch } from 'vue'
@@ -221,9 +222,13 @@ const refillIn = computed(() => {
 const disabled = computed(
   () => busy.value || !state.value || state.value.quotaLeft <= 0 || state.value.win,
 )
-const displayChance = computed(() =>
-  state.value ? effChance(state.value.chance, risk.value, state.value.charmLevel) : 0,
-)
+// include the armed talisman's bonus when it would actually fire (tier match),
+// so the button shows the same P the server will roll
+const displayChance = computed(() => {
+  if (!state.value) return 0
+  const base = effChance(state.value.chance, risk.value, state.value.charmLevel)
+  return Math.min(100, base + talismanBonus(state.value))
+})
 const displayGain = computed(() => gainFor(displayChance.value, risk.value))
 
 function setRisk(lvl: number) {
