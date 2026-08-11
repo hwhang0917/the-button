@@ -62,6 +62,7 @@ const dict = {
       '• 서버에는 진행 상황(별, 카드, 직접 정한 닉네임)만 이 토큰에 묶여 저장됩니다.\n' +
       '• 게임 서버는 IP 주소를 저장하지 않습니다.\n' +
       '• 유일한 개인정보 접점: 앞단의 리버스 프록시가 과도한 요청을 막기 위해 IP 기준 속도 제한을 수행하며, IP는 그곳에서만 잠시 처리됩니다.\n' +
+      '• 게임 개선을 위해 익명 플레이 통계(강화 결과·상점 이용)가 단방향 해시 ID로 기록됩니다 — 복원 불가능하며 계정과 분리 보관돼요.\n' +
       '• 플레이어 메뉴의 "기록 삭제"로 언제든 모든 데이터를 지울 수 있습니다.',
     tutNext: '다음',
     tutPrev: '이전',
@@ -143,6 +144,7 @@ const dict = {
       '• The server stores only game progress (stars, cards, a nickname you choose) keyed to that token.\n' +
       '• The game server never stores IP addresses.\n' +
       '• The only PII touchpoint: the reverse proxy in front rate-limits requests per IP, so IPs are briefly processed there and nowhere else.\n' +
+      '• To improve the game, anonymous gameplay statistics (enchant results, shop use) are recorded under a one-way hashed id — irreversible and kept separate from your account.\n' +
       '• "Delete data" in the player menu erases everything, any time.',
     tutNext: 'Next',
     tutPrev: 'Back',

@@ -23,6 +23,7 @@ go build -o thebutton .
 | `PORT` | no | `8080` | |
 | `DB_PATH` | no | `./thebutton.db` | SQLite file |
 | `QUOTA` | no | `5` | clicks per player per hour (resets on the clock hour) |
+| `EVENTS_DIR` | no | — | anonymous NDJSON gameplay events for analytics; unset = telemetry off |
 
 ## Dev
 
@@ -30,6 +31,19 @@ go build -o thebutton .
 go run .                    # API on :8080
 cd web && npm run dev       # Vite on :5173, proxies /api
 ```
+
+## Analytics (DuckDB)
+
+With `EVENTS_DIR` set, the server appends anonymous gameplay events (rolls, shop
+activity, quota rejections) as daily NDJSON files — keyed by a one-way hash of the
+session token, never IPs or names. Analyze them offline with [DuckDB](https://duckdb.org):
+
+```sh
+duckdb -c "SELECT type, count(*) FROM read_json('events/*.ndjson') GROUP BY type"
+duckdb -c ".read analytics/queries.sql"   # starter queries: success rates, sell timing, lottery RTP, DAU
+```
+
+Telemetry is off unless `EVENTS_DIR` is set, and dropped (never blocking) under load.
 
 ## Game rules
 

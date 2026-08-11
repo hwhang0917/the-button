@@ -40,16 +40,18 @@ const linkAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 var nicknameRe = regexp.MustCompile(fmt.Sprintf(`^[A-Za-z0-9_]{%d,%d}$`, minNicknameLen, maxNicknameLen))
 
 type config struct {
-	Port   string
-	DBPath string
-	Quota  int // clicks per player per hour
+	Port      string
+	DBPath    string
+	EventsDir string // anonymous NDJSON gameplay events; empty = telemetry off
+	Quota     int    // clicks per player per hour
 }
 
 func loadConfig() config {
 	cfg := config{
-		Port:   envOr("PORT", "8080"),
-		DBPath: envOr("DB_PATH", "./thebutton.db"),
-		Quota:  5,
+		Port:      envOr("PORT", "8080"),
+		DBPath:    envOr("DB_PATH", "./thebutton.db"),
+		EventsDir: os.Getenv("EVENTS_DIR"),
+		Quota:     5,
 	}
 	if q := os.Getenv("QUOTA"); q != "" {
 		n, err := strconv.Atoi(q)
@@ -74,8 +76,9 @@ type linkCode struct {
 }
 
 type server struct {
-	cfg   config
-	store *store
+	cfg    config
+	store  *store
+	events *eventLogger
 
 	// ponytail: in-memory link codes — lost on restart, single process only
 	mu          sync.Mutex
@@ -90,7 +93,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("open db: %v", err)
 	}
-	srv := &server{cfg: cfg, store: st, linkCodes: map[string]linkCode{}}
+	srv := &server{cfg: cfg, store: st, events: newEventLogger(cfg.EventsDir), linkCodes: map[string]linkCode{}}
 
 	dist, err := fs.Sub(distFS, "web/dist")
 	if err != nil {
@@ -252,6 +255,7 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 	body.Risk = min(max(body.Risk, 0), maxRisk)
 	quotaLeft, err := s.store.consumeQuota(p.Token, s.cfg.Quota)
 	if errors.Is(err, errQuotaExceeded) {
+		s.events.log("quota_empty", pid(p.Token), nil)
 		writeError(w, http.StatusTooManyRequests, "quota_exceeded")
 		return
 	}
@@ -263,6 +267,20 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 		Charm:     p.CharmLevel,
 		Headstart: p.HeadstartLevel,
 		Shield:    p.ShieldCharges > 0,
+	})
+	s.events.log("roll", pid(p.Token), map[string]any{
+		"stars_before": p.Stars,
+		"stars_after":  res.Stars,
+		"risk":         body.Risk,
+		"chance":       effChanceFor(p.Stars, body.Risk, p.CharmLevel),
+		"success":      res.Success,
+		"shield_used":  res.ShieldUsed,
+		"tier_up":      res.TierUp,
+		"win":          res.Win,
+		"card":         res.Card != nil,
+		"charm":        p.CharmLevel,
+		"headstart":    p.HeadstartLevel,
+		"prestige":     p.Prestige,
 	})
 	shieldCharges := p.ShieldCharges
 	if res.ShieldUsed {
@@ -336,6 +354,7 @@ func (s *server) handleSell(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "retry")
 		return
 	}
+	s.events.log("sell", pid(p.Token), map[string]any{"stars": p.Stars, "gain": gain})
 	writeJSON(w, http.StatusOK, map[string]any{
 		"coins":  p.Coins + gain,
 		"gained": gain,
@@ -367,6 +386,7 @@ func (s *server) handlePrestige(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "retry")
 		return
 	}
+	s.events.log("prestige", pid(p.Token), map[string]any{"level": p.Prestige + 1, "reward": reward})
 	writeJSON(w, http.StatusOK, map[string]any{
 		"coins":    p.Coins + reward,
 		"gained":   reward,
@@ -394,6 +414,7 @@ func (s *server) handleLottery(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "cannot_buy")
 		return
 	}
+	s.events.log("lottery", pid(p.Token), map[string]any{"prize": prize})
 	writeJSON(w, http.StatusOK, map[string]int{
 		"prize": prize,
 		"coins": p.Coins - lotteryPrice + prize,
@@ -441,6 +462,7 @@ func (s *server) handleBuy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	*cur++
+	s.events.log("buy", pid(p.Token), map[string]any{"skill": body.Skill, "price": price, "level": *cur})
 	writeJSON(w, http.StatusOK, map[string]int{
 		"coins":          p.Coins - price,
 		"shieldCharges":  p.ShieldCharges,
