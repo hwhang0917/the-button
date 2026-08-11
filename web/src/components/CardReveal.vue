@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { nextRarity, state, type Card } from '../useGame'
+import { nextRarity, prevRarity, state, type Card } from '../useGame'
 import { TIER_COLORS } from '../tiers'
 import { t } from '../i18n'
 
@@ -8,9 +8,10 @@ const props = withDefaults(defineProps<{ card: Card; drop?: boolean; count?: num
   drop: true,
   count: 0,
 })
-defineEmits<{ close: []; arm: []; fuse: [] }>()
+defineEmits<{ close: []; arm: []; fuse: []; defuse: [] }>()
 
 const fuseTarget = computed(() => nextRarity(props.card.rarity))
+const defuseTarget = computed(() => prevRarity(props.card.rarity))
 const talismanBusy = computed(() => state.value?.talismanTier !== '')
 // arming only works while standing in the card's tier (mirrors the server)
 const inTier = computed(() => state.value?.tier === props.card.tier)
@@ -109,6 +110,14 @@ function onTouch(e: TouchEvent) {
           @click="$emit('fuse')"
         >
           {{ t('fuse') }} ×3 → {{ t('rarity')[fuseTarget] }}
+        </button>
+        <button
+          v-if="defuseTarget"
+          class="flex-1 rounded-lg border border-slate-500/60 py-2 text-xs font-bold text-slate-400 hover:bg-slate-700/40 disabled:opacity-40"
+          :disabled="count < 1"
+          @click="$emit('defuse')"
+        >
+          {{ t('defuse') }} → {{ t('rarity')[defuseTarget] }} ×2
         </button>
       </div>
       <p v-if="!inTier" class="text-center text-[10px] text-rose-400/80">{{ wrongTierHint }}</p>

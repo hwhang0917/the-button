@@ -353,6 +353,64 @@ func TestPrestigeStore(t *testing.T) {
 	}
 }
 
+func TestCancelAndDefuse(t *testing.T) {
+	s, err := openStore(t.TempDir() + "/test.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.getOrCreatePlayer("a"); err != nil {
+		t.Fatal(err)
+	}
+	if ok, _ := s.cancelTalisman("a"); ok {
+		t.Fatal("cancel with nothing armed must fail")
+	}
+	if err := s.addCard("a", "gold", "rare"); err != nil {
+		t.Fatal(err)
+	}
+	if ok, _ := s.armTalisman("a", "gold", "rare"); !ok {
+		t.Fatal("arm failed")
+	}
+	if ok, _ := s.cancelTalisman("a"); !ok {
+		t.Fatal("cancel failed")
+	}
+	p, _ := s.getOrCreatePlayer("a")
+	if p.TalismanTier != "" {
+		t.Fatal("slot must be cleared after cancel")
+	}
+	cards, _ := s.getCards("a")
+	if len(cards) != 1 || cards[0].Count != 1 {
+		t.Fatalf("card must be refunded: %v", cards)
+	}
+
+	// defuse: 1 rare -> 2 commons; rejects at 0
+	if ok, _ := s.defuseCard("a", "gold", "rare", "common"); !ok {
+		t.Fatal("defuse failed")
+	}
+	byKey := map[string]int{}
+	cards, _ = s.getCards("a")
+	for _, c := range cards {
+		byKey[c.Rarity] = c.Count
+	}
+	if byKey["rare"] != 0 || byKey["common"] != defuseYield {
+		t.Fatalf("defuse counts wrong: %v", byKey)
+	}
+	if ok, _ := s.defuseCard("a", "gold", "rare", "common"); ok {
+		t.Fatal("defuse without a copy must fail")
+	}
+}
+
+func TestPrevRarity(t *testing.T) {
+	want := map[string]string{"rare": "common", "holo": "rare", "prismatic": "holo"}
+	for from, to := range want {
+		if got, ok := prevRarity(from); !ok || got != to {
+			t.Errorf("prevRarity(%q) = %q,%v", from, got, ok)
+		}
+	}
+	if _, ok := prevRarity("common"); ok {
+		t.Error("common must not defuse")
+	}
+}
+
 func TestNextRarity(t *testing.T) {
 	want := map[string]string{"common": "rare", "rare": "holo", "holo": "prismatic"}
 	for from, to := range want {

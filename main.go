@@ -109,7 +109,9 @@ func main() {
 	mux.HandleFunc("POST /api/prestige", srv.handlePrestige)
 	mux.HandleFunc("POST /api/lottery", srv.handleLottery)
 	mux.HandleFunc("POST /api/talisman", srv.handleTalisman)
+	mux.HandleFunc("POST /api/talisman/cancel", srv.handleTalismanCancel)
 	mux.HandleFunc("POST /api/fuse", srv.handleFuse)
+	mux.HandleFunc("POST /api/defuse", srv.handleDefuse)
 	mux.HandleFunc("POST /api/buy", srv.handleBuy)
 	mux.HandleFunc("POST /api/link/new", srv.handleLinkNew)
 	mux.HandleFunc("POST /api/link/claim", srv.handleLinkClaim)
@@ -487,6 +489,58 @@ func (s *server) handleTalisman(w http.ResponseWriter, r *http.Request) {
 	}
 	s.events.log("talisman_arm", pid(p.Token), map[string]any{"tier": body.Tier, "rarity": body.Rarity})
 	writeJSON(w, http.StatusOK, map[string]string{"talismanTier": body.Tier, "talismanRarity": body.Rarity})
+}
+
+// handleTalismanCancel disarms the talisman slot and refunds the card copy.
+func (s *server) handleTalismanCancel(w http.ResponseWriter, r *http.Request) {
+	p, ok := s.player(w, r)
+	if !ok {
+		return
+	}
+	cancelled, err := s.store.cancelTalisman(p.Token)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "db")
+		return
+	}
+	if !cancelled {
+		writeError(w, http.StatusConflict, "nothing_armed")
+		return
+	}
+	s.events.log("talisman_cancel", pid(p.Token), map[string]any{"tier": p.TalismanTier, "rarity": p.TalismanRarity})
+	writeJSON(w, http.StatusOK, map[string]string{"talismanTier": "", "talismanRarity": ""})
+}
+
+// handleDefuse breaks one card into defuseYield copies of the rarity below —
+// lossy on purpose (fusion costs 3, defusion returns 2).
+func (s *server) handleDefuse(w http.ResponseWriter, r *http.Request) {
+	p, ok := s.player(w, r)
+	if !ok {
+		return
+	}
+	var body struct {
+		Tier   string `json:"tier"`
+		Rarity string `json:"rarity"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_json")
+		return
+	}
+	lower, ok2 := prevRarity(body.Rarity)
+	if !ok2 || !validTier(body.Tier) {
+		writeError(w, http.StatusBadRequest, "cannot_defuse")
+		return
+	}
+	defused, err := s.store.defuseCard(p.Token, body.Tier, body.Rarity, lower)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "db")
+		return
+	}
+	if !defused {
+		writeError(w, http.StatusConflict, "cannot_defuse")
+		return
+	}
+	s.events.log("defuse", pid(p.Token), map[string]any{"tier": body.Tier, "from": body.Rarity, "to": lower})
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
 // handleFuse burns 3 copies of a card into 1 of the next rarity, same tier.

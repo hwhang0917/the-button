@@ -58,6 +58,9 @@ const dict = {
     talismanUse: '부적으로 사용',
     talismanArmedHint: '이미 부적이 활성화되어 있어요 — 발동 후 다시 사용하세요',
     talismanWrongTier: '카드와 같은 {tier} 티어에 있을 때만 사용할 수 있어요',
+    talismanCancelConfirm: '부적을 해제하고 카드를 돌려받을까요?',
+    defuse: '분해',
+    defuseConfirm: '분해하면 {rarity} 카드 2장만 돌려받아요 (합성에는 3장이 들었어요). 계속할까요?',
     talismanSaved: '🃏 부적이 별을 지켰어요!',
     fuse: '합성',
     talEffect: {
@@ -165,6 +168,9 @@ const dict = {
     talismanUse: 'Use as talisman',
     talismanArmedHint: 'A talisman is already armed — use it up first',
     talismanWrongTier: "Usable only while your streak is in the card's tier ({tier})",
+    talismanCancelConfirm: 'Disarm the talisman and get the card back?',
+    defuse: 'Defuse',
+    defuseConfirm: 'Defusing returns only 2 {rarity} cards (fusing one cost 3). Continue?',
     talismanSaved: '🃏 The talisman saved your stars!',
     fuse: 'Fuse',
     talEffect: {

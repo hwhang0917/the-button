@@ -149,6 +149,38 @@ export async function armTalisman(tier: Tier, rarity: Rarity): Promise<boolean> 
   return true
 }
 
+/** Disarms the talisman slot and refunds the card copy. */
+export async function cancelTalisman(): Promise<boolean> {
+  const res = await fetch('/api/talisman/cancel', { method: 'POST' })
+  if (!res.ok) return false
+  if (state.value) {
+    state.value.talismanTier = ''
+    state.value.talismanRarity = ''
+  }
+  await loadCards()
+  return true
+}
+
+/** Cards returned per defusion; mirrors defuseYield in game.go (fusion costs 3). */
+export const DEFUSE_YIELD = 2
+
+/** Rarity one step down; null for common. Mirrors prevRarity in game.go. */
+export function prevRarity(r: Rarity): Rarity | null {
+  const i = RARITIES.indexOf(r)
+  return i > 0 ? RARITIES[i - 1] : null
+}
+
+/** Breaks one card into DEFUSE_YIELD copies of the rarity below. */
+export async function defuseCard(tier: Tier, rarity: Rarity): Promise<boolean> {
+  const res = await fetch('/api/defuse', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tier, rarity }),
+  })
+  if (res.ok) await loadCards()
+  return res.ok
+}
+
 /** Burns 3 copies of a card into 1 of the next rarity, same tier. */
 export async function fuseCards(tier: Tier, rarity: Rarity): Promise<boolean> {
   const res = await fetch('/api/fuse', {

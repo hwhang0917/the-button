@@ -2,8 +2,10 @@
 import { computed, onMounted, ref } from 'vue'
 import {
   armTalisman,
+  cancelTalisman,
   cards,
   click,
+  defuseCard,
   deletePlayer,
   effChance,
   fuseCards,
@@ -13,6 +15,7 @@ import {
   loadState,
   MAX_RISK,
   nextRarity,
+  prevRarity,
   PRESTIGE_REWARDS,
   prestigeStreak,
   state,
@@ -134,6 +137,24 @@ const RARITY_BURST: Record<Rarity, { colors: string[]; count: number }> = {
   rare: { colors: ['#7dd3fc', '#38bdf8', '#0ea5e9', '#ffffff'], count: 60 },
   holo: { colors: ['#f0abfc', '#fcd34d', '#22d3ee', '#a78bfa', '#ffffff'], count: 90 },
   prismatic: { colors: ['#ff0084', '#fcff00', '#00fff0', '#7c00ff', '#ffffff'], count: 140 },
+}
+
+async function onCancelTalisman() {
+  if (!confirm(t('talismanCancelConfirm'))) return
+  if (await cancelTalisman()) play('switch')
+}
+
+async function onDefuse() {
+  const v = viewedCard.value
+  if (!v) return
+  const lower = prevRarity(v.rarity)
+  if (!lower) return
+  // lossy on purpose: fusion cost 3, defusion returns 2 — warn before burning
+  if (!confirm(t('defuseConfirm').replace('{rarity}', t('rarity')[lower]))) return
+  if (await defuseCard(v.tier, v.rarity)) {
+    play('switch')
+    viewedCard.value = { tier: v.tier, rarity: lower }
+  }
 }
 
 async function onFuse() {
@@ -400,13 +421,15 @@ onMounted(async () => {
           <span v-if="state.shieldCharges > 0" class="text-xs font-bold text-sky-300">
             🛡️×{{ state.shieldCharges }}
           </span>
-          <span
+          <button
             v-if="state.talismanTier"
-            class="text-xs font-bold"
+            class="text-xs font-bold hover:opacity-70"
             :style="{ color: TIER_COLORS[state.talismanTier] }"
+            :title="t('talismanCancelConfirm')"
+            @click="onCancelTalisman"
           >
-            🃏 {{ t('tier')[state.talismanTier] }}·{{ t('rarity')[state.talismanRarity as Rarity] }}
-          </span>
+            🃏 {{ t('tier')[state.talismanTier] }}·{{ t('rarity')[state.talismanRarity as Rarity] }} ✕
+          </button>
 
           <div id="tut-button" class="relative">
             <button
@@ -527,6 +550,7 @@ onMounted(async () => {
       @close="viewedCard = null"
       @arm="onArm"
       @fuse="onFuse"
+      @defuse="onDefuse"
     />
     <NicknameModal
       v-if="ready && showNickname"

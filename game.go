@@ -108,6 +108,19 @@ func nextRarity(r string) (string, bool) {
 	return "", false
 }
 
+// defusion breaks one card into cards of the rarity below — deliberately
+// lossy: fusing costs 3, defusing returns only 2.
+const defuseYield = 2
+
+func prevRarity(r string) (string, bool) {
+	for i, name := range rarities {
+		if name == r && i > 0 {
+			return rarities[i-1], true
+		}
+	}
+	return "", false
+}
+
 type skills struct {
 	Charm     int
 	Headstart int

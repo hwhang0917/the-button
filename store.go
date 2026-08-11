@@ -307,6 +307,55 @@ func (s *store) clearTalisman(token string) error {
 	return err
 }
 
+// cancelTalisman disarms the slot and refunds the card copy.
+func (s *store) cancelTalisman(token string) (bool, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	var tier, rarity string
+	err = tx.QueryRow(`SELECT talisman_tier, talisman_rarity FROM players
+		WHERE token = ? AND talisman_tier != ''`, token).Scan(&tier, &rarity)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if _, err := tx.Exec(`INSERT INTO cards (player_token, tier, rarity, count) VALUES (?, ?, ?, 1)
+		ON CONFLICT (player_token, tier, rarity) DO UPDATE SET count = count + 1`, token, tier, rarity); err != nil {
+		return false, err
+	}
+	if _, err := tx.Exec(`UPDATE players SET talisman_tier = '', talisman_rarity = '' WHERE token = ?`, token); err != nil {
+		return false, err
+	}
+	return true, tx.Commit()
+}
+
+// defuseCard breaks one card into defuseYield copies of the rarity below.
+func (s *store) defuseCard(token, tier, rarity, lower string) (bool, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(`UPDATE cards SET count = count - 1
+		WHERE player_token = ? AND tier = ? AND rarity = ? AND count >= 1`, token, tier, rarity)
+	if err != nil {
+		return false, err
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return false, nil
+	}
+	if _, err := tx.Exec(`INSERT INTO cards (player_token, tier, rarity, count) VALUES (?, ?, ?, ?)
+		ON CONFLICT (player_token, tier, rarity) DO UPDATE SET count = count + ?`,
+		token, tier, lower, defuseYield, defuseYield); err != nil {
+		return false, err
+	}
+	return true, tx.Commit()
+}
+
 // fuseCards burns 3 copies of a card into 1 of the next rarity, same tier.
 func (s *store) fuseCards(token, tier, rarity, next string) (bool, error) {
 	tx, err := s.db.Begin()
