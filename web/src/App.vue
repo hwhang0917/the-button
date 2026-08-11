@@ -148,6 +148,8 @@ const RARITY_BURST: Record<Rarity, { colors: string[]; count: number }> = {
 }
 
 const cancelTalismanAsk = ref(false)
+// red pulse on the 🛡️ counter as a charge burns
+const shieldFlash = ref(false)
 
 async function confirmCancelTalisman() {
   cancelTalismanAsk.value = false
@@ -312,6 +314,8 @@ async function onPress(center: { x: number; y: number }) {
     messageColor.value = 'text-amber-300'
     play('shield')
     vibrate([30, 40, 60])
+    shieldFlash.value = true
+    setTimeout(() => (shieldFlash.value = false), 900)
   } else {
     message.value = t('fail')
     messageColor.value = 'text-rose-400'
@@ -465,7 +469,12 @@ onMounted(async () => {
           <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
             <TierBadge :tier="state.tier" />
             <StarRow :stars="state.stars" :prestige="state.prestige" />
-            <span v-if="state.shieldCharges > 0" class="text-xs font-bold text-sky-300">
+            <!-- stays mounted at 0 while flashing so the burn is visible -->
+            <span
+              v-if="state.shieldCharges > 0 || shieldFlash"
+              class="text-xs font-bold"
+              :class="shieldFlash ? 'shield-hit text-rose-400' : 'text-sky-300'"
+            >
               🛡️×{{ state.shieldCharges }}
             </span>
             <button

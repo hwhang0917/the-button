@@ -384,6 +384,16 @@ body::before {
   mix-blend-mode: hard-light;
 }
 
+@keyframes shield-hit {
+  0% { transform: scale(1.8); }
+  30% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+.shield-hit {
+  display: inline-block; /* transforms need a box */
+  animation: shield-hit 0.5s ease-out;
+}
+
 @keyframes prisma-spin {
   0% { filter: hue-rotate(0deg); }
   100% { filter: hue-rotate(360deg); }
