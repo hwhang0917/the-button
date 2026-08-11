@@ -33,6 +33,16 @@ const viewedCard = ref<Card | null>(null)
 const showNickname = ref(false)
 const nicknameDismissed = ref(false)
 
+const now = ref(Date.now())
+
+// ponytail: quota refills on the server's clock hour; client top-of-hour matches
+// for whole-hour timezones — pass the server's bucket deadline in /api/state if that breaks
+const refillIn = computed(() => {
+  const d = new Date(now.value)
+  const s = 3599 - d.getMinutes() * 60 - d.getSeconds()
+  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+})
+
 const disabled = computed(
   () => busy.value || !state.value || state.value.quotaLeft <= 0 || state.value.win,
 )
@@ -84,6 +94,15 @@ onMounted(() => {
   loadState()
   loadLeaderboard()
   loadCards()
+  let lastHour = new Date().getHours()
+  setInterval(() => {
+    now.value = Date.now()
+    const h = new Date().getHours()
+    if (h !== lastHour) {
+      lastHour = h
+      if (state.value && state.value.quotaLeft <= 0) loadState()
+    }
+  }, 1000)
 })
 </script>
 
@@ -152,7 +171,10 @@ onMounted(() => {
               <span class="font-mono font-bold text-slate-200">{{ state.quotaLeft }}</span>
               / {{ state.quota }}
             </template>
-            <template v-else>{{ t('quotaExhausted') }}</template>
+            <template v-else>
+              {{ t('quotaExhausted') }}
+              <span class="font-mono font-bold text-slate-200">⏳ {{ refillIn }}</span>
+            </template>
           </p>
 
           <p class="text-xs text-slate-500">{{ t('best') }}: ★{{ state.bestStars }}</p>
