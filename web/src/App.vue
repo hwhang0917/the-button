@@ -13,6 +13,9 @@ import {
   state,
   type Card,
 } from './useGame'
+import { nextTick, watch } from 'vue'
+import { driver } from 'driver.js'
+import 'driver.js/dist/driver.css'
 import { t, lang, toggleLang } from './i18n'
 import { play, preloadAudio, soundCount } from './audio'
 import { burst, confetti } from './particles'
@@ -43,6 +46,25 @@ function preloadImage(src: string): Promise<void> {
   })
 }
 
+const TUTORIAL_SEEN_KEY = 'bt_tutorial_seen'
+// order matches the t('tutorial') steps
+const TUT_SELECTORS = ['#tut-button', '#tut-risk', '#tut-quota', '#tut-shop', '#tut-collection', '#tut-rank']
+
+function startTutorial() {
+  localStorage.setItem(TUTORIAL_SEEN_KEY, '1')
+  const steps = t('tutorial')
+  driver({
+    showProgress: true,
+    nextBtnText: t('tutNext'),
+    prevBtnText: t('tutPrev'),
+    doneBtnText: t('tutDone'),
+    steps: TUT_SELECTORS.map((element, i) => ({
+      element,
+      popover: { title: steps[i].title, description: steps[i].desc },
+    })),
+  }).drive()
+}
+
 const risk = ref(0)
 const busy = ref(false)
 const shaking = ref(false)
@@ -55,6 +77,15 @@ const showNickname = ref(false)
 const showLink = ref(false)
 const showPrivacy = ref(false)
 const showShop = ref(false)
+const tutorialPending = ref(!localStorage.getItem(TUTORIAL_SEEN_KEY))
+
+// first visit: run the tour once the game is ready and the nickname modal is out of the way
+watch([ready, showNickname], async () => {
+  if (!ready.value || showNickname.value || !tutorialPending.value) return
+  tutorialPending.value = false
+  await nextTick() // the tour targets live inside the v-else main
+  startTutorial()
+})
 const menuOpen = ref(false)
 
 async function onDelete() {
@@ -207,6 +238,13 @@ onMounted(async () => {
           ✏️ {{ t('setName') }}
         </button>
         <button
+          class="flex h-7 w-7 items-center justify-center rounded-full border border-slate-600 text-xs font-bold text-slate-300 hover:bg-slate-800"
+          aria-label="tutorial"
+          @click="startTutorial(); play('switch')"
+        >
+          ?
+        </button>
+        <button
           class="rounded-full border border-slate-600 px-3 py-1 text-xs font-bold text-slate-300 hover:bg-slate-800"
           @click="toggleLang(); play('switch')"
         >
@@ -227,7 +265,7 @@ onMounted(async () => {
     </div>
 
     <main v-else class="mx-auto grid max-w-6xl gap-6 px-4 pb-12 lg:grid-cols-[280px_1fr_280px]">
-      <Leaderboard class="order-2 lg:order-1" />
+      <Leaderboard id="tut-rank" class="order-2 lg:order-1" />
 
       <div class="order-1 flex flex-col items-center gap-5 pt-4 lg:order-2">
         <p class="text-sm text-slate-400">{{ t('subtitle') }}</p>
@@ -239,17 +277,19 @@ onMounted(async () => {
             🛡️×{{ state.shieldCharges }}
           </span>
 
-          <TheButton
-            :tier="state.tier"
-            :chance="displayChance"
-            :risky="risk > 0"
-            :disabled="disabled"
-            @press="onPress"
-          />
+          <div id="tut-button">
+            <TheButton
+              :tier="state.tier"
+              :chance="displayChance"
+              :risky="risk > 0"
+              :disabled="disabled"
+              @press="onPress"
+            />
+          </div>
 
           <p class="h-6 text-center font-bold" :class="messageColor">{{ message }}</p>
 
-          <div class="flex flex-col items-center gap-1 select-none">
+          <div id="tut-risk" class="flex flex-col items-center gap-1 select-none">
             <div class="flex items-center gap-2 whitespace-nowrap">
               <span class="text-sm font-bold" :class="risk ? 'text-rose-400' : 'text-slate-400'">
                 🔥 {{ t('riskIt') }}
@@ -276,13 +316,14 @@ onMounted(async () => {
           </div>
 
           <button
+            id="tut-shop"
             class="rounded-full border border-yellow-500/40 bg-yellow-400/10 px-4 py-1 text-sm font-bold text-yellow-300 hover:bg-yellow-400/20"
             @click="showShop = true; play('switch')"
           >
             🛒 {{ t('shop') }} · 💰 {{ state.coins }}
           </button>
 
-          <p class="text-sm text-slate-400">
+          <p id="tut-quota" class="text-sm text-slate-400">
             <template v-if="state.quotaLeft > 0">
               {{ t('clicksLeft') }}:
               <span class="font-mono font-bold text-slate-200">{{ state.quotaLeft }}</span>
@@ -298,7 +339,7 @@ onMounted(async () => {
         </template>
       </div>
 
-      <CardCollection class="order-3" :key="cards.length" @view="viewedCard = $event" />
+      <CardCollection id="tut-collection" class="order-3" :key="cards.length" @view="viewedCard = $event" />
     </main>
 
     <footer class="flex items-center justify-center gap-4 pb-6 text-slate-500">

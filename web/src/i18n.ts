@@ -54,6 +54,17 @@ const dict = {
       '• 게임 서버는 IP 주소를 저장하지 않습니다.\n' +
       '• 유일한 개인정보 접점: 앞단의 리버스 프록시가 과도한 요청을 막기 위해 IP 기준 속도 제한을 수행하며, IP는 그곳에서만 잠시 처리됩니다.\n' +
       '• 플레이어 메뉴의 "기록 삭제"로 언제든 모든 데이터를 지울 수 있습니다.',
+    tutNext: '다음',
+    tutPrev: '이전',
+    tutDone: '완료',
+    tutorial: [
+      { title: 'THE BUTTON', desc: '버튼을 누르면 확률에 따라 별을 얻어요. 실패하면 별이 모두 사라집니다!' },
+      { title: '리스크 모드', desc: '확률을 나누는 대신 성공하면 훨씬 많은 별을 받아요. 하이 리스크 하이 리턴!' },
+      { title: '남은 시도', desc: '클릭은 시간당 제한이 있고 매 정각에 충전돼요. 최고 티어를 처음 넘으면 보너스 클릭도!' },
+      { title: '스킬 상점', desc: '별을 코인으로 팔아 보호 주문서·행운 부적·출발 부스트를 구매하세요.' },
+      { title: '컬렉션', desc: '강화 성공 시 낮은 확률로 카드가 드랍돼요. 24종을 모두 모아보세요.' },
+      { title: '랭킹', desc: '최고 기록으로 순위를 겨뤄요. 이름을 등록하면 랭킹에 올라갑니다.' },
+    ],
     tier: { unrank: '언랭', bronze: '브론즈', silver: '실버', gold: '골드', platinum: '플래티넘', diamond: '다이아몬드' },
     rarity: { common: '커먼', rare: '레어', holo: '홀로', prismatic: '프리즘' },
   },
@@ -110,6 +121,17 @@ const dict = {
       '• The game server never stores IP addresses.\n' +
       '• The only PII touchpoint: the reverse proxy in front rate-limits requests per IP, so IPs are briefly processed there and nowhere else.\n' +
       '• "Delete data" in the player menu erases everything, any time.',
+    tutNext: 'Next',
+    tutPrev: 'Back',
+    tutDone: 'Done',
+    tutorial: [
+      { title: 'THE BUTTON', desc: 'Press to roll for stars — the odds shown decide your fate. Fail and every star is gone!' },
+      { title: 'Risk mode', desc: 'Divide your odds for a much bigger star payout on success. High risk, high return!' },
+      { title: 'Clicks', desc: 'Clicks are limited per hour and refill on the clock hour. Beating your best tier grants bonus clicks!' },
+      { title: 'Skill shop', desc: 'Sell your stars for coins and buy protection scrolls, lucky charms, and head starts.' },
+      { title: 'Collection', desc: 'Successful enchants can drop collectible cards. Complete all 24!' },
+      { title: 'Ranking', desc: 'Compete on best streaks. Register a name to appear on the board.' },
+    ],
     tier: { unrank: 'Unrank', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum', diamond: 'Diamond' },
     rarity: { common: 'Common', rare: 'Rare', holo: 'Holo', prismatic: 'Prismatic' },
   },
