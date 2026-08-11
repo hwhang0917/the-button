@@ -108,6 +108,8 @@ func main() {
 	mux.HandleFunc("POST /api/sell", srv.handleSell)
 	mux.HandleFunc("POST /api/prestige", srv.handlePrestige)
 	mux.HandleFunc("POST /api/lottery", srv.handleLottery)
+	mux.HandleFunc("POST /api/pack", srv.handlePack)
+	mux.HandleFunc("POST /api/refill", srv.handleRefill)
 	mux.HandleFunc("POST /api/talisman", srv.handleTalisman)
 	mux.HandleFunc("POST /api/talisman/cancel", srv.handleTalismanCancel)
 	mux.HandleFunc("POST /api/fuse", srv.handleFuse)
@@ -573,6 +575,53 @@ func (s *server) handleFuse(w http.ResponseWriter, r *http.Request) {
 	}
 	s.events.log("fuse", pid(p.Token), map[string]any{"tier": body.Tier, "from": body.Rarity, "to": next})
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// handlePack sells one random-card pack: any tier, higher tiers rarer.
+func (s *server) handlePack(w http.ResponseWriter, r *http.Request) {
+	p, ok := s.player(w, r)
+	if !ok {
+		return
+	}
+	tier, rarity := rollPack()
+	bought, err := s.store.buyPack(p.Token, packPrice, tier, rarity)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "db")
+		return
+	}
+	if !bought {
+		writeError(w, http.StatusConflict, "cannot_buy")
+		return
+	}
+	s.events.log("pack", pid(p.Token), map[string]any{"tier": tier, "rarity": rarity})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"tier":   tier,
+		"rarity": rarity,
+		"coins":  p.Coins - packPrice,
+	})
+}
+
+// handleRefill sells back the current hour's spent clicks.
+func (s *server) handleRefill(w http.ResponseWriter, r *http.Request) {
+	p, ok := s.player(w, r)
+	if !ok {
+		return
+	}
+	refilled, err := s.store.refillQuota(p.Token, refillPrice)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "db")
+		return
+	}
+	if !refilled {
+		// broke, or nothing spent this hour
+		writeError(w, http.StatusConflict, "cannot_refill")
+		return
+	}
+	s.events.log("refill", pid(p.Token), nil)
+	writeJSON(w, http.StatusOK, map[string]int{
+		"coins":     p.Coins - refillPrice,
+		"quotaLeft": s.cfg.Quota,
+	})
 }
 
 func (s *server) handleBuy(w http.ResponseWriter, r *http.Request) {

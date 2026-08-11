@@ -5,9 +5,15 @@ import {
   sellStreak,
   buySkill,
   buyLottery,
+  buyPack,
+  loadCards,
+  refillQuota,
   streakValue,
   LOTTERY_PRICE,
+  PACK_PRICE,
+  REFILL_PRICE,
   SKILLS,
+  type Card,
   type SkillKey,
 } from '../useGame'
 import { t } from '../i18n'
@@ -15,6 +21,7 @@ import { play, vibrate } from '../audio'
 import { burst } from '../particles'
 import { COIN_COLORS, useCoinCounter } from '../useCoinCounter'
 import LotteryModal from './LotteryModal.vue'
+import PackModal from './PackModal.vue'
 
 defineEmits<{ close: [] }>()
 
@@ -25,6 +32,24 @@ const shownCoins = useCoinCounter(() => state.value?.coins ?? 0)
 function coinBurst(count: number) {
   const r = coinEl.value?.getBoundingClientRect()
   if (r) burst(r.left + r.width / 2, r.top + r.height / 2, COIN_COLORS, count)
+}
+
+const pack = ref<Card | null>(null)
+
+async function onPack() {
+  const card = await buyPack()
+  if (card) {
+    play('switch')
+    vibrate([8, 15, 12])
+    pack.value = card
+  }
+}
+
+async function onRefill() {
+  if (await refillQuota()) {
+    play('success_silver')
+    vibrate([15, 20, 30])
+  }
 }
 
 async function onLottery() {
@@ -135,6 +160,42 @@ async function onBuy(key: SkillKey) {
         </button>
       </div>
 
+      <div
+        id="tut-shop-pack"
+        class="flex items-center gap-3 rounded-lg border border-violet-500/40 bg-violet-500/10 px-3 py-2"
+      >
+        <span class="text-xl">🎴</span>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-bold text-slate-200">{{ t('packName') }}</p>
+          <p class="text-xs text-slate-500">{{ t('packDesc') }}</p>
+        </div>
+        <button
+          class="rounded-lg bg-violet-400 px-3 py-1.5 font-mono text-xs font-bold text-slate-900 hover:bg-violet-300 disabled:opacity-40"
+          :disabled="state.coins < PACK_PRICE"
+          @click="onPack"
+        >
+          {{ PACK_PRICE }}💰
+        </button>
+      </div>
+
+      <div
+        id="tut-shop-refill"
+        class="flex items-center gap-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2"
+      >
+        <span class="text-xl">⏰</span>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-bold text-slate-200">{{ t('refillName') }}</p>
+          <p class="text-xs text-slate-500">{{ t('refillDesc') }}</p>
+        </div>
+        <button
+          class="rounded-lg bg-emerald-400 px-3 py-1.5 font-mono text-xs font-bold text-slate-900 hover:bg-emerald-300 disabled:opacity-40"
+          :disabled="state.coins < REFILL_PRICE || state.quotaLeft >= state.quota"
+          @click="onRefill"
+        >
+          {{ REFILL_PRICE }}💰
+        </button>
+      </div>
+
       <div class="flex flex-col gap-2">
         <div
           v-for="row in rows"
@@ -174,5 +235,6 @@ async function onBuy(key: SkillKey) {
       :final-coins="ticket.coins"
       @close="ticket = null"
     />
+    <PackModal v-if="pack" :card="pack" @close="pack = null; loadCards()" />
   </div>
 </template>

@@ -157,6 +157,55 @@ func (s *store) playLottery(token string, price, prize int) (bool, error) {
 	return n == 1, err
 }
 
+// buyPack deducts the pack price and grants the rolled card atomically.
+func (s *store) buyPack(token string, price int, tier, rarity string) (bool, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(`UPDATE players SET coins = coins - ?, updated_at = ?
+		WHERE token = ? AND coins >= ?`, price, time.Now(), token, price)
+	if err != nil {
+		return false, err
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return false, nil
+	}
+	if _, err := tx.Exec(`INSERT INTO cards (player_token, tier, rarity, count) VALUES (?, ?, ?, 1)
+		ON CONFLICT (player_token, tier, rarity) DO UPDATE SET count = count + 1`, token, tier, rarity); err != nil {
+		return false, err
+	}
+	return true, tx.Commit()
+}
+
+// refillQuota buys back the current hour's spent clicks: coins out, the hour
+// bucket's count zeroed. Rejects when broke or when nothing was spent.
+func (s *store) refillQuota(token string, price int) (bool, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(`UPDATE players SET coins = coins - ?, updated_at = ?
+		WHERE token = ? AND coins >= ?`, price, time.Now(), token, price)
+	if err != nil {
+		return false, err
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return false, nil
+	}
+	res, err = tx.Exec(`UPDATE player_quota SET count = 0
+		WHERE player_token = ? AND day = ? AND count > 0`, token, bucketKey(time.Now()))
+	if err != nil {
+		return false, err
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return false, nil
+	}
+	return true, tx.Commit()
+}
+
 // sellStreak converts the streak to coins; the stars pin rejects a stale sell
 // when another request already changed the streak.
 func (s *store) sellStreak(token string, gain, toStars, fromStars int) (bool, error) {

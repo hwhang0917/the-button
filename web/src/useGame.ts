@@ -203,6 +203,31 @@ export function nextRarity(r: Rarity): Rarity | null {
 export const LOTTERY_PRICE = 15
 export const LOTTERY_PRIZES = [2000, 400, 80, 15]
 
+/** Mirrors packPrice / refillPrice in game.go. */
+export const PACK_PRICE = 30
+export const REFILL_PRICE = 60
+
+/** Buys one random-card pack; returns the rolled card (coins patched immediately). */
+export async function buyPack(): Promise<Card | null> {
+  const res = await fetch('/api/pack', { method: 'POST' })
+  if (!res.ok) return null
+  const d = await res.json()
+  if (state.value) state.value.coins = d.coins
+  return { tier: d.tier, rarity: d.rarity }
+}
+
+/** Buys back this hour's spent clicks. */
+export async function refillQuota(): Promise<boolean> {
+  const res = await fetch('/api/refill', { method: 'POST' })
+  if (!res.ok) return false
+  const d = await res.json()
+  if (state.value) {
+    state.value.coins = d.coins
+    state.value.quotaLeft = d.quotaLeft
+  }
+  return true
+}
+
 /** Buys a scratch ticket. Patches state with the prize still hidden (price
  * deducted only) — the LotteryModal applies `coins` after the reveal. */
 export async function buyLottery(): Promise<{ prize: number; coins: number } | null> {

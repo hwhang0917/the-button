@@ -57,6 +57,56 @@ var lotteryTable = []struct{ prize, permille int }{
 	{15, 250},  // 4등 25% (money back)
 }
 
+// Card pack: one random card from any tier, higher tiers rarer. A pity path
+// for talisman supply and collection completion; always yields a card.
+const packPrice = 30
+
+// Quota refill: buy back this hour's spent clicks. 10 clicks yield ~14 coins
+// on average, so 60 is a deeply negative-EV convenience — fun, not income.
+const refillPrice = 60
+
+var packTierTable = []struct {
+	tier     string
+	permille int
+}{
+	{"unrank", 320}, {"bronze", 260}, {"silver", 180},
+	{"gold", 120}, {"platinum", 80}, {"diamond", 40},
+}
+
+var packRarityTable = []struct {
+	rarity   string
+	permille int
+}{
+	{"common", 600}, {"rare", 250}, {"holo", 120}, {"prismatic", 30},
+}
+
+// rollPack draws the pack's card: tier and rarity rolled independently.
+func rollPack() (string, string) {
+	tier := packTierTable[0].tier
+	if n, err := rand.Int(rand.Reader, big.NewInt(1000)); err == nil {
+		roll := int(n.Int64())
+		for _, e := range packTierTable {
+			if roll < e.permille {
+				tier = e.tier
+				break
+			}
+			roll -= e.permille
+		}
+	}
+	rarity := packRarityTable[0].rarity
+	if n, err := rand.Int(rand.Reader, big.NewInt(1000)); err == nil {
+		roll := int(n.Int64())
+		for _, e := range packRarityTable {
+			if roll < e.permille {
+				rarity = e.rarity
+				break
+			}
+			roll -= e.permille
+		}
+	}
+	return tier, rarity
+}
+
 // rollLottery returns the prize for one ticket, 0 for 꽝.
 func rollLottery() int {
 	n, err := rand.Int(rand.Reader, big.NewInt(1000))

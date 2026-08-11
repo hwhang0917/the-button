@@ -69,6 +69,8 @@ const TUT_SELECTORS = [
   '#tut-shop',
   '#tut-shop-sell',
   '#tut-shop-lottery',
+  '#tut-shop-pack',
+  '#tut-shop-refill',
   '#tut-shop-shield',
   '#tut-shop-charm',
   '#tut-shop-headstart',
@@ -76,7 +78,7 @@ const TUT_SELECTORS = [
   '#tut-rank',
 ]
 const TUT_SHOP_FIRST = 4
-const TUT_SHOP_LAST = 8
+const TUT_SHOP_LAST = 10
 
 function startTutorial() {
   localStorage.setItem(TUTORIAL_SEEN_KEY, '1')

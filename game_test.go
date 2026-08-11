@@ -306,6 +306,86 @@ func TestPlayLottery(t *testing.T) {
 	}
 }
 
+func TestPackTables(t *testing.T) {
+	tierSum, raritySum := 0, 0
+	for _, e := range packTierTable {
+		tierSum += e.permille
+		if !validTier(e.tier) {
+			t.Errorf("unknown tier %q", e.tier)
+		}
+	}
+	for _, e := range packRarityTable {
+		raritySum += e.permille
+		if !validRarity(e.rarity) {
+			t.Errorf("unknown rarity %q", e.rarity)
+		}
+	}
+	if tierSum != 1000 || raritySum != 1000 {
+		t.Fatalf("pack tables must sum to 1000‰: tiers %d rarities %d", tierSum, raritySum)
+	}
+	diamonds, prismatics := 0, 0
+	for i := 0; i < 10000; i++ {
+		tier, rarity := rollPack()
+		if !validTier(tier) || !validRarity(rarity) {
+			t.Fatalf("rolled invalid card %s/%s", tier, rarity)
+		}
+		if tier == "diamond" {
+			diamonds++
+		}
+		if rarity == "prismatic" {
+			prismatics++
+		}
+	}
+	if diamonds > 1000 || prismatics > 800 { // 4% / 3% expected; generous non-flaky bounds
+		t.Errorf("high-end drops suspiciously common: diamond %d prismatic %d", diamonds, prismatics)
+	}
+}
+
+func TestBuyPackAndRefill(t *testing.T) {
+	s, err := openStore(t.TempDir() + "/test.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.getOrCreatePlayer("a"); err != nil {
+		t.Fatal(err)
+	}
+	if ok, _ := s.buyPack("a", packPrice, "gold", "rare"); ok {
+		t.Fatal("broke pack purchase must fail")
+	}
+	if _, err := s.db.Exec(`UPDATE players SET coins = 100 WHERE token = 'a'`); err != nil {
+		t.Fatal(err)
+	}
+	if ok, _ := s.buyPack("a", packPrice, "gold", "rare"); !ok {
+		t.Fatal("funded pack purchase failed")
+	}
+	p, _ := s.getOrCreatePlayer("a")
+	if p.Coins != 100-packPrice {
+		t.Fatalf("coins = %d after pack", p.Coins)
+	}
+	cards, _ := s.getCards("a")
+	if len(cards) != 1 || cards[0].Count != 1 {
+		t.Fatalf("pack card missing: %v", cards)
+	}
+
+	// refill: rejected with no spent clicks, works after spending
+	if ok, _ := s.refillQuota("a", refillPrice); ok {
+		t.Fatal("refill with nothing spent must fail")
+	}
+	if _, err := s.consumeQuota("a", 10); err != nil {
+		t.Fatal(err)
+	}
+	if ok, _ := s.refillQuota("a", refillPrice); !ok {
+		t.Fatal("refill failed")
+	}
+	if used, _ := s.quotaUsed("a"); used != 0 {
+		t.Fatalf("quota not reset: used %d", used)
+	}
+	p, _ = s.getOrCreatePlayer("a")
+	if p.Coins != 100-packPrice-refillPrice {
+		t.Fatalf("coins = %d after refill", p.Coins)
+	}
+}
+
 func TestPrestigeReward(t *testing.T) {
 	cases := map[int]int{0: 300, 1: 450, 2: 600, 3: 600} // 3 = repeat at the prismatic cap
 	for level, want := range cases {
