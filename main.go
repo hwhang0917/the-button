@@ -1,6 +1,7 @@
 package main
 
 import (
+	"compress/gzip"
 	"crypto/rand"
 	"embed"
 	"encoding/hex"
@@ -11,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -123,7 +125,7 @@ func main() {
 	mux.HandleFunc("POST /api/link/claim", srv.handleLinkClaim)
 	mux.HandleFunc("GET /api/leaderboard", srv.handleLeaderboard)
 	mux.HandleFunc("GET /api/cards", srv.handleCards)
-	mux.Handle("/", cacheHeaders(http.FileServerFS(dist)))
+	mux.Handle("/", cacheHeaders(gzipText(http.FileServerFS(dist))))
 
 	log.Printf("the button listening on :%s", cfg.Port)
 	log.Fatal(http.ListenAndServe(":"+cfg.Port, mux))
@@ -148,6 +150,38 @@ func cacheHeaders(next http.Handler) http.Handler {
 			w.Header().Set("Cache-Control", cacheNever)
 		}
 		next.ServeHTTP(w, r)
+	})
+}
+
+type gzipWriter struct {
+	http.ResponseWriter
+	gz *gzip.Writer
+}
+
+func (w gzipWriter) WriteHeader(code int) {
+	// ServeContent sets the uncompressed length; ours differs, so drop it
+	w.Header().Del("Content-Length")
+	w.ResponseWriter.WriteHeader(code)
+}
+
+func (w gzipWriter) Write(b []byte) (int, error) { return w.gz.Write(b) }
+
+// gzipText compresses the text assets in flight — the JS bundle is the last
+// big transfer after the media went lossy. Media types are already compressed.
+func gzipText(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ext := path.Ext(r.URL.Path)
+		textAsset := ext == ".js" || ext == ".css" || ext == ".html" || ext == ".svg" ||
+			ext == ".json" || !strings.ContainsRune(r.URL.Path[1:], '.')
+		if !textAsset || !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			next.ServeHTTP(w, r)
+			return
+		}
+		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Add("Vary", "Accept-Encoding")
+		gz := gzip.NewWriter(w)
+		defer gz.Close()
+		next.ServeHTTP(gzipWriter{w, gz}, r)
 	})
 }
 

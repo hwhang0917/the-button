@@ -9,7 +9,7 @@ export type Sound = (typeof files)[number]
 
 const cache = new Map<Sound, HTMLAudioElement>()
 for (const f of files) {
-  const a = new Audio(`/${f}.wav`)
+  const a = new Audio(`/${f}.mp3`)
   a.preload = 'auto'
   cache.set(f, a)
 }
