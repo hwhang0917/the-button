@@ -352,14 +352,14 @@ func TestBuyPackAndRefill(t *testing.T) {
 	if ok, _ := s.buyPack("a", packPrice, "gold", "rare"); ok {
 		t.Fatal("broke pack purchase must fail")
 	}
-	if _, err := s.db.Exec(`UPDATE players SET coins = 100 WHERE token = 'a'`); err != nil {
+	if _, err := s.db.Exec(`UPDATE players SET coins = 200 WHERE token = 'a'`); err != nil {
 		t.Fatal(err)
 	}
 	if ok, _ := s.buyPack("a", packPrice, "gold", "rare"); !ok {
 		t.Fatal("funded pack purchase failed")
 	}
 	p, _ := s.getOrCreatePlayer("a")
-	if p.Coins != 100-packPrice {
+	if p.Coins != 200-packPrice {
 		t.Fatalf("coins = %d after pack", p.Coins)
 	}
 	cards, _ := s.getCards("a")
@@ -382,7 +382,7 @@ func TestBuyPackAndRefill(t *testing.T) {
 		t.Fatalf("quota not reset: used %d", used)
 	}
 	p, _ = s.getOrCreatePlayer("a")
-	if p.Coins != 100-packPrice-refillPrice {
+	if p.Coins != 200-packPrice-refillPrice {
 		t.Fatalf("coins = %d after refill", p.Coins)
 	}
 	if _, err := s.consumeQuota("a", 10); err != nil {
