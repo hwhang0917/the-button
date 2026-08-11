@@ -46,14 +46,15 @@ func prestigeRewardFor(prestige int) int {
 
 // Lottery: a 15-coin scratch ticket. The outcome is rolled server-side at
 // purchase; the client-side scratching is theater over a printed ticket.
-// EV ≈ 9.2 (61% payback) — a fun coin sink, never an income source.
+// EV ≈ 10.7 (71% payback), wins land ~1 in 2.8 tickets — a fun coin sink,
+// never an income source.
 const lotteryPrice = 15
 
 var lotteryTable = []struct{ prize, permille int }{
 	{500, 5},   // 1등 0.5%
 	{100, 20},  // 2등 2%
 	{30, 80},   // 3등 8%
-	{15, 150},  // 4등 15% (money back)
+	{15, 250},  // 4등 25% (money back)
 }
 
 // rollLottery returns the prize for one ticket, 0 for 꽝.
