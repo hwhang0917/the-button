@@ -6,6 +6,11 @@ body {
   background: #060814;
 }
 
+/* tailwind v4 preflight leaves buttons on cursor: default */
+button:not(:disabled) {
+  cursor: pointer;
+}
+
 /* mobile browsers ignore background-attachment: fixed, so pin the
    wallpaper with a fixed pseudo-element instead */
 body::before {
@@ -78,12 +83,36 @@ body::before {
   --green: #21e985;
   --blue: #0dbde9;
   --violet: #c929f1;
-  transform: perspective(600px) rotateX(var(--ry, 0deg)) rotateY(var(--rx, 0deg));
-  transition: transform 0.1s ease-out;
   position: relative;
   overflow: hidden;
   /* blend layers must composite against the card only, never the page */
   isolation: isolate;
+}
+
+/* flip + tilt live on separate wrappers so each keeps its own duration:
+   a 0.5s flip would make the tilt float, a 0.1s tilt would snap the flip */
+.flip-scene {
+  perspective: 600px;
+}
+.flipper {
+  transform-style: preserve-3d;
+  transition: transform 0.5s;
+}
+.flipper.flipped {
+  transform: rotateY(180deg);
+}
+.card-tilt {
+  transform-style: preserve-3d;
+  transform: rotateX(var(--ry, 0deg)) rotateY(var(--rx, 0deg));
+  transition: transform 0.1s ease-out;
+}
+.card-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+}
+.card-back {
+  transform: rotateY(180deg);
 }
 /* commons stay plain: the shine starts at rare. the shared boilerplate must
    cover every shiny rarity — a rule without content: renders nothing */

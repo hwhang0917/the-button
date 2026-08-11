@@ -21,6 +21,13 @@ const wrongTierHint = computed(() =>
 
 const el = ref<HTMLDivElement | null>(null)
 const vars = ref<Record<string, string>>({})
+const flipped = ref(false)
+
+const faceStyle = computed(() => ({
+  borderColor: TIER_COLORS[props.card.tier],
+  background: `linear-gradient(165deg, ${TIER_COLORS[props.card.tier]}55, #0b1120 60%, ${TIER_COLORS[props.card.tier]}22)`,
+  boxShadow: `0 0 50px ${TIER_COLORS[props.card.tier]}66`,
+}))
 
 // the card drop has no sound cue, so give it its own haptic flourish
 navigator.vibrate?.([20, 30, 80])
@@ -56,38 +63,50 @@ function onTouch(e: TouchEvent) {
     class="fixed inset-0 z-40 flex touch-none select-none flex-col items-center justify-center gap-6 overscroll-contain bg-black/80 backdrop-blur-sm"
   >
     <p v-if="drop" class="text-xl font-black tracking-widest text-yellow-300">✨ {{ t('cardDrop') }}</p>
-    <div
-      ref="el"
-      class="holo-card card-in flex h-80 w-56 flex-col items-center justify-between rounded-2xl border-2 p-5"
-      :class="`rarity-${card.rarity}`"
-      :style="{
-        ...vars,
-        borderColor: TIER_COLORS[card.tier],
-        background: `linear-gradient(165deg, ${TIER_COLORS[card.tier]}55, #0b1120 60%, ${TIER_COLORS[card.tier]}22)`,
-        boxShadow: `0 0 50px ${TIER_COLORS[card.tier]}66`,
-      }"
-      @mousemove="onMove"
-      @mouseleave="vars = {}"
-      @touchstart.prevent="onTouch"
-      @touchmove.prevent="onTouch"
-      @touchend="vars = {}"
-    >
-      <span class="self-end rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-200">
-        {{ t('rarity')[card.rarity] }}
-      </span>
-      <!-- star stays plain yellow: rarity reads from the card's foil, not the art -->
-      <img src="/star.png" class="h-24 w-24 drop-shadow-[0_0_20px_#facc15]" alt="" />
-      <div class="text-center">
-        <p class="text-lg font-black uppercase tracking-widest" :style="{ color: TIER_COLORS[card.tier] }">
-          {{ t('tier')[card.tier] }}
-        </p>
-        <p class="text-[10px] uppercase tracking-[0.3em] text-slate-400">the button</p>
+    <div class="flip-scene">
+      <div class="flipper card-in" :class="{ flipped }">
+        <div
+          ref="el"
+          class="card-tilt h-80 w-56"
+          :style="vars"
+          @mousemove="onMove"
+          @mouseleave="vars = {}"
+          @touchstart.prevent="onTouch"
+          @touchmove.prevent="onTouch"
+          @touchend="vars = {}"
+        >
+          <div
+            class="holo-card card-face flex flex-col items-center justify-between rounded-2xl border-2 p-5"
+            :class="`rarity-${card.rarity}`"
+            :style="faceStyle"
+          >
+            <span class="self-end rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-200">
+              {{ t('rarity')[card.rarity] }}
+            </span>
+            <!-- star stays plain yellow: rarity reads from the card's foil, not the art -->
+            <img src="/star.png" class="h-24 w-24 drop-shadow-[0_0_20px_#facc15]" alt="" />
+            <div class="text-center">
+              <p class="text-lg font-black uppercase tracking-widest" :style="{ color: TIER_COLORS[card.tier] }">
+                {{ t('tier')[card.tier] }}
+              </p>
+              <p class="text-[10px] uppercase tracking-[0.3em] text-slate-400">the button</p>
+            </div>
+          </div>
+          <div
+            class="holo-card card-face card-back flex flex-col items-center justify-center gap-4 rounded-2xl border-2 p-5"
+            :class="`rarity-${card.rarity}`"
+            :style="faceStyle"
+          >
+            <p class="text-4xl">🃏</p>
+            <p class="text-center text-sm font-bold leading-relaxed text-slate-100">
+              {{ t('talEffect')[card.rarity] }}
+            </p>
+            <p class="text-[10px] uppercase tracking-[0.3em] text-slate-400">the button</p>
+          </div>
+        </div>
       </div>
     </div>
     <div v-if="!drop" class="flex w-64 flex-col gap-2">
-      <p class="text-center text-xs text-slate-400">
-        🃏 {{ t('talEffect')[card.rarity] }}
-      </p>
       <div class="flex gap-2">
         <button
           class="flex-1 rounded-lg bg-amber-400 py-2 text-xs font-bold text-slate-900 hover:bg-amber-300 disabled:opacity-40"
@@ -117,11 +136,19 @@ function onTouch(e: TouchEvent) {
       <p v-else-if="talismanBusy" class="text-center text-[10px] text-slate-500">{{ t('talismanArmedHint') }}</p>
     </div>
 
-    <button
-      class="rounded-full border border-slate-600 px-6 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
-      @click="$emit('close')"
-    >
-      OK
-    </button>
+    <div class="flex gap-3">
+      <button
+        class="rounded-full border border-slate-600 px-6 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
+        @click="flipped = !flipped"
+      >
+        🔄 {{ t('flip') }}
+      </button>
+      <button
+        class="rounded-full border border-slate-600 px-6 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
+        @click="$emit('close')"
+      >
+        OK
+      </button>
+    </div>
   </div>
 </template>

@@ -72,6 +72,8 @@ const dict = {
     defuseConfirm: '분해하면 {rarity} 카드 2장만 돌려받아요 (합성에는 3장이 들었어요). 계속할까요?',
     talismanSaved: '🃏 부적이 별을 지켰어요!',
     fuse: '합성',
+    flip: '뒤집기',
+    offline: '서버가 오프라인이에요 — 재연결 중',
     talEffect: {
       common: '부적: 해당 티어에서 다음 클릭 확률 +5% (보상 그대로)',
       rare: '부적: 해당 티어에서 다음 클릭 확률 +10% (보상 그대로)',
@@ -193,6 +195,8 @@ const dict = {
     defuseConfirm: 'Defusing returns only 2 {rarity} cards (fusing one cost 3). Continue?',
     talismanSaved: '🃏 The talisman saved your stars!',
     fuse: 'Fuse',
+    flip: 'Flip',
+    offline: 'Server offline — reconnecting',
     talEffect: {
       common: 'Talisman: +5% roll chance on your next click in this tier (reward unchanged)',
       rare: 'Talisman: +10% roll chance on your next click in this tier (reward unchanged)',
