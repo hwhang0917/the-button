@@ -4,6 +4,7 @@ import {
   cards,
   click,
   deletePlayer,
+  effChance,
   gainFor,
   loadCards,
   loadLeaderboard,
@@ -24,6 +25,7 @@ import CardCollection from './components/CardCollection.vue'
 import CardReveal from './components/CardReveal.vue'
 import NicknameModal from './components/NicknameModal.vue'
 import LinkModal from './components/LinkModal.vue'
+import ShopModal from './components/ShopModal.vue'
 
 const risk = ref(0)
 const busy = ref(false)
@@ -36,6 +38,7 @@ const viewedCard = ref<Card | null>(null)
 const showNickname = ref(false)
 const showLink = ref(false)
 const showPrivacy = ref(false)
+const showShop = ref(false)
 const menuOpen = ref(false)
 
 async function onDelete() {
@@ -58,7 +61,7 @@ const disabled = computed(
   () => busy.value || !state.value || state.value.quotaLeft <= 0 || state.value.win,
 )
 const displayChance = computed(() =>
-  state.value ? Math.floor(state.value.chance / (risk.value + 1)) : 0,
+  state.value ? effChance(state.value.chance, risk.value, state.value.charmLevel) : 0,
 )
 const displayGain = computed(() => gainFor(displayChance.value, risk.value))
 
@@ -84,6 +87,10 @@ async function onPress(center: { x: number; y: number }) {
     burst(center.x, center.y, [TIER_COLORS[result.tier], '#ffffff', '#facc15'], result.tierUp ? 120 : 60)
     play(result.win ? 'win' : `success_${result.tier}`)
     if (result.win) confetti()
+  } else if (result.shieldUsed) {
+    message.value = t('shieldSaved')
+    messageColor.value = 'text-amber-300'
+    play('switch')
   } else {
     message.value = t('fail')
     messageColor.value = 'text-rose-400'
@@ -185,6 +192,9 @@ onMounted(() => {
         <template v-if="state">
           <TierBadge :tier="state.tier" />
           <StarRow :stars="state.stars" />
+          <span v-if="state.shieldCharges > 0" class="text-xs font-bold text-sky-300">
+            🛡️×{{ state.shieldCharges }}
+          </span>
 
           <TheButton
             :tier="state.tier"
@@ -221,6 +231,13 @@ onMounted(() => {
               <template v-if="risk">{{ t('chance') }} 1/{{ risk + 1 }} · ★+{{ displayGain }}</template>
             </span>
           </div>
+
+          <button
+            class="rounded-full border border-yellow-500/40 bg-yellow-400/10 px-4 py-1 text-sm font-bold text-yellow-300 hover:bg-yellow-400/20"
+            @click="showShop = true; play('switch')"
+          >
+            🛒 {{ t('shop') }} · 💰 {{ state.coins }}
+          </button>
 
           <p class="text-sm text-slate-400">
             <template v-if="state.quotaLeft > 0">
@@ -275,6 +292,7 @@ onMounted(() => {
       @link="showNickname = false; showLink = true"
     />
     <LinkModal v-if="showLink" @close="showLink = false" />
+    <ShopModal v-if="showShop" @close="showShop = false" />
     <div
       v-if="showPrivacy"
       class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"

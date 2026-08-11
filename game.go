@@ -16,6 +16,65 @@ const maxRisk = 3
 
 const baseCardDropPct = 5
 
+// Skill shop: streaks sell for triangle-number coins; skills persist on the
+// player row. Charm adds to the effective chance AFTER the risk division and
+// that same chance feeds gainFor, so charm trades payout for survival instead
+// of being strictly better.
+const (
+	charmBonusPct = 2 // success % per charm level
+	charmCap      = 5
+	headstartCap  = 3
+	shieldPrice   = 25
+)
+
+var (
+	charmPrices     = [charmCap]int{10, 30, 90, 270, 810}
+	headstartPrices = [headstartCap]int{20, 100, 400}
+)
+
+type skills struct {
+	Charm     int
+	Headstart int
+	Shield    bool
+}
+
+// effChanceFor is the roll chance after risk division and charm bonus.
+func effChanceFor(stars, risk, charm int) int {
+	if stars >= maxStars {
+		return 0
+	}
+	return min(100, chanceFor(stars, risk)+charmBonusPct*charm)
+}
+
+func tri(n int) int { return n * (n + 1) / 2 }
+
+// streakValue is the coin payout for selling a streak down to the head-start
+// floor. Only stars above the floor pay — otherwise sell-land-sell at the
+// floor would print free coins.
+func streakValue(stars, floor int) int {
+	return tri(stars) - tri(min(floor, stars))
+}
+
+// priceFor returns the next purchase price of a skill at the given level, or
+// ok=false when the skill is unknown or capped.
+func priceFor(skill string, level int) (int, bool) {
+	switch skill {
+	case "shield":
+		return shieldPrice, true // uncapped consumable
+	case "charm":
+		if level >= charmCap {
+			return 0, false
+		}
+		return charmPrices[level], true
+	case "headstart":
+		if level >= headstartCap {
+			return 0, false
+		}
+		return headstartPrices[level], true
+	}
+	return 0, false
+}
+
 var tiers = []struct {
 	Name     string
 	MinStars int
@@ -120,22 +179,29 @@ func rollCard(stars, risk int) *cardDrop {
 }
 
 type clickResult struct {
-	Success bool      `json:"success"`
-	Stars   int       `json:"stars"`
-	Gained  int       `json:"gained"`
-	Tier    string    `json:"tier"`
-	TierUp  bool      `json:"tierUp"`
-	Win     bool      `json:"win"`
-	Card    *cardDrop `json:"card"`
+	Success    bool      `json:"success"`
+	Stars      int       `json:"stars"`
+	Gained     int       `json:"gained"`
+	Tier       string    `json:"tier"`
+	TierUp     bool      `json:"tierUp"`
+	Win        bool      `json:"win"`
+	Card       *cardDrop `json:"card"`
+	ShieldUsed bool      `json:"shieldUsed"`
 }
 
-// resolveClick runs one enchant attempt: roll, apply gain or full reset,
-// then roll the card drop on success.
-func resolveClick(stars, risk int) clickResult {
+// resolveClick runs one enchant attempt: roll, apply gain or reset, then roll
+// the card drop on success. A shield keeps the stars on fail; otherwise the
+// reset lands at the head-start floor — but never above where the streak was,
+// so failing below the floor is never profitable.
+func resolveClick(stars, risk int, sk skills) clickResult {
 	prevTier := tierFor(stars)
-	chance := chanceFor(stars, risk)
+	chance := effChanceFor(stars, risk, sk.Charm)
 	if !rollPct(chance) {
-		return clickResult{Stars: 0, Tier: tierFor(0)}
+		if sk.Shield {
+			return clickResult{Stars: stars, Tier: prevTier, ShieldUsed: true}
+		}
+		floor := min(sk.Headstart, stars)
+		return clickResult{Stars: floor, Tier: tierFor(floor)}
 	}
 	newStars := min(stars+gainFor(chance, risk), maxStars)
 	return clickResult{

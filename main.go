@@ -102,6 +102,8 @@ func main() {
 	mux.HandleFunc("POST /api/click", srv.handleClick)
 	mux.HandleFunc("POST /api/nickname", srv.handleNickname)
 	mux.HandleFunc("DELETE /api/player", srv.handleDeletePlayer)
+	mux.HandleFunc("POST /api/sell", srv.handleSell)
+	mux.HandleFunc("POST /api/buy", srv.handleBuy)
 	mux.HandleFunc("POST /api/link/new", srv.handleLinkNew)
 	mux.HandleFunc("POST /api/link/claim", srv.handleLinkClaim)
 	mux.HandleFunc("GET /api/leaderboard", srv.handleLeaderboard)
@@ -162,26 +164,34 @@ func (s *server) player(w http.ResponseWriter, r *http.Request) (*player, bool) 
 }
 
 type stateResponse struct {
-	Stars      int    `json:"stars"`
-	BestStars  int    `json:"bestStars"`
-	Tier       string `json:"tier"`
-	Chance     int    `json:"chance"`
-	QuotaLeft  int    `json:"quotaLeft"`
-	Quota      int    `json:"quota"`
-	Nickname   string `json:"nickname"`
-	Win        bool   `json:"win"`
+	Stars          int    `json:"stars"`
+	BestStars      int    `json:"bestStars"`
+	Tier           string `json:"tier"`
+	Chance         int    `json:"chance"`
+	QuotaLeft      int    `json:"quotaLeft"`
+	Quota          int    `json:"quota"`
+	Nickname       string `json:"nickname"`
+	Win            bool   `json:"win"`
+	Coins          int    `json:"coins"`
+	ShieldCharges  int    `json:"shieldCharges"`
+	CharmLevel     int    `json:"charmLevel"`
+	HeadstartLevel int    `json:"headstartLevel"`
 }
 
 func (s *server) stateFor(p *player, quotaLeft int) stateResponse {
 	return stateResponse{
-		Stars:      p.Stars,
-		BestStars:  p.BestStars,
-		Tier:       tierFor(p.Stars),
-		Chance:     chanceFor(p.Stars, 0),
-		QuotaLeft:  quotaLeft,
-		Quota:      s.cfg.Quota,
-		Nickname:   p.Nickname,
-		Win:        p.Stars >= maxStars,
+		Stars:          p.Stars,
+		BestStars:      p.BestStars,
+		Tier:           tierFor(p.Stars),
+		Chance:         chanceFor(p.Stars, 0),
+		QuotaLeft:      quotaLeft,
+		Quota:          s.cfg.Quota,
+		Nickname:       p.Nickname,
+		Win:            p.Stars >= maxStars,
+		Coins:          p.Coins,
+		ShieldCharges:  p.ShieldCharges,
+		CharmLevel:     p.CharmLevel,
+		HeadstartLevel: p.HeadstartLevel,
 	}
 }
 
@@ -223,7 +233,27 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "db")
 		return
 	}
-	res := resolveClick(p.Stars, body.Risk)
+	res := resolveClick(p.Stars, body.Risk, skills{
+		Charm:     p.CharmLevel,
+		Headstart: p.HeadstartLevel,
+		Shield:    p.ShieldCharges > 0,
+	})
+	shieldCharges := p.ShieldCharges
+	if res.ShieldUsed {
+		burned, err := s.store.consumeShield(p.Token)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "db")
+			return
+		}
+		if burned {
+			shieldCharges--
+		} else {
+			// a racing click burned the last charge first: real reset
+			res.ShieldUsed = false
+			res.Stars = min(p.HeadstartLevel, p.Stars)
+			res.Tier = tierFor(res.Stars)
+		}
+	}
 	// first time above the lifetime-best tier: refund clicks equal to the new
 	// tier's rank (gating on best stops farming the free bronze click)
 	bonus := 0
@@ -246,10 +276,91 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, struct {
 		clickResult
-		Chance      int `json:"chance"`
-		QuotaLeft   int `json:"quotaLeft"`
-		BonusClicks int `json:"bonusClicks"`
-	}{res, chanceFor(res.Stars, 0), quotaLeft + bonus, bonus})
+		Chance        int `json:"chance"`
+		QuotaLeft     int `json:"quotaLeft"`
+		BonusClicks   int `json:"bonusClicks"`
+		ShieldCharges int `json:"shieldCharges"`
+	}{res, chanceFor(res.Stars, 0), quotaLeft + bonus, bonus, shieldCharges})
+}
+
+// handleSell converts the whole streak to coins and drops stars to the
+// head-start floor. Consumes no quota; also the replay path after a win.
+func (s *server) handleSell(w http.ResponseWriter, r *http.Request) {
+	p, ok := s.player(w, r)
+	if !ok {
+		return
+	}
+	gain := streakValue(p.Stars, p.HeadstartLevel)
+	if gain <= 0 {
+		writeError(w, http.StatusConflict, "nothing_to_sell")
+		return
+	}
+	floor := min(p.HeadstartLevel, p.Stars)
+	sold, err := s.store.sellStreak(p.Token, gain, floor, p.Stars)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "db")
+		return
+	}
+	if !sold {
+		writeError(w, http.StatusConflict, "retry")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"coins":  p.Coins + gain,
+		"gained": gain,
+		"stars":  floor,
+		"tier":   tierFor(floor),
+		"chance": chanceFor(floor, 0),
+	})
+}
+
+func (s *server) handleBuy(w http.ResponseWriter, r *http.Request) {
+	p, ok := s.player(w, r)
+	if !ok {
+		return
+	}
+	var body struct {
+		Skill string `json:"skill"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_json")
+		return
+	}
+	// whitelist: skill name -> column + the current value used as level and pin
+	var col string
+	var cur *int
+	switch body.Skill {
+	case "shield":
+		col, cur = "shield_charges", &p.ShieldCharges
+	case "charm":
+		col, cur = "charm_level", &p.CharmLevel
+	case "headstart":
+		col, cur = "headstart_level", &p.HeadstartLevel
+	default:
+		writeError(w, http.StatusBadRequest, "bad_skill")
+		return
+	}
+	price, ok2 := priceFor(body.Skill, *cur)
+	if !ok2 {
+		writeError(w, http.StatusConflict, "cannot_buy")
+		return
+	}
+	bought, err := s.store.buySkill(p.Token, col, price, *cur)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "db")
+		return
+	}
+	if !bought {
+		writeError(w, http.StatusConflict, "cannot_buy")
+		return
+	}
+	*cur++
+	writeJSON(w, http.StatusOK, map[string]int{
+		"coins":          p.Coins - price,
+		"shieldCharges":  p.ShieldCharges,
+		"charmLevel":     p.CharmLevel,
+		"headstartLevel": p.HeadstartLevel,
+	})
 }
 
 func (s *server) handleNickname(w http.ResponseWriter, r *http.Request) {

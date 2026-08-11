@@ -3,6 +3,8 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -26,12 +28,16 @@ func openStore(path string) (*store, error) {
 	db.SetMaxOpenConns(1)
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS players (
-			token      TEXT PRIMARY KEY,
-			nickname   TEXT NOT NULL DEFAULT '',
-			stars      INTEGER NOT NULL DEFAULT 0,
-			best_stars INTEGER NOT NULL DEFAULT 0,
-			best_at    TIMESTAMP,
-			updated_at TIMESTAMP NOT NULL
+			token           TEXT PRIMARY KEY,
+			nickname        TEXT NOT NULL DEFAULT '',
+			stars           INTEGER NOT NULL DEFAULT 0,
+			best_stars      INTEGER NOT NULL DEFAULT 0,
+			best_at         TIMESTAMP,
+			updated_at      TIMESTAMP NOT NULL,
+			coins           INTEGER NOT NULL DEFAULT 0,
+			shield_charges  INTEGER NOT NULL DEFAULT 0,
+			charm_level     INTEGER NOT NULL DEFAULT 0,
+			headstart_level INTEGER NOT NULL DEFAULT 0
 		);
 		CREATE TABLE IF NOT EXISTS player_quota (
 			player_token TEXT NOT NULL,
@@ -57,14 +63,26 @@ func openStore(path string) (*store, error) {
 	if err != nil {
 		return nil, err
 	}
+	// bring pre-skill-shop DBs up to the canonical schema; sqlite has no
+	// ADD COLUMN IF NOT EXISTS, so ignore the duplicate-column error
+	for _, col := range []string{"coins", "shield_charges", "charm_level", "headstart_level"} {
+		_, err := db.Exec("ALTER TABLE players ADD COLUMN " + col + " INTEGER NOT NULL DEFAULT 0")
+		if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+			return nil, err
+		}
+	}
 	return &store{db: db}, nil
 }
 
 type player struct {
-	Token     string
-	Nickname  string
-	Stars     int
-	BestStars int
+	Token          string
+	Nickname       string
+	Stars          int
+	BestStars      int
+	Coins          int
+	ShieldCharges  int
+	CharmLevel     int
+	HeadstartLevel int
 }
 
 func (s *store) getOrCreatePlayer(token string) (*player, error) {
@@ -74,12 +92,51 @@ func (s *store) getOrCreatePlayer(token string) (*player, error) {
 		return nil, err
 	}
 	p := &player{Token: token}
-	err = s.db.QueryRow(`SELECT nickname, stars, best_stars FROM players WHERE token = ?`, token).
-		Scan(&p.Nickname, &p.Stars, &p.BestStars)
+	err = s.db.QueryRow(`SELECT nickname, stars, best_stars, coins, shield_charges, charm_level, headstart_level
+		FROM players WHERE token = ?`, token).
+		Scan(&p.Nickname, &p.Stars, &p.BestStars, &p.Coins, &p.ShieldCharges, &p.CharmLevel, &p.HeadstartLevel)
 	if err != nil {
 		return nil, err
 	}
 	return p, nil
+}
+
+// buySkill spends coins on one unit of a skill column. The current-value pin
+// keeps concurrent buys from skipping the price ladder or double-spending.
+// col comes from a fixed whitelist in the handler, never from user input.
+func (s *store) buySkill(token, col string, price, cur int) (bool, error) {
+	q := fmt.Sprintf(`UPDATE players SET coins = coins - ?, %s = %s + 1, updated_at = ?
+		WHERE token = ? AND coins >= ? AND %s = ?`, col, col, col)
+	res, err := s.db.Exec(q, price, time.Now(), token, price, cur)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n == 1, err
+}
+
+// consumeShield burns one charge; the guard makes two racing fails fight over
+// the last charge instead of both being saved by it.
+func (s *store) consumeShield(token string) (bool, error) {
+	res, err := s.db.Exec(`UPDATE players SET shield_charges = shield_charges - 1
+		WHERE token = ? AND shield_charges > 0`, token)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n == 1, err
+}
+
+// sellStreak converts the streak to coins; the stars pin rejects a stale sell
+// when another request already changed the streak.
+func (s *store) sellStreak(token string, gain, toStars, fromStars int) (bool, error) {
+	res, err := s.db.Exec(`UPDATE players SET coins = coins + ?, stars = ?, updated_at = ?
+		WHERE token = ? AND stars = ?`, gain, toStars, time.Now(), token, fromStars)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n == 1, err
 }
 
 // deletePlayer wipes the player row, cards, and quota. A recreated account

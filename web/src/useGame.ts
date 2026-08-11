@@ -10,6 +10,10 @@ export interface GameState {
   quota: number
   nickname: string
   win: boolean
+  coins: number
+  shieldCharges: number
+  charmLevel: number
+  headstartLevel: number
 }
 
 export interface Card {
@@ -28,6 +32,8 @@ export interface ClickResult {
   chance: number
   quotaLeft: number
   bonusClicks: number
+  shieldUsed: boolean
+  shieldCharges: number
 }
 
 export interface OwnedCard extends Card {
@@ -66,6 +72,57 @@ export function gainFor(chance: number, risk: number): number {
   return Math.max(1, Math.round(100 / chance))
 }
 
+/** Roll chance after risk division and charm bonus. Mirrors effChanceFor in game.go. */
+export function effChance(base: number, risk: number, charm: number): number {
+  return Math.min(100, Math.floor(base / (risk + 1)) + 2 * charm)
+}
+
+const tri = (n: number) => (n * (n + 1)) / 2
+
+/** Coin payout for selling the streak down to the head-start floor. Mirrors streakValue in game.go. */
+export function streakValue(stars: number, floor: number): number {
+  return tri(stars) - tri(Math.min(floor, stars))
+}
+
+export type SkillKey = 'shield' | 'charm' | 'headstart'
+
+/** Mirrors the price ladders and caps in game.go. */
+export const SKILLS: Record<SkillKey, { prices: number[]; cap: number }> = {
+  shield: { prices: [25], cap: Infinity }, // flat price, uncapped charges
+  charm: { prices: [10, 30, 90, 270, 810], cap: 5 },
+  headstart: { prices: [20, 100, 400], cap: 3 },
+}
+
+/** Sells the whole streak; returns coins gained, or null when rejected. */
+export async function sellStreak(): Promise<number | null> {
+  const res = await fetch('/api/sell', { method: 'POST' })
+  if (!res.ok) return null
+  const d = await res.json()
+  if (state.value) {
+    Object.assign(state.value, { coins: d.coins, stars: d.stars, tier: d.tier, chance: d.chance, win: false })
+  }
+  return d.gained
+}
+
+export async function buySkill(skill: SkillKey): Promise<boolean> {
+  const res = await fetch('/api/buy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ skill }),
+  })
+  if (!res.ok) return false
+  const d = await res.json()
+  if (state.value) {
+    Object.assign(state.value, {
+      coins: d.coins,
+      shieldCharges: d.shieldCharges,
+      charmLevel: d.charmLevel,
+      headstartLevel: d.headstartLevel,
+    })
+  }
+  return true
+}
+
 /** Returns the roll result, or null when out of quota / already won. */
 export async function click(risk: number): Promise<ClickResult | null> {
   const res = await fetch('/api/click', {
@@ -84,6 +141,7 @@ export async function click(risk: number): Promise<ClickResult | null> {
     state.value.chance = result.chance
     state.value.quotaLeft = result.quotaLeft
     state.value.win = result.win
+    state.value.shieldCharges = result.shieldCharges
     if (result.stars > state.value.bestStars) state.value.bestStars = result.stars
   }
   return result
