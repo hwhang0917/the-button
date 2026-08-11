@@ -1,11 +1,17 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import type { Card } from '../useGame'
+import { computed, ref } from 'vue'
+import { nextRarity, state, type Card } from '../useGame'
 import { TIER_COLORS } from '../tiers'
 import { t } from '../i18n'
 
-withDefaults(defineProps<{ card: Card; drop?: boolean }>(), { drop: true })
-defineEmits<{ close: [] }>()
+const props = withDefaults(defineProps<{ card: Card; drop?: boolean; count?: number }>(), {
+  drop: true,
+  count: 0,
+})
+defineEmits<{ close: []; arm: []; fuse: [] }>()
+
+const fuseTarget = computed(() => nextRarity(props.card.rarity))
+const talismanBusy = computed(() => state.value?.talismanTier !== '')
 
 const el = ref<HTMLDivElement | null>(null)
 const vars = ref<Record<string, string>>({})
@@ -66,6 +72,30 @@ function onTouch(e: TouchEvent) {
         <p class="text-[10px] uppercase tracking-[0.3em] text-slate-400">the button</p>
       </div>
     </div>
+    <div v-if="!drop" class="flex w-64 flex-col gap-2">
+      <p class="text-center text-xs text-slate-400">
+        🃏 {{ t('talEffect')[card.rarity] }}
+      </p>
+      <div class="flex gap-2">
+        <button
+          class="flex-1 rounded-lg bg-amber-400 py-2 text-xs font-bold text-slate-900 hover:bg-amber-300 disabled:opacity-40"
+          :disabled="count < 1 || talismanBusy"
+          @click="$emit('arm')"
+        >
+          {{ t('talismanUse') }}
+        </button>
+        <button
+          v-if="fuseTarget"
+          class="flex-1 rounded-lg border border-fuchsia-400/60 py-2 text-xs font-bold text-fuchsia-300 hover:bg-fuchsia-500/20 disabled:opacity-40"
+          :disabled="count < 3"
+          @click="$emit('fuse')"
+        >
+          {{ t('fuse') }} ×3 → {{ t('rarity')[fuseTarget] }}
+        </button>
+      </div>
+      <p v-if="talismanBusy" class="text-center text-[10px] text-slate-500">{{ t('talismanArmedHint') }}</p>
+    </div>
+
     <button
       class="rounded-full border border-slate-600 px-6 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
       @click="$emit('close')"

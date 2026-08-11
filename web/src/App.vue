@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import {
+  armTalisman,
   cards,
   click,
   deletePlayer,
   effChance,
+  fuseCards,
   gainFor,
   loadCards,
   loadLeaderboard,
@@ -21,7 +23,7 @@ import 'driver.js/dist/driver.css'
 import { t, lang, toggleLang } from './i18n'
 import { play, preloadAudio, soundCount } from './audio'
 import { burst, confetti } from './particles'
-import { TIER_COLORS } from './tiers'
+import { TIER_COLORS, type Rarity } from './tiers'
 import TheButton from './components/TheButton.vue'
 import StarRow from './components/StarRow.vue'
 import TierBadge from './components/TierBadge.vue'
@@ -107,6 +109,26 @@ const message = ref('')
 const messageColor = ref('text-slate-300')
 const droppedCard = ref<Card | null>(null)
 const viewedCard = ref<Card | null>(null)
+const viewedCount = computed(() => {
+  const v = viewedCard.value
+  if (!v) return 0
+  return cards.value.find((c) => c.tier === v.tier && c.rarity === v.rarity)?.count ?? 0
+})
+
+async function onArm() {
+  const v = viewedCard.value
+  if (!v) return
+  if (await armTalisman(v.tier, v.rarity)) {
+    play('switch')
+    viewedCard.value = null
+  }
+}
+
+async function onFuse() {
+  const v = viewedCard.value
+  if (!v) return
+  if (await fuseCards(v.tier, v.rarity)) play('success_gold')
+}
 const showNickname = ref(false)
 const showLink = ref(false)
 // link modal reached from the first-visit nickname prompt: closing it without
@@ -196,6 +218,7 @@ const CLICK_COOLDOWN_MS = 800
 async function onPress(center: { x: number; y: number }) {
   if (busy.value) return
   busy.value = true
+  const starsBefore = state.value?.stars ?? 0
   const result = await click(risk.value)
   setTimeout(() => (busy.value = false), CLICK_COOLDOWN_MS)
   if (!result) return
@@ -207,6 +230,10 @@ async function onPress(center: { x: number; y: number }) {
     burst(center.x, center.y, [TIER_COLORS[result.tier], '#ffffff', '#facc15'], result.tierUp ? 120 : 60)
     play(result.win ? 'win' : `success_${result.tier}`)
     if (result.win) confetti()
+  } else if (!result.success && result.talismanUsed && result.stars === starsBefore && starsBefore > 0) {
+    message.value = t('talismanSaved')
+    messageColor.value = 'text-amber-300'
+    play('switch')
   } else if (result.shieldUsed) {
     message.value = t('shieldSaved')
     messageColor.value = 'text-amber-300'
@@ -349,6 +376,13 @@ onMounted(async () => {
           <span v-if="state.shieldCharges > 0" class="text-xs font-bold text-sky-300">
             🛡️×{{ state.shieldCharges }}
           </span>
+          <span
+            v-if="state.talismanTier"
+            class="text-xs font-bold"
+            :style="{ color: TIER_COLORS[state.talismanTier] }"
+          >
+            🃏 {{ t('tier')[state.talismanTier] }}·{{ t('rarity')[state.talismanRarity as Rarity] }}
+          </span>
 
           <div id="tut-button">
             <TheButton
@@ -451,7 +485,15 @@ onMounted(async () => {
     />
 
     <CardReveal v-if="droppedCard" :card="droppedCard" @close="droppedCard = null" />
-    <CardReveal v-if="viewedCard" :card="viewedCard" :drop="false" @close="viewedCard = null" />
+    <CardReveal
+      v-if="viewedCard"
+      :card="viewedCard"
+      :drop="false"
+      :count="viewedCount"
+      @close="viewedCard = null"
+      @arm="onArm"
+      @fuse="onFuse"
+    />
     <NicknameModal
       v-if="ready && showNickname"
       @close="showNickname = false"

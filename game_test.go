@@ -353,6 +353,112 @@ func TestPrestigeStore(t *testing.T) {
 	}
 }
 
+func TestNextRarity(t *testing.T) {
+	want := map[string]string{"common": "rare", "rare": "holo", "holo": "prismatic"}
+	for from, to := range want {
+		if got, ok := nextRarity(from); !ok || got != to {
+			t.Errorf("nextRarity(%q) = %q,%v", from, got, ok)
+		}
+	}
+	if _, ok := nextRarity("prismatic"); ok {
+		t.Error("prismatic must not fuse")
+	}
+	if _, ok := nextRarity("nonsense"); ok {
+		t.Error("unknown rarity must not fuse")
+	}
+}
+
+func TestResolveClickTalisman(t *testing.T) {
+	// chance talisman burns on the click regardless of outcome and feeds payout
+	for i := 0; i < 100; i++ {
+		res := resolveClick(9, 1, skills{TalBonus: talRarePct})
+		if !res.TalismanUsed {
+			t.Fatal("chance talisman must burn on any outcome")
+		}
+		if res.Success {
+			// base 14% pays 7; boosted 24% must pay the lower 4
+			if res.Gained > gainFor(14, 1) {
+				t.Fatalf("boosted chance must lower payout, gained %d", res.Gained)
+			}
+		}
+	}
+	// holo talisman saves before the purchased shield
+	sawFail := false
+	for i := 0; i < 200; i++ {
+		res := resolveClick(14, maxRisk, skills{TalShield: true, Shield: true})
+		if !res.Success {
+			sawFail = true
+			if !res.TalismanUsed || res.ShieldUsed || res.Stars != 14 {
+				t.Fatalf("talisman must save before shield: %+v", res)
+			}
+		}
+	}
+	if !sawFail {
+		t.Fatal("no fails at 2% odds")
+	}
+	// prismatic doubles the gain, clamped at maxStars
+	for i := 0; i < 200; i++ {
+		res := resolveClick(0, 0, skills{TalDouble: true})
+		if !res.Success {
+			t.Fatal("100% click failed")
+		}
+		if res.Stars != 2 || !res.TalismanUsed {
+			t.Fatalf("double talisman: %+v", res)
+		}
+	}
+}
+
+func TestTalismanStore(t *testing.T) {
+	s, err := openStore(t.TempDir() + "/test.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.getOrCreatePlayer("a"); err != nil {
+		t.Fatal(err)
+	}
+	if ok, _ := s.armTalisman("a", "bronze", "common"); ok {
+		t.Fatal("arming without a card must fail")
+	}
+	for i := 0; i < 4; i++ {
+		if err := s.addCard("a", "bronze", "common"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if ok, _ := s.armTalisman("a", "bronze", "common"); !ok {
+		t.Fatal("arm failed with cards in hand")
+	}
+	if ok, _ := s.armTalisman("a", "bronze", "common"); ok {
+		t.Fatal("second arm must be rejected while the slot is busy")
+	}
+	p, _ := s.getOrCreatePlayer("a")
+	if p.TalismanTier != "bronze" || p.TalismanRarity != "common" {
+		t.Fatalf("talisman not armed: %+v", p)
+	}
+	if err := s.clearTalisman("a"); err != nil {
+		t.Fatal(err)
+	}
+
+	// fusion: 3 commons -> 1 rare; rejects when short
+	if ok, _ := s.fuseCards("a", "bronze", "common", "rare"); !ok {
+		t.Fatal("fuse with 3 copies failed")
+	}
+	cards, _ := s.getCards("a")
+	byKey := map[string]int{}
+	for _, c := range cards {
+		byKey[c.Tier+"/"+c.Rarity] = c.Count
+	}
+	if byKey["bronze/common"] != 0 || byKey["bronze/rare"] != 1 {
+		t.Fatalf("fusion counts wrong: %v", byKey)
+	}
+	// the count-0 row survives as the discovered marker
+	if _, found := byKey["bronze/common"]; !found {
+		t.Fatal("count-0 card row must persist")
+	}
+	if ok, _ := s.fuseCards("a", "bronze", "common", "rare"); ok {
+		t.Fatal("fuse without 3 copies must fail")
+	}
+}
+
 func TestNicknameRule(t *testing.T) {
 	ok := []string{"철수", "김밥왕", "Hero_1", "버튼장인_99", "ab"}
 	for _, n := range ok {

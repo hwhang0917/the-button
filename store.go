@@ -38,7 +38,9 @@ func openStore(path string) (*store, error) {
 			shield_charges  INTEGER NOT NULL DEFAULT 0,
 			charm_level     INTEGER NOT NULL DEFAULT 0,
 			headstart_level INTEGER NOT NULL DEFAULT 0,
-			prestige        INTEGER NOT NULL DEFAULT 0
+			prestige        INTEGER NOT NULL DEFAULT 0,
+			talisman_tier   TEXT NOT NULL DEFAULT '',
+			talisman_rarity TEXT NOT NULL DEFAULT ''
 		);
 		CREATE TABLE IF NOT EXISTS player_quota (
 			player_token TEXT NOT NULL,
@@ -67,8 +69,16 @@ func openStore(path string) (*store, error) {
 	// bring pre-skill-shop DBs up to the canonical schema; sqlite has no
 	// ADD COLUMN IF NOT EXISTS, so ignore the duplicate-column error
 	// old DBs may carry an unused `earned` column from the points-rank era; harmless
-	for _, col := range []string{"coins", "shield_charges", "charm_level", "headstart_level", "prestige"} {
-		_, err := db.Exec("ALTER TABLE players ADD COLUMN " + col + " INTEGER NOT NULL DEFAULT 0")
+	for _, ddl := range []string{
+		"coins INTEGER NOT NULL DEFAULT 0",
+		"shield_charges INTEGER NOT NULL DEFAULT 0",
+		"charm_level INTEGER NOT NULL DEFAULT 0",
+		"headstart_level INTEGER NOT NULL DEFAULT 0",
+		"prestige INTEGER NOT NULL DEFAULT 0",
+		"talisman_tier TEXT NOT NULL DEFAULT ''",
+		"talisman_rarity TEXT NOT NULL DEFAULT ''",
+	} {
+		_, err := db.Exec("ALTER TABLE players ADD COLUMN " + ddl)
 		if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
 			return nil, err
 		}
@@ -86,6 +96,8 @@ type player struct {
 	CharmLevel     int
 	HeadstartLevel int
 	Prestige       int
+	TalismanTier   string
+	TalismanRarity string
 }
 
 func (s *store) getOrCreatePlayer(token string) (*player, error) {
@@ -95,9 +107,11 @@ func (s *store) getOrCreatePlayer(token string) (*player, error) {
 		return nil, err
 	}
 	p := &player{Token: token}
-	err = s.db.QueryRow(`SELECT nickname, stars, best_stars, coins, shield_charges, charm_level, headstart_level, prestige
+	err = s.db.QueryRow(`SELECT nickname, stars, best_stars, coins, shield_charges, charm_level, headstart_level,
+		prestige, talisman_tier, talisman_rarity
 		FROM players WHERE token = ?`, token).
-		Scan(&p.Nickname, &p.Stars, &p.BestStars, &p.Coins, &p.ShieldCharges, &p.CharmLevel, &p.HeadstartLevel, &p.Prestige)
+		Scan(&p.Nickname, &p.Stars, &p.BestStars, &p.Coins, &p.ShieldCharges, &p.CharmLevel, &p.HeadstartLevel,
+			&p.Prestige, &p.TalismanTier, &p.TalismanRarity)
 	if err != nil {
 		return nil, err
 	}
@@ -258,6 +272,61 @@ func (s *store) addCard(token, tier, rarity string) error {
 		ON CONFLICT (player_token, tier, rarity) DO UPDATE SET count = count + 1`,
 		token, tier, rarity)
 	return err
+}
+
+// armTalisman consumes one copy of a card and arms it as the player's single
+// talisman slot. Card rows are never deleted — a row at count 0 stays as the
+// permanent "discovered" marker for the collection.
+func (s *store) armTalisman(token, tier, rarity string) (bool, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(`UPDATE cards SET count = count - 1
+		WHERE player_token = ? AND tier = ? AND rarity = ? AND count >= 1`, token, tier, rarity)
+	if err != nil {
+		return false, err
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return false, nil
+	}
+	res, err = tx.Exec(`UPDATE players SET talisman_tier = ?, talisman_rarity = ?, updated_at = ?
+		WHERE token = ? AND talisman_tier = ''`, tier, rarity, time.Now(), token)
+	if err != nil {
+		return false, err
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return false, nil
+	}
+	return true, tx.Commit()
+}
+
+func (s *store) clearTalisman(token string) error {
+	_, err := s.db.Exec(`UPDATE players SET talisman_tier = '', talisman_rarity = '' WHERE token = ?`, token)
+	return err
+}
+
+// fuseCards burns 3 copies of a card into 1 of the next rarity, same tier.
+func (s *store) fuseCards(token, tier, rarity, next string) (bool, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(`UPDATE cards SET count = count - 3
+		WHERE player_token = ? AND tier = ? AND rarity = ? AND count >= 3`, token, tier, rarity)
+	if err != nil {
+		return false, err
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return false, nil
+	}
+	if _, err := tx.Exec(`INSERT INTO cards (player_token, tier, rarity, count) VALUES (?, ?, ?, 1)
+		ON CONFLICT (player_token, tier, rarity) DO UPDATE SET count = count + 1`, token, tier, next); err != nil {
+		return false, err
+	}
+	return true, tx.Commit()
 }
 
 type ownedCard struct {

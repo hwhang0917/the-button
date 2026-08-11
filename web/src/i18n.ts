@@ -55,6 +55,16 @@ const dict = {
     lotteryScratch: '긁어보세요!',
     lotteryLose: '꽝',
     lotteryTiers: ['1등', '2등', '3등', '4등'],
+    talismanUse: '부적으로 사용',
+    talismanArmedHint: '이미 부적이 활성화되어 있어요 — 발동 후 다시 사용하세요',
+    talismanSaved: '🃏 부적이 별을 지켰어요!',
+    fuse: '합성',
+    talEffect: {
+      common: '부적: 해당 티어에서 다음 클릭 확률 +5%',
+      rare: '부적: 해당 티어에서 다음 클릭 확률 +10%',
+      holo: '부적: 해당 티어에서 실패해도 별 유지 (1회)',
+      prismatic: '부적: 해당 티어에서 다음 성공 시 별 2배',
+    },
     privacy: '개인정보 처리방침',
     privacyBody:
       '이 게임은 개인정보를 수집하지 않습니다.\n\n' +
@@ -77,7 +87,7 @@ const dict = {
       { title: '보호 주문서', desc: '1회용 보험 — 실패해도 별이 사라지지 않아요.' },
       { title: '행운 부적', desc: '레벨당 성공 확률 +2%. 영구 스킬이에요.' },
       { title: '출발 부스트', desc: '리셋돼도 ★레벨부터 다시 시작해요.' },
-      { title: '컬렉션', desc: '강화 성공 시 낮은 확률로 카드가 드랍돼요. 24종을 모두 모아보세요.' },
+      { title: '컬렉션', desc: '성공 시 드랍되는 카드! 부적으로 소모하거나 3장을 합성해 상위 등급으로 — 한 번 발견한 카드는 소모해도 도감에 남아요.' },
       { title: '랭킹', desc: '프리스티지 티어 → 별 순으로 겨뤄요. ★15 달성 시 프리스티지로 별 티어를 승급 — 프리즘 이후로도 무한히!' },
     ],
     tier: { unrank: '언랭', bronze: '브론즈', silver: '실버', gold: '골드', platinum: '플래티넘', diamond: '다이아몬드' },
@@ -137,6 +147,16 @@ const dict = {
     lotteryScratch: 'Scratch here!',
     lotteryLose: 'No luck',
     lotteryTiers: ['1st prize', '2nd prize', '3rd prize', '4th prize'],
+    talismanUse: 'Use as talisman',
+    talismanArmedHint: 'A talisman is already armed — use it up first',
+    talismanSaved: '🃏 The talisman saved your stars!',
+    fuse: 'Fuse',
+    talEffect: {
+      common: 'Talisman: +5% chance on your next click in this tier',
+      rare: 'Talisman: +10% chance on your next click in this tier',
+      holo: 'Talisman: keep your stars on a fail in this tier (once)',
+      prismatic: 'Talisman: double stars on your next success in this tier',
+    },
     privacy: 'Privacy policy',
     privacyBody:
       'This game collects no personal data.\n\n' +
@@ -159,7 +179,7 @@ const dict = {
       { title: 'Protection scroll', desc: 'Single-use insurance — a fail won’t wipe your stars.' },
       { title: 'Lucky charm', desc: '+2% success chance per level. Permanent.' },
       { title: 'Head start', desc: 'Resets land at ★level instead of zero.' },
-      { title: 'Collection', desc: 'Successful enchants can drop collectible cards. Complete all 24!' },
+      { title: 'Collection', desc: 'Cards drop on success! Consume one as a talisman or fuse 3 into the next rarity — discovered cards stay in the collection even at ×0.' },
       { title: 'Ranking', desc: 'Ranked by prestige tier → stars. Hit ★15 and PRESTIGE to promote your star tier — forever past prismatic!' },
     ],
     tier: { unrank: 'Unrank', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum', diamond: 'Diamond' },

@@ -72,10 +72,49 @@ func rollLottery() int {
 	return 0
 }
 
+// Talisman one-shot effects by card rarity (armed via the collection, fires
+// only while the streak is inside the card's tier).
+const (
+	talCommonPct = 5  // +chance on the next in-tier click
+	talRarePct   = 10 // +chance on the next in-tier click
+)
+
+func validTier(name string) bool {
+	for _, t := range tiers {
+		if t.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func validRarity(name string) bool {
+	for _, r := range rarities {
+		if r == name {
+			return true
+		}
+	}
+	return false
+}
+
+// nextRarity is the fusion target one step up the ladder; prismatic is final.
+func nextRarity(r string) (string, bool) {
+	for i, name := range rarities {
+		if name == r && i+1 < len(rarities) {
+			return rarities[i+1], true
+		}
+	}
+	return "", false
+}
+
 type skills struct {
 	Charm     int
 	Headstart int
 	Shield    bool
+	// active talisman effects, pre-resolved by the handler for the current tier
+	TalBonus  int  // +chance from a common/rare talisman
+	TalShield bool // holo: keep stars on fail
+	TalDouble bool // prismatic: double stars on success
 }
 
 // effChanceFor is the roll chance after risk division and charm bonus.
@@ -225,8 +264,9 @@ type clickResult struct {
 	Tier       string    `json:"tier"`
 	TierUp     bool      `json:"tierUp"`
 	Win        bool      `json:"win"`
-	Card       *cardDrop `json:"card"`
-	ShieldUsed bool      `json:"shieldUsed"`
+	Card         *cardDrop `json:"card"`
+	ShieldUsed   bool      `json:"shieldUsed"`
+	TalismanUsed bool      `json:"talismanUsed"`
 }
 
 // resolveClick runs one enchant attempt: roll, apply gain or reset, then roll
@@ -235,22 +275,39 @@ type clickResult struct {
 // so failing below the floor is never profitable.
 func resolveClick(stars, risk int, sk skills) clickResult {
 	prevTier := tierFor(stars)
+	// one effective chance feeds both roll and payout, so chance boosts trade
+	// payout for survival instead of stacking a free win
 	chance := effChanceFor(stars, risk, sk.Charm)
+	if chance > 0 && sk.TalBonus > 0 {
+		chance = min(100, chance+sk.TalBonus)
+	}
+	// a chance talisman burns on the click no matter the outcome
+	talUsed := sk.TalBonus > 0
 	if !rollPct(chance) {
+		if sk.TalShield {
+			// the scoped talisman saves before a purchased scroll would
+			return clickResult{Stars: stars, Tier: prevTier, TalismanUsed: true}
+		}
 		if sk.Shield {
-			return clickResult{Stars: stars, Tier: prevTier, ShieldUsed: true}
+			return clickResult{Stars: stars, Tier: prevTier, ShieldUsed: true, TalismanUsed: talUsed}
 		}
 		floor := min(sk.Headstart, stars)
-		return clickResult{Stars: floor, Tier: tierFor(floor)}
+		return clickResult{Stars: floor, Tier: tierFor(floor), TalismanUsed: talUsed}
 	}
-	newStars := min(stars+gainFor(chance, risk), maxStars)
+	gain := gainFor(chance, risk)
+	if sk.TalDouble {
+		gain *= 2
+		talUsed = true
+	}
+	newStars := min(stars+gain, maxStars)
 	return clickResult{
-		Success: true,
-		Stars:   newStars,
-		Gained:  newStars - stars,
-		Tier:    tierFor(newStars),
-		TierUp:  tierFor(newStars) != prevTier,
-		Win:     newStars == maxStars,
-		Card:    rollCard(newStars, risk),
+		Success:      true,
+		Stars:        newStars,
+		Gained:       newStars - stars,
+		Tier:         tierFor(newStars),
+		TierUp:       tierFor(newStars) != prevTier,
+		Win:          newStars == maxStars,
+		Card:         rollCard(newStars, risk),
+		TalismanUsed: talUsed,
 	}
 }

@@ -108,6 +108,8 @@ func main() {
 	mux.HandleFunc("POST /api/sell", srv.handleSell)
 	mux.HandleFunc("POST /api/prestige", srv.handlePrestige)
 	mux.HandleFunc("POST /api/lottery", srv.handleLottery)
+	mux.HandleFunc("POST /api/talisman", srv.handleTalisman)
+	mux.HandleFunc("POST /api/fuse", srv.handleFuse)
 	mux.HandleFunc("POST /api/buy", srv.handleBuy)
 	mux.HandleFunc("POST /api/link/new", srv.handleLinkNew)
 	mux.HandleFunc("POST /api/link/claim", srv.handleLinkClaim)
@@ -204,6 +206,8 @@ type stateResponse struct {
 	CharmLevel     int    `json:"charmLevel"`
 	HeadstartLevel int    `json:"headstartLevel"`
 	Prestige       int    `json:"prestige"`
+	TalismanTier   string `json:"talismanTier"`
+	TalismanRarity string `json:"talismanRarity"`
 }
 
 func (s *server) stateFor(p *player, quotaLeft int) stateResponse {
@@ -221,6 +225,8 @@ func (s *server) stateFor(p *player, quotaLeft int) stateResponse {
 		CharmLevel:     p.CharmLevel,
 		HeadstartLevel: p.HeadstartLevel,
 		Prestige:       p.Prestige,
+		TalismanTier:   p.TalismanTier,
+		TalismanRarity: p.TalismanRarity,
 	}
 }
 
@@ -263,11 +269,33 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "db")
 		return
 	}
-	res := resolveClick(p.Stars, body.Risk, skills{
+	sk := skills{
 		Charm:     p.CharmLevel,
 		Headstart: p.HeadstartLevel,
 		Shield:    p.ShieldCharges > 0,
-	})
+	}
+	// the armed talisman only acts while the streak is inside its tier
+	if p.TalismanTier != "" && p.TalismanTier == tierFor(p.Stars) {
+		switch p.TalismanRarity {
+		case "common":
+			sk.TalBonus = talCommonPct
+		case "rare":
+			sk.TalBonus = talRarePct
+		case "holo":
+			sk.TalShield = true
+		case "prismatic":
+			sk.TalDouble = true
+		}
+	}
+	res := resolveClick(p.Stars, body.Risk, sk)
+	if res.TalismanUsed {
+		if err := s.store.clearTalisman(p.Token); err != nil {
+			writeError(w, http.StatusInternalServerError, "db")
+			return
+		}
+		s.events.log("talisman_proc", pid(p.Token), map[string]any{"tier": p.TalismanTier, "rarity": p.TalismanRarity})
+		p.TalismanTier, p.TalismanRarity = "", ""
+	}
 	s.events.log("roll", pid(p.Token), map[string]any{
 		"stars_before": p.Stars,
 		"stars_after":  res.Stars,
@@ -320,11 +348,13 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, struct {
 		clickResult
-		Chance        int `json:"chance"`
-		QuotaLeft     int `json:"quotaLeft"`
-		BonusClicks   int `json:"bonusClicks"`
-		ShieldCharges int `json:"shieldCharges"`
-	}{res, chanceFor(res.Stars, 0), quotaLeft + bonus, bonus, shieldCharges})
+		Chance         int    `json:"chance"`
+		QuotaLeft      int    `json:"quotaLeft"`
+		BonusClicks    int    `json:"bonusClicks"`
+		ShieldCharges  int    `json:"shieldCharges"`
+		TalismanTier   string `json:"talismanTier"`
+		TalismanRarity string `json:"talismanRarity"`
+	}{res, chanceFor(res.Stars, 0), quotaLeft + bonus, bonus, shieldCharges, p.TalismanTier, p.TalismanRarity})
 }
 
 // handleSell converts the whole streak to coins and drops stars to the
@@ -419,6 +449,70 @@ func (s *server) handleLottery(w http.ResponseWriter, r *http.Request) {
 		"prize": prize,
 		"coins": p.Coins - lotteryPrice + prize,
 	})
+}
+
+// handleTalisman consumes one copy of a card and arms it as the single
+// talisman slot; the effect fires later, on a click inside the card's tier.
+func (s *server) handleTalisman(w http.ResponseWriter, r *http.Request) {
+	p, ok := s.player(w, r)
+	if !ok {
+		return
+	}
+	var body struct {
+		Tier   string `json:"tier"`
+		Rarity string `json:"rarity"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_json")
+		return
+	}
+	if !validTier(body.Tier) || !validRarity(body.Rarity) {
+		writeError(w, http.StatusBadRequest, "bad_card")
+		return
+	}
+	armed, err := s.store.armTalisman(p.Token, body.Tier, body.Rarity)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "db")
+		return
+	}
+	if !armed {
+		writeError(w, http.StatusConflict, "cannot_arm")
+		return
+	}
+	s.events.log("talisman_arm", pid(p.Token), map[string]any{"tier": body.Tier, "rarity": body.Rarity})
+	writeJSON(w, http.StatusOK, map[string]string{"talismanTier": body.Tier, "talismanRarity": body.Rarity})
+}
+
+// handleFuse burns 3 copies of a card into 1 of the next rarity, same tier.
+func (s *server) handleFuse(w http.ResponseWriter, r *http.Request) {
+	p, ok := s.player(w, r)
+	if !ok {
+		return
+	}
+	var body struct {
+		Tier   string `json:"tier"`
+		Rarity string `json:"rarity"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_json")
+		return
+	}
+	next, ok2 := nextRarity(body.Rarity)
+	if !ok2 || !validTier(body.Tier) {
+		writeError(w, http.StatusBadRequest, "cannot_fuse")
+		return
+	}
+	fused, err := s.store.fuseCards(p.Token, body.Tier, body.Rarity, next)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "db")
+		return
+	}
+	if !fused {
+		writeError(w, http.StatusConflict, "cannot_fuse")
+		return
+	}
+	s.events.log("fuse", pid(p.Token), map[string]any{"tier": body.Tier, "from": body.Rarity, "to": next})
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
 func (s *server) handleBuy(w http.ResponseWriter, r *http.Request) {

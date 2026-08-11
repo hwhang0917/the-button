@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import type { Rarity, Tier } from './tiers'
+import { RARITIES, type Rarity, type Tier } from './tiers'
 
 export interface GameState {
   stars: number
@@ -15,6 +15,8 @@ export interface GameState {
   charmLevel: number
   headstartLevel: number
   prestige: number
+  talismanTier: Tier | ''
+  talismanRarity: Rarity | ''
 }
 
 export interface Card {
@@ -35,6 +37,9 @@ export interface ClickResult {
   bonusClicks: number
   shieldUsed: boolean
   shieldCharges: number
+  talismanUsed: boolean
+  talismanTier: Tier | ''
+  talismanRarity: Rarity | ''
 }
 
 export interface OwnedCard extends Card {
@@ -118,6 +123,40 @@ export async function prestigeStreak(): Promise<number | null> {
   return d.gained
 }
 
+/** Consumes one copy of a card and arms it as the single talisman slot. */
+export async function armTalisman(tier: Tier, rarity: Rarity): Promise<boolean> {
+  const res = await fetch('/api/talisman', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tier, rarity }),
+  })
+  if (!res.ok) return false
+  const d = await res.json()
+  if (state.value) {
+    state.value.talismanTier = d.talismanTier
+    state.value.talismanRarity = d.talismanRarity
+  }
+  await loadCards()
+  return true
+}
+
+/** Burns 3 copies of a card into 1 of the next rarity, same tier. */
+export async function fuseCards(tier: Tier, rarity: Rarity): Promise<boolean> {
+  const res = await fetch('/api/fuse', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tier, rarity }),
+  })
+  if (res.ok) await loadCards()
+  return res.ok
+}
+
+/** Fusion target one rarity up; null for prismatic. Mirrors nextRarity in game.go. */
+export function nextRarity(r: Rarity): Rarity | null {
+  const i = RARITIES.indexOf(r)
+  return i >= 0 && i + 1 < RARITIES.length ? RARITIES[i + 1] : null
+}
+
 /** Mirrors lotteryPrice in game.go. */
 export const LOTTERY_PRICE = 15
 
@@ -180,6 +219,8 @@ export async function click(risk: number): Promise<ClickResult | null> {
     state.value.quotaLeft = result.quotaLeft
     state.value.win = result.win
     state.value.shieldCharges = result.shieldCharges
+    state.value.talismanTier = result.talismanTier
+    state.value.talismanRarity = result.talismanRarity
     if (result.stars > state.value.bestStars) state.value.bestStars = result.stars
   }
   return result

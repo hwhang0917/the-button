@@ -33,6 +33,7 @@ const owned = computed(() => {
     <summary
       class="flex cursor-pointer list-none items-center justify-between text-sm font-bold uppercase tracking-widest text-slate-400 select-none [&::-webkit-details-marker]:hidden"
     >
+      <!-- rows persist at count 0: discovery survives consuming the last copy -->
       <span>🃏 {{ t('collection') }} ({{ cards.length }}/24)</span>
       <span class="transition-transform group-open:rotate-180">▾</span>
     </summary>
@@ -54,14 +55,20 @@ const owned = computed(() => {
           "
         >
           <template v-if="owned.has(`${tier}/${rarity}`)">
-            <img src="/star.png" class="h-5 w-5" alt="" />
-            <span class="mt-1 text-[9px] font-bold leading-tight" :style="{ color: TIER_COLORS[tier] }">
-              {{ t('tier')[tier] }}
-            </span>
-            <span class="text-[8px] uppercase text-slate-400">{{ t('rarity')[rarity] }}</span>
+            <div
+              class="flex flex-col items-center"
+              :class="owned.get(`${tier}/${rarity}`) === 0 ? 'opacity-40 saturate-50' : ''"
+            >
+              <img src="/star.png" class="h-5 w-5" alt="" />
+              <span class="mt-1 text-[9px] font-bold leading-tight" :style="{ color: TIER_COLORS[tier] }">
+                {{ t('tier')[tier] }}
+              </span>
+              <span class="text-[8px] uppercase text-slate-400">{{ t('rarity')[rarity] }}</span>
+            </div>
             <span
-              v-if="(owned.get(`${tier}/${rarity}`) ?? 0) > 1"
-              class="absolute right-0.5 top-0.5 rounded bg-slate-900/90 px-1 text-[8px] font-mono text-slate-300"
+              v-if="(owned.get(`${tier}/${rarity}`) ?? 1) !== 1"
+              class="absolute right-0.5 top-0.5 rounded bg-slate-900/90 px-1 text-[8px] font-mono"
+              :class="owned.get(`${tier}/${rarity}`) === 0 ? 'text-rose-400' : 'text-slate-300'"
             >
               ×{{ owned.get(`${tier}/${rarity}`) }}
             </span>
