@@ -422,6 +422,8 @@ onMounted(async () => {
               :risky="risk > 0"
               :disabled="disabled"
               :prestige="state.prestige"
+              :shield="state.shieldCharges > 0"
+              :talisman="!!state.talismanTier"
               @press="onPress"
             />
           </div>

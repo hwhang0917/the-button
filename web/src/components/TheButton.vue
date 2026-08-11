@@ -12,8 +12,10 @@ const props = withDefaults(
     risky: boolean
     disabled: boolean
     prestige?: number
+    shield?: boolean
+    talisman?: boolean
   }>(),
-  { prestige: 0 },
+  { prestige: 0, shield: false, talisman: false },
 )
 const emit = defineEmits<{ press: [center: { x: number; y: number }] }>()
 
@@ -26,6 +28,8 @@ let app: Application | null = null
 let btn: Container
 let fx: Container
 let halo: Graphics
+let auraShield: Graphics
+let auraTalisman: Graphics
 let base: Graphics
 let shadeDark: Graphics
 let shadeHi: Graphics
@@ -83,6 +87,23 @@ function hslTint(h: number): number {
 // 0..1: embers start under ~60% odds and rage as the odds shrink
 function heat(): number {
   return Math.max(0, Math.min(1, (60 - props.chance) / 55))
+}
+
+// aura rings signalling attached consumables: 🛡 sky blue, 🃏 amber
+const AURA_SHIELD_TINT = 0x38bdf8
+const AURA_TALISMAN_TINT = 0xfbbf24
+
+// a dashed ring drawn white so .tint can color it; rotated/pulsed in the ticker
+function drawAuraRing(g: Graphics, radius: number) {
+  g.clear()
+  const SEGS = 5
+  for (let i = 0; i < SEGS; i++) {
+    const a0 = (i * Math.PI * 2) / SEGS
+    const a1 = a0 + ((Math.PI * 2) / SEGS) * 0.55
+    g.moveTo(Math.cos(a0) * radius, Math.sin(a0) * radius)
+    g.arc(0, 0, radius, a0, a1)
+  }
+  g.stroke({ width: 4, color: 0xffffff, cap: 'round' })
 }
 
 function drawButton() {
@@ -166,6 +187,14 @@ onMounted(async () => {
   fx = new Container()
   btn = new Container()
   halo = new Graphics()
+  auraShield = new Graphics()
+  auraShield.tint = AURA_SHIELD_TINT
+  auraShield.alpha = 0
+  drawAuraRing(auraShield, R + 20)
+  auraTalisman = new Graphics()
+  auraTalisman.tint = AURA_TALISMAN_TINT
+  auraTalisman.alpha = 0
+  drawAuraRing(auraTalisman, R + 30)
   base = new Graphics()
   shadeDark = new Graphics()
   shadeHi = new Graphics()
@@ -190,7 +219,7 @@ onMounted(async () => {
   pct.anchor.set(0.5)
   pct.position.set(0, 24)
 
-  btn.addChild(halo, shade, rim, label, pct)
+  btn.addChild(halo, auraShield, auraTalisman, shade, rim, label, pct)
   btn.position.set(SIZE / 2, SIZE / 2)
   btn.cursor = 'pointer'
   a.stage.addChild(fx, btn)
@@ -262,6 +291,12 @@ onMounted(async () => {
     btn.scale.set(scale * breath)
     btn.position.set(SIZE / 2 + ox + tremX, SIZE / 2 + oy + tremY)
     btn.rotation = Math.sin(phase * 0.9) * 0.02
+
+    // consumable auras: counter-rotating pulsing rings while attached
+    auraShield.rotation = phase * 0.6
+    auraShield.alpha = props.shield ? 0.4 + Math.sin(phase * 2.2) * 0.2 : 0
+    auraTalisman.rotation = -phase * 0.8
+    auraTalisman.alpha = props.talisman ? 0.4 + Math.sin(phase * 2.6 + 1) * 0.2 : 0
 
     // prestige flair: hue-cycled rim/halo for holo+, orbiting sparkles for prismatic
     if (props.prestige >= 2) {
