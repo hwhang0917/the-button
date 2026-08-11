@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import katex from 'katex'
@@ -16,15 +16,46 @@ const oddsMath = {
   fail: tex(String.raw`s' = \begin{cases} s & \text{holo talisman or }🛡 \\ \min(\mathrm{headstart},\, s) & \text{else} \end{cases}`),
 }
 
+// robots.txt / sitemap.xml / security.txt all need the canonical origin, and
+// Vite only substitutes %VITE_*% inside index.html — so they're emitted here
+// instead, keeping VITE_SITE_URL the single source of truth.
+const botFiles = (origin: string, contact: string): Plugin => ({
+  name: 'bot-files',
+  generateBundle() {
+    const emit = (fileName: string, source: string) =>
+      this.emitFile({ type: 'asset', fileName, source })
+
+    emit('robots.txt', `User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: ${origin}/sitemap.xml\n`)
+    emit(
+      'sitemap.xml',
+      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url>\n    <loc>${origin}/</loc>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>\n</urlset>\n`,
+    )
+    // Re-stamped on every build, so the expiry can't quietly go stale.
+    const expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+    emit(
+      '.well-known/security.txt',
+      `Contact: ${contact}\nExpires: ${expires}\nPreferred-Languages: ko, en\nCanonical: ${origin}/.well-known/security.txt\n`,
+    )
+  },
+})
+
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [vue(), tailwindcss()],
-  define: {
-    __ODDS_MATH__: JSON.stringify(oddsMath),
-  },
-  server: {
-    proxy: {
-      '/api': 'http://localhost:8080',
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), 'VITE_')
+  if (!env.VITE_SITE_URL || !env.VITE_SECURITY_CONTACT) {
+    throw new Error('VITE_SITE_URL and VITE_SECURITY_CONTACT must be set (see web/.env)')
+  }
+  const origin = env.VITE_SITE_URL.replace(/\/$/, '')
+
+  return {
+    plugins: [vue(), tailwindcss(), botFiles(origin, env.VITE_SECURITY_CONTACT)],
+    define: {
+      __ODDS_MATH__: JSON.stringify(oddsMath),
     },
-  },
+    server: {
+      proxy: {
+        '/api': 'http://localhost:8080',
+      },
+    },
+  }
 })

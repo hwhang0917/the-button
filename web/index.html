@@ -3,19 +3,56 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>The Button</title>
-    <meta name="description" content="RNG enchant clicker — how far can your streak go?" />
-    <meta property="og:title" content="The Button" />
-    <meta property="og:description" content="RNG enchant clicker — how far can your streak go?" />
+    <title>The Button — RNG 강화 클리커 | 별 15개까지 올리고 실시간 랭킹 1위에 도전</title>
+    <meta
+      name="description"
+      content="버튼을 눌러 별을 강화하세요. 확률은 별이 오를수록 가혹해지고, 실패하면 처음부터. 부적과 프리스티지, 카드 컬렉션으로 한계를 넘고 실시간 랭킹에서 최고 기록을 겨뤄보세요. 설치 없이 브라우저에서 바로 플레이하세요."
+    />
+    <link rel="canonical" href="%VITE_SITE_URL%/" />
+    <meta property="og:title" content="The Button — RNG 강화 클리커 | 별 15개까지 올리고 실시간 랭킹 1위에 도전" />
+    <meta
+      property="og:description"
+      content="버튼을 눌러 별을 강화하세요. 확률은 별이 오를수록 가혹해지고, 실패하면 처음부터. 부적과 프리스티지, 카드 컬렉션으로 한계를 넘고 실시간 랭킹에서 최고 기록을 겨뤄보세요. 설치 없이 브라우저에서 바로 플레이하세요."
+    />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/og.jpeg" />
+    <meta property="og:url" content="%VITE_SITE_URL%/" />
+    <meta property="og:site_name" content="The Button" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:image" content="%VITE_SITE_URL%/og.jpeg" />
+    <!-- og.jpeg really is 1024x1024 — declaring the recommended 1200x630 would
+         make platforms reserve the wrong box and letterbox the preview. -->
+    <meta property="og:image:width" content="1024" />
+    <meta property="og:image:height" content="1024" />
+    <meta property="og:image:alt" content="어둠 속에서 빛나는 강화 버튼과 별 게이지 — The Button 게임 이미지" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#0f172a" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "VideoGame",
+        "name": "The Button",
+        "url": "%VITE_SITE_URL%/",
+        "image": "%VITE_SITE_URL%/og.jpeg",
+        "description": "버튼을 눌러 별을 강화하는 RNG 클리커. 부적과 프리스티지, 카드 컬렉션으로 한계를 넘고 실시간 랭킹에서 최고 기록을 겨뤄보세요.",
+        "inLanguage": "ko-KR",
+        "genre": "Incremental",
+        "applicationCategory": "Game",
+        "gamePlatform": "Web browser",
+        "playMode": "SinglePlayer",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" }
+      }
+    </script>
   </head>
   <body>
-    <div id="app"></div>
+    <!-- Crawlers that don't run JS see this; Vue wipes it on mount, so the app's
+         own <h1> stays the only one in the live DOM. -->
+    <div id="app">
+      <h1>The Button — RNG 강화 클리커</h1>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
