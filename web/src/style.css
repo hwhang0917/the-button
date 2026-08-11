@@ -73,8 +73,20 @@ body::before {
    pokemon frame clip-paths/masks and the illusion foil texture are dropped.
    rarity map: rare → "reverse holo", holo → "rare holo", prismatic → "rare rainbow" */
 .card {
-  --grain: none;
+  --grain: url('/img/grain.webp');
   --glitter: url('/img/glitter.png');
+  --sunpillar-1: hsl(2, 100%, 73%);
+  --sunpillar-2: hsl(53, 100%, 69%);
+  --sunpillar-3: hsl(93, 100%, 69%);
+  --sunpillar-4: hsl(176, 100%, 76%);
+  --sunpillar-5: hsl(228, 100%, 74%);
+  --sunpillar-6: hsl(283, 100%, 73%);
+  --sunpillar-clr-1: var(--sunpillar-1);
+  --sunpillar-clr-2: var(--sunpillar-2);
+  --sunpillar-clr-3: var(--sunpillar-3);
+  --sunpillar-clr-4: var(--sunpillar-4);
+  --sunpillar-clr-5: var(--sunpillar-5);
+  --sunpillar-clr-6: var(--sunpillar-6);
   --glittersize: 25%;
   --space: 5%;
   --angle: 133deg;
@@ -130,6 +142,24 @@ body::before {
   position: absolute;
   inset: 0;
   border-radius: inherit;
+}
+/* reference base.css: pseudo layers rotate the sunpillar palette */
+.card__shine::before,
+.card__shine::after {
+  --sunpillar-clr-1: var(--sunpillar-5);
+  --sunpillar-clr-2: var(--sunpillar-6);
+  --sunpillar-clr-3: var(--sunpillar-1);
+  --sunpillar-clr-4: var(--sunpillar-2);
+  --sunpillar-clr-5: var(--sunpillar-3);
+  --sunpillar-clr-6: var(--sunpillar-4);
+}
+.card__shine::after {
+  --sunpillar-clr-1: var(--sunpillar-6);
+  --sunpillar-clr-2: var(--sunpillar-1);
+  --sunpillar-clr-3: var(--sunpillar-2);
+  --sunpillar-clr-4: var(--sunpillar-3);
+  --sunpillar-clr-5: var(--sunpillar-4);
+  --sunpillar-clr-6: var(--sunpillar-5);
 }
 .card__shine {
   background: transparent;
@@ -352,6 +382,79 @@ body::before {
   filter: brightness(0.9) contrast(1.75);
   opacity: calc(var(--pointer-from-center) * 0.9 + 0.2);
   mix-blend-mode: hard-light;
+}
+
+/* ========== PLATINUM TIER — reference v-regular.css (sunpillar beams).
+   The rarity foils color-dodge to a white smear on platinum's bright cyan
+   base; the V effect carries its own dark streak layer so it survives it.
+   :not(common) keeps commons plain and outranks the rarity blocks. ========== */
+.card[data-tier='platinum']:not([data-rarity='common']) .card__shine,
+.card[data-tier='platinum']:not([data-rarity='common']) .card__shine::after {
+  --space: 5%;
+  --angle: 133deg;
+  --imgsize: 500px;
+  background-image:
+    var(--grain),
+    repeating-linear-gradient(
+      0deg,
+      var(--sunpillar-clr-1) calc(var(--space) * 1),
+      var(--sunpillar-clr-2) calc(var(--space) * 2),
+      var(--sunpillar-clr-3) calc(var(--space) * 3),
+      var(--sunpillar-clr-4) calc(var(--space) * 4),
+      var(--sunpillar-clr-5) calc(var(--space) * 5),
+      var(--sunpillar-clr-6) calc(var(--space) * 6),
+      var(--sunpillar-clr-1) calc(var(--space) * 7)
+    ),
+    repeating-linear-gradient(
+      var(--angle),
+      #0e152e 0%,
+      hsl(180, 10%, 60%) 3.8%,
+      hsl(180, 29%, 66%) 4.5%,
+      hsl(180, 10%, 60%) 5.2%,
+      #0e152e 10%,
+      #0e152e 12%
+    ),
+    radial-gradient(
+      farthest-corner circle at var(--pointer-x) var(--pointer-y),
+      hsla(0, 0%, 0%, 0.1) 12%,
+      hsla(0, 0%, 0%, 0.15) 20%,
+      hsla(0, 0%, 0%, 0.25) 120%
+    );
+  background-blend-mode: screen, hue, hard-light;
+  background-size: var(--imgsize) 100%, 200% 700%, 300% 100%, 200% 100%;
+  background-position:
+    center,
+    0% var(--background-y),
+    var(--background-x) var(--background-y),
+    var(--background-x) var(--background-y);
+  filter: brightness(0.8) contrast(2.95) saturate(0.65);
+  mix-blend-mode: color-dodge;
+  opacity: var(--card-opacity);
+}
+.card[data-tier='platinum']:not([data-rarity='common']) .card__shine::before {
+  content: none;
+}
+.card[data-tier='platinum']:not([data-rarity='common']) .card__shine::after {
+  content: '';
+  background-position:
+    center,
+    0% var(--background-y),
+    calc(var(--background-x) * -1) calc(var(--background-y) * -1),
+    var(--background-x) var(--background-y);
+  background-size: var(--imgsize) 100%, 200% 400%, 195% 100%, 200% 100%;
+  filter: brightness(1) contrast(2.5) saturate(1.75);
+  mix-blend-mode: soft-light;
+}
+.card[data-tier='platinum']:not([data-rarity='common']) .card__glare {
+  background-image: radial-gradient(
+    farthest-corner circle at var(--pointer-x) var(--pointer-y),
+    hsl(0, 0%, 100%) 0%,
+    hsla(210, 3%, 54%, 0.33) 45%,
+    hsla(0, 0%, 20%, 0.9) 130%
+  );
+  opacity: calc(var(--card-opacity) * 0.5);
+  mix-blend-mode: hard-light;
+  filter: brightness(0.9) contrast(1.75);
 }
 
 @keyframes shield-hit {
