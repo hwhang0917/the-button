@@ -133,7 +133,7 @@ async function onArm() {
   const v = viewedCard.value
   if (!v) return
   if (await armTalisman(v.tier, v.rarity)) {
-    play('switch')
+    play('talisman')
     vibrate([10, 20, 25]) // charge-up tick as the talisman locks in
     viewedCard.value = null
   }
@@ -305,12 +305,12 @@ async function onPress(center: { x: number; y: number }) {
   } else if (!result.success && result.talismanUsed && result.stars === starsBefore && starsBefore > 0) {
     message.value = t('talismanSaved')
     messageColor.value = 'text-amber-300'
-    play('switch')
+    play('shield')
     vibrate([30, 40, 60]) // "phew" double-pulse for a save
   } else if (result.shieldUsed) {
     message.value = t('shieldSaved')
     messageColor.value = 'text-amber-300'
-    play('switch')
+    play('shield')
     vibrate([30, 40, 60])
   } else {
     message.value = t('fail')

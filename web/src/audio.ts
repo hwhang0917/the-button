@@ -1,5 +1,6 @@
 const files = [
   'click', 'fail', 'hover', 'mouseover', 'switch', 'win',
+  'scratch', 'shield', 'streak-sell', 'coin-use', 'talisman',
   'success_unrank', 'success_bronze', 'success_silver',
   'success_gold', 'success_platinum', 'success_diamond',
 ] as const
@@ -39,34 +40,15 @@ export function preloadAudio(onEach: () => void, timeoutMs: number): Promise<voi
   ).then(() => {})
 }
 
-// synthesized coin-on-latex scratch: a short bandpassed noise burst per stroke.
-// no CC0 scratch-card sample with a scriptable download exists, and synthesis
-// varies naturally with every stroke anyway
-let scratchCtx: AudioContext | null = null
+// real scratch sample now; throttled so continuous strokes don't stack clones
 let lastTick = 0
-const SCRATCH_THROTTLE_MS = 70
+const SCRATCH_THROTTLE_MS = 180
 
 export function scratchTick() {
   const now = performance.now()
   if (now - lastTick < SCRATCH_THROTTLE_MS) return
   lastTick = now
-  scratchCtx ??= new AudioContext()
-  const ctx = scratchCtx
-  const len = Math.floor(ctx.sampleRate * 0.06)
-  const buf = ctx.createBuffer(1, len, ctx.sampleRate)
-  const data = buf.getChannelData(0)
-  for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1
-  const src = ctx.createBufferSource()
-  src.buffer = buf
-  const bp = ctx.createBiquadFilter()
-  bp.type = 'bandpass'
-  bp.frequency.value = 2500 + (Math.random() - 0.5) * 1000
-  bp.Q.value = 1.2
-  const gain = ctx.createGain()
-  gain.gain.setValueAtTime(0.25, ctx.currentTime)
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06)
-  src.connect(bp).connect(gain).connect(ctx.destination)
-  src.start()
+  play('scratch')
 }
 
 /** Haptic helper: no-ops where the Vibration API is missing (iOS Safari).

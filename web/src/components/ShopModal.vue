@@ -39,7 +39,7 @@ const pack = ref<Card | null>(null)
 async function onPack() {
   const card = await buyPack()
   if (card) {
-    play('switch')
+    play('coin-use')
     vibrate([8, 15, 12])
     pack.value = card
   }
@@ -47,7 +47,7 @@ async function onPack() {
 
 async function onRefill() {
   if (await refillQuota()) {
-    play('success_silver')
+    play('coin-use')
     vibrate([15, 20, 30])
   }
 }
@@ -55,7 +55,7 @@ async function onRefill() {
 async function onLottery() {
   const bought = await buyLottery()
   if (bought) {
-    play('switch')
+    play('coin-use')
     vibrate([8, 15, 12]) // ticket tearing off the roll
     ticket.value = bought
   }
@@ -117,7 +117,7 @@ async function onSell() {
   if (!sellValue.value) return
   const gained = await sellStreak()
   if (gained) {
-    play('switch')
+    play('streak-sell')
     vibrate([15, 20, 35]) // coins clattering in
     // more coins, bigger shower
     coinBurst(Math.min(30 + Math.floor(gained / 2), 90))
@@ -126,7 +126,7 @@ async function onSell() {
 
 async function onBuy(key: SkillKey) {
   if (await buySkill(key)) {
-    play('switch')
+    play('coin-use')
     vibrate([10, 15, 25])
   }
 }

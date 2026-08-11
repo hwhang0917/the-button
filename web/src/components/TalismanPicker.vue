@@ -23,7 +23,7 @@ async function onPick(rarity: Rarity) {
   const s = state.value
   if (!s) return
   if (await armTalisman(s.tier, rarity)) {
-    play('switch')
+    play('talisman')
     vibrate([10, 20, 25])
     emit('close')
   }

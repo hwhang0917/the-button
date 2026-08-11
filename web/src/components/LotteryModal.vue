@@ -104,7 +104,7 @@ function finish() {
       vibrate(20)
       break
     default:
-      play('switch')
+      play('fail') // 꽝
   }
 }
 
