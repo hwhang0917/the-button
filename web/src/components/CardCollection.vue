@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { cards, type Card } from '../useGame'
-import { RARITIES, TIERS, TIER_COLORS } from '../tiers'
+import { CARD_EMOJI, RARITIES, TIERS, TIER_COLORS } from '../tiers'
 import { t } from '../i18n'
 
 defineEmits<{ view: [Card] }>()
@@ -59,7 +59,7 @@ const owned = computed(() => {
               class="flex flex-col items-center"
               :class="owned.get(`${tier}/${rarity}`) === 0 ? 'opacity-40 saturate-50' : ''"
             >
-              <img src="/star.png" class="h-5 w-5" alt="" />
+              <span class="text-xl leading-none">{{ CARD_EMOJI[tier][rarity] }}</span>
               <span class="mt-1 text-[9px] font-bold leading-tight" :style="{ color: TIER_COLORS[tier] }">
                 {{ t('tier')[tier] }}
               </span>

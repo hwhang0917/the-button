@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { nextRarity, prevRarity, state, type Card } from '../useGame'
-import { TIER_COLORS } from '../tiers'
+import { CARD_EMOJI, TIER_COLORS } from '../tiers'
 import { t } from '../i18n'
 
 const props = withDefaults(
@@ -34,8 +34,9 @@ const DATA_RARITY: Record<string, string> = {
 const faceStyle = computed(() => ({
   borderColor: TIER_COLORS[props.card.tier],
   // mid-tone base: the reference foils are color-dodge layers, which stay
-  // black over a near-black card — they need luminance underneath to ignite
-  background: `linear-gradient(165deg, ${TIER_COLORS[props.card.tier]}88, #475569 60%, ${TIER_COLORS[props.card.tier]}44)`,
+  // black over a near-black card — they need luminance underneath to ignite.
+  // the trailing solid layer keeps the card fully opaque
+  background: `linear-gradient(165deg, ${TIER_COLORS[props.card.tier]}88, #475569 60%, ${TIER_COLORS[props.card.tier]}44), #334155`,
   boxShadow: `0 0 50px ${TIER_COLORS[props.card.tier]}66`,
 }))
 
@@ -120,8 +121,7 @@ function onPointerUp(e: PointerEvent) {
             <span class="self-end rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-200">
               {{ t('rarity')[card.rarity] }}
             </span>
-            <!-- star stays plain yellow: rarity reads from the card's foil, not the art -->
-            <img src="/star.png" class="h-24 w-24 drop-shadow-[0_0_20px_#facc15]" alt="" />
+            <span class="text-7xl drop-shadow-[0_0_20px_#facc15]">{{ CARD_EMOJI[card.tier][card.rarity] }}</span>
             <div class="text-center">
               <p class="text-lg font-black uppercase tracking-widest" :style="{ color: TIER_COLORS[card.tier] }">
                 {{ t('tier')[card.tier] }}
