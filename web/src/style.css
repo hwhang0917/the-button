@@ -80,6 +80,9 @@ body::before {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* 3D transforms drop the parent's rounded overflow clip on composited
+     layers, leaving a square overlay — carry the radius on the overlay itself */
+  border-radius: inherit;
   background: linear-gradient(
     115deg,
     transparent 25%,
