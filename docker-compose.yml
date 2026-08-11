@@ -4,7 +4,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      QUOTA: ${QUOTA:-5}
+      QUOTA: ${QUOTA:-10}
       EVENTS_DIR: /data/events
     volumes:
       - data:/data

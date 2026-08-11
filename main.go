@@ -51,7 +51,7 @@ func loadConfig() config {
 		Port:      envOr("PORT", "8080"),
 		DBPath:    envOr("DB_PATH", "./thebutton.db"),
 		EventsDir: os.Getenv("EVENTS_DIR"),
-		Quota:     5,
+		Quota:     10,
 	}
 	if q := os.Getenv("QUOTA"); q != "" {
 		n, err := strconv.Atoi(q)

@@ -22,7 +22,7 @@ go build -o thebutton .
 |---|---|---|---|
 | `PORT` | no | `8080` | |
 | `DB_PATH` | no | `./thebutton.db` | SQLite file |
-| `QUOTA` | no | `5` | clicks per player per hour (resets on the clock hour) |
+| `QUOTA` | no | `10` | clicks per player per hour (resets on the clock hour) |
 | `EVENTS_DIR` | no | — | anonymous NDJSON gameplay events for analytics; unset = telemetry off |
 
 ## Dev
