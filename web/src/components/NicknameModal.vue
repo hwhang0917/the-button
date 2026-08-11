@@ -6,6 +6,7 @@ import { t } from '../i18n'
 const emit = defineEmits<{ close: []; link: [] }>()
 const name = ref('')
 const saving = ref(false)
+const taken = ref(false)
 // mirrors nicknameRe in main.go
 const valid = computed(() => /^[A-Za-z0-9_]{3,16}$/.test(name.value.trim()))
 
@@ -13,10 +14,13 @@ async function submit() {
   const n = name.value.trim()
   if (!valid.value || saving.value) return
   saving.value = true
-  if (await saveNickname(n)) {
+  taken.value = false
+  const result = await saveNickname(n)
+  if (result === 'ok') {
     await loadLeaderboard()
     emit('close')
   }
+  taken.value = result === 'taken'
   saving.value = false
 }
 </script>
@@ -35,6 +39,7 @@ async function submit() {
         autofocus
         class="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100 outline-none focus:border-yellow-400"
       />
+      <p v-if="taken" class="text-center text-xs text-rose-400">{{ t('nameTaken') }}</p>
       <div class="flex gap-2">
         <button
           type="button"

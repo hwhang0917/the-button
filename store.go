@@ -8,7 +8,10 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-var errQuotaExceeded = errors.New("daily quota exceeded")
+var (
+	errQuotaExceeded = errors.New("daily quota exceeded")
+	errNicknameTaken = errors.New("nickname taken")
+)
 
 type store struct {
 	db *sql.DB
@@ -37,6 +40,13 @@ func openStore(path string) (*store, error) {
 			PRIMARY KEY (player_token, day)
 		);
 		DROP TABLE IF EXISTS quota; -- old IP-keyed quota; hourly data, disposable, no-op after first boot
+		-- one-time dedupe so the unique index below can be created on old DBs;
+		-- later duplicates blank out (no-op once the index exists)
+		UPDATE players SET nickname = '' WHERE nickname != '' AND rowid NOT IN (
+			SELECT MIN(rowid) FROM players WHERE nickname != '' GROUP BY nickname COLLATE NOCASE
+		);
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_players_nickname
+			ON players(nickname COLLATE NOCASE) WHERE nickname != '';
 		CREATE TABLE IF NOT EXISTS cards (
 			player_token TEXT NOT NULL,
 			tier         TEXT NOT NULL,
@@ -97,7 +107,18 @@ func (s *store) savePlayerStars(token string, stars int) error {
 }
 
 func (s *store) setNickname(token, nickname string) error {
-	_, err := s.db.Exec(`UPDATE players SET nickname = ?, updated_at = ? WHERE token = ?`,
+	// friendly pre-check; the unique index backstops the lookup-to-update race
+	var taken bool
+	err := s.db.QueryRow(`SELECT EXISTS(
+		SELECT 1 FROM players WHERE nickname = ? COLLATE NOCASE AND token != ?)`,
+		nickname, token).Scan(&taken)
+	if err != nil {
+		return err
+	}
+	if taken {
+		return errNicknameTaken
+	}
+	_, err = s.db.Exec(`UPDATE players SET nickname = ?, updated_at = ? WHERE token = ?`,
 		nickname, time.Now(), token)
 	return err
 }

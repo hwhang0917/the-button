@@ -89,14 +89,17 @@ export async function click(risk: number): Promise<ClickResult | null> {
   return result
 }
 
-export async function saveNickname(name: string): Promise<boolean> {
+export async function saveNickname(name: string): Promise<'ok' | 'taken' | 'error'> {
   const res = await fetch('/api/nickname', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name }),
   })
-  if (res.ok && state.value) state.value.nickname = name
-  return res.ok
+  if (res.ok) {
+    if (state.value) state.value.nickname = name
+    return 'ok'
+  }
+  return res.status === 409 ? 'taken' : 'error'
 }
 
 /** Wipes rank, cards, and quota server-side; the session cookie is cleared. */

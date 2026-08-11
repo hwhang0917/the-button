@@ -96,6 +96,27 @@ func TestQuota(t *testing.T) {
 	}
 }
 
+func TestNicknameUnique(t *testing.T) {
+	s, err := openStore(t.TempDir() + "/test.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tok := range []string{"a", "b"} {
+		if _, err := s.getOrCreatePlayer(tok); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.setNickname("a", "Hero"); err != nil {
+		t.Fatalf("first claim failed: %v", err)
+	}
+	if err := s.setNickname("b", "hero"); err != errNicknameTaken {
+		t.Fatalf("case-insensitive dupe should be rejected, got %v", err)
+	}
+	if err := s.setNickname("a", "hero"); err != nil {
+		t.Fatalf("renaming to own name should pass: %v", err)
+	}
+}
+
 func TestTierRankLadder(t *testing.T) {
 	for want, name := range []string{"unrank", "bronze", "silver", "gold", "platinum", "diamond"} {
 		if got := tierRank(name); got != want {

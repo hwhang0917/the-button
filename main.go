@@ -269,7 +269,10 @@ func (s *server) handleNickname(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_nickname")
 		return
 	}
-	if err := s.store.setNickname(p.Token, name); err != nil {
+	if err := s.store.setNickname(p.Token, name); errors.Is(err, errNicknameTaken) {
+		writeError(w, http.StatusConflict, "name_taken")
+		return
+	} else if err != nil {
 		writeError(w, http.StatusInternalServerError, "db")
 		return
 	}
