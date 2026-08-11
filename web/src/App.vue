@@ -75,6 +75,17 @@ const droppedCard = ref<Card | null>(null)
 const viewedCard = ref<Card | null>(null)
 const showNickname = ref(false)
 const showLink = ref(false)
+// link modal reached from the first-visit nickname prompt: closing it without
+// claiming must fall back to the prompt, or the player ends up unnamed
+const linkViaNickname = ref(false)
+
+function closeLink() {
+  showLink.value = false
+  if (linkViaNickname.value) {
+    linkViaNickname.value = false
+    showNickname.value = true
+  }
+}
 const showPrivacy = ref(false)
 const showShop = ref(false)
 const tutorialPending = ref(!localStorage.getItem(TUTORIAL_SEEN_KEY))
@@ -373,9 +384,9 @@ onMounted(async () => {
     <NicknameModal
       v-if="ready && showNickname"
       @close="showNickname = false"
-      @link="showNickname = false; showLink = true"
+      @link="showNickname = false; linkViaNickname = true; showLink = true"
     />
-    <LinkModal v-if="showLink" @close="showLink = false" />
+    <LinkModal v-if="showLink" @close="closeLink" />
     <ShopModal v-if="showShop" @close="showShop = false" />
     <div
       v-if="showPrivacy"
