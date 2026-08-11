@@ -109,7 +109,6 @@ function onPointerUp(e: PointerEvent) {
       <div
         class="card card-tilt card-in relative flex h-80 w-56 flex-col items-center justify-between rounded-2xl border-2 p-5"
         :data-rarity="DATA_RARITY[card.rarity]"
-        :data-tier="card.tier"
         :style="{ ...vars, ...faceStyle }"
       >
         <span class="self-end rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-200">
