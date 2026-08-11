@@ -29,7 +29,7 @@ import { t, lang, toggleLang } from './i18n'
 import { play, preloadAudio, soundCount, vibrate } from './audio'
 import { burst, confetti } from './particles'
 import { COIN_COLORS, useCoinCounter } from './useCoinCounter'
-import { TIER_COLORS, type Rarity } from './tiers'
+import { TIER_COLORS, type Rarity, type Tier } from './tiers'
 import TheButton from './components/TheButton.vue'
 import StarRow from './components/StarRow.vue'
 import TierBadge from './components/TierBadge.vue'
@@ -42,6 +42,7 @@ import ShopModal from './components/ShopModal.vue'
 // katex is heavy: load it only when the odds popup is actually opened
 const OddsModal = defineAsyncComponent(() => import('./components/OddsModal.vue'))
 import TalismanPicker from './components/TalismanPicker.vue'
+import ConfirmModal from './components/ConfirmModal.vue'
 
 const IMAGE_ASSETS = ['/wallpaper.jpg', '/star.png', '/stich.gif']
 const AUDIO_PRELOAD_TIMEOUT_MS = 4000
@@ -147,17 +148,24 @@ async function onCancelTalisman() {
   if (await cancelTalisman()) play('switch')
 }
 
-async function onDefuse() {
+// lossy on purpose: fusion cost 3, defusion returns 2 — warn before burning
+const defuseAsk = ref<{ tier: Tier; rarity: Rarity; lower: Rarity } | null>(null)
+
+function onDefuse() {
   const v = viewedCard.value
-  if (!v) return
-  const lower = prevRarity(v.rarity)
-  if (!lower) return
-  // lossy on purpose: fusion cost 3, defusion returns 2 — warn before burning
-  if (!confirm(t('defuseConfirm').replace('{rarity}', t('rarity')[lower]))) return
-  if (await defuseCard(v.tier, v.rarity)) {
+  const lower = v && prevRarity(v.rarity)
+  if (!v || !lower) return
+  defuseAsk.value = { tier: v.tier, rarity: v.rarity, lower }
+}
+
+async function confirmDefuse() {
+  const d = defuseAsk.value
+  defuseAsk.value = null
+  if (!d) return
+  if (await defuseCard(d.tier, d.rarity)) {
     play('switch')
     vibrate([25, 20, 15]) // decaying pulse: something broke apart
-    viewedCard.value = { tier: v.tier, rarity: lower }
+    viewedCard.value = { tier: d.tier, rarity: d.lower }
   }
 }
 
@@ -584,6 +592,15 @@ onMounted(async () => {
     <ShopModal v-if="showShop" @close="showShop = false" />
     <OddsModal v-if="showOdds" @close="showOdds = false" />
     <TalismanPicker v-if="showTalismanPick" @close="showTalismanPick = false" />
+    <ConfirmModal
+      v-if="defuseAsk"
+      :title="`⚠️ ${t('defuse')}`"
+      :message="t('defuseConfirm').replace('{rarity}', t('rarity')[defuseAsk.lower])"
+      :confirm-label="t('defuse')"
+      :cancel-label="t('later')"
+      @confirm="confirmDefuse"
+      @cancel="defuseAsk = null"
+    />
     <div
       v-if="showPrivacy"
       class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
