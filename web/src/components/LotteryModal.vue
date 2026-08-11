@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { state } from '../useGame'
+import { LOTTERY_PRIZES, state } from '../useGame'
 import { t } from '../i18n'
-import { play, scratchTick } from '../audio'
-import { confetti } from '../particles'
+import { play, scratchTick, vibrate } from '../audio'
+import { burst, confetti } from '../particles'
+import { COIN_COLORS } from '../useCoinCounter'
 
 const props = defineProps<{ prize: number; finalCoins: number }>()
 defineEmits<{ close: [] }>()
@@ -18,7 +19,7 @@ let scratching = false
 let strokes = 0
 
 const tierLabel = computed(() => {
-  const idx = [500, 100, 30, 15].indexOf(props.prize)
+  const idx = LOTTERY_PRIZES.indexOf(props.prize)
   return idx >= 0 ? t('lotteryTiers')[idx] : ''
 })
 
@@ -68,17 +69,40 @@ function checkCleared(ctx: CanvasRenderingContext2D) {
   if (clear / total > REVEAL_RATIO) finish()
 }
 
+const RAINBOW = ['#ff0084', '#fcff00', '#00fff0', '#7c00ff', '#ffffff']
+
 function finish() {
   if (revealed.value) return
   revealed.value = true
   if (state.value) state.value.coins = props.finalCoins
-  if (props.prize >= 500) {
-    play('win')
-    confetti()
-  } else if (props.prize > 0) {
-    play('success_gold')
-  } else {
-    play('switch')
+  const cx = window.innerWidth / 2
+  const cy = window.innerHeight / 2
+  // celebration scales with the prize tier
+  switch (LOTTERY_PRIZES.indexOf(props.prize)) {
+    case 0: // jackpot: full fireworks
+      play('win')
+      confetti()
+      burst(cx, cy, RAINBOW, 160)
+      burst(cx, cy - 60, COIN_COLORS, 120)
+      vibrate([50, 50, 50, 50, 200])
+      break
+    case 1:
+      play('success_diamond')
+      burst(cx, cy, COIN_COLORS, 120)
+      vibrate([30, 30, 80])
+      break
+    case 2:
+      play('success_gold')
+      burst(cx, cy, COIN_COLORS, 60)
+      vibrate([20, 30, 40])
+      break
+    case 3:
+      play('success_silver')
+      burst(cx, cy, COIN_COLORS, 30)
+      vibrate(20)
+      break
+    default:
+      play('switch')
   }
 }
 

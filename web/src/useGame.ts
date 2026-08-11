@@ -199,8 +199,9 @@ export function nextRarity(r: Rarity): Rarity | null {
   return i >= 0 && i + 1 < RARITIES.length ? RARITIES[i + 1] : null
 }
 
-/** Mirrors lotteryPrice in game.go. */
+/** Mirrors lotteryPrice and the prize ladder (1등..4등) in game.go. */
 export const LOTTERY_PRICE = 15
+export const LOTTERY_PRIZES = [2000, 400, 80, 15]
 
 /** Buys a scratch ticket. Patches state with the prize still hidden (price
  * deducted only) — the LotteryModal applies `coins` after the reveal. */

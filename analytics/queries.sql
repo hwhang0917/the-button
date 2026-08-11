@@ -28,7 +28,7 @@ FROM read_json('events/*.ndjson')
 WHERE type = 'sell'
 GROUP BY stars ORDER BY stars;
 
--- Lottery: observed payback vs the designed 71%
+-- Lottery: observed payback vs the designed 81%
 SELECT count(*) AS tickets,
        sum(prize) AS paid_out,
        round(sum(prize) * 100.0 / (count(*) * 15), 1) AS observed_payback_pct
