@@ -41,6 +41,7 @@ import LinkModal from './components/LinkModal.vue'
 import ShopModal from './components/ShopModal.vue'
 // katex is heavy: load it only when the odds popup is actually opened
 const OddsModal = defineAsyncComponent(() => import('./components/OddsModal.vue'))
+import TalismanPicker from './components/TalismanPicker.vue'
 
 const IMAGE_ASSETS = ['/wallpaper.jpg', '/star.png', '/stich.gif']
 const AUDIO_PRELOAD_TIMEOUT_MS = 4000
@@ -189,6 +190,7 @@ function closeLink() {
 const showPrivacy = ref(false)
 const showShop = ref(false)
 const showOdds = ref(false)
+const showTalismanPick = ref(false)
 const tutorialPending = ref(!localStorage.getItem(TUTORIAL_SEEN_KEY))
 
 // first visit: run the tour once the game is ready and the nickname modal is out of the way
@@ -208,7 +210,8 @@ const modalOpen = computed(() =>
       showLink.value ||
       showShop.value ||
       showPrivacy.value ||
-      showOdds.value,
+      showOdds.value ||
+      showTalismanPick.value,
   ),
 )
 // modals cover the page; freeze the body so the background can't scroll under them
@@ -442,6 +445,14 @@ onMounted(async () => {
           >
             🃏 {{ t('tier')[state.talismanTier] }}·{{ t('rarity')[state.talismanRarity as Rarity] }} ✕
           </button>
+          <button
+            v-else
+            class="rounded-full border border-slate-600 px-2 text-xs font-bold text-slate-400 hover:border-amber-400/60 hover:text-amber-300"
+            :title="t('talismanPick')"
+            @click="showTalismanPick = true; play('switch')"
+          >
+            🃏 +
+          </button>
 
           <div id="tut-button" class="relative">
             <button
@@ -572,6 +583,7 @@ onMounted(async () => {
     <LinkModal v-if="showLink" @close="closeLink" />
     <ShopModal v-if="showShop" @close="showShop = false" />
     <OddsModal v-if="showOdds" @close="showOdds = false" />
+    <TalismanPicker v-if="showTalismanPick" @close="showTalismanPick = false" />
     <div
       v-if="showPrivacy"
       class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
