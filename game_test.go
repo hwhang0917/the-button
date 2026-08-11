@@ -427,17 +427,16 @@ func TestNextRarity(t *testing.T) {
 }
 
 func TestResolveClickTalisman(t *testing.T) {
-	// chance talisman burns on the click regardless of outcome and feeds payout
+	// chance talisman burns on the click regardless of outcome, boosts only the
+	// roll, and must NOT shrink the risk-mode payout
+	base := gainFor(chanceFor(5, 1), 1)
 	for i := 0; i < 100; i++ {
-		res := resolveClick(9, 1, skills{TalBonus: talRarePct})
+		res := resolveClick(5, 1, skills{TalBonus: talRarePct})
 		if !res.TalismanUsed {
 			t.Fatal("chance talisman must burn on any outcome")
 		}
-		if res.Success {
-			// base 14% pays 7; boosted 24% must pay the lower 4
-			if res.Gained > gainFor(14, 1) {
-				t.Fatalf("boosted chance must lower payout, gained %d", res.Gained)
-			}
+		if res.Success && res.Gained != base {
+			t.Fatalf("talisman must not change the payout: gained %d, want %d", res.Gained, base)
 		}
 	}
 	// holo talisman saves before the purchased shield

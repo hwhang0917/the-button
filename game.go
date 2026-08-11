@@ -289,11 +289,13 @@ type clickResult struct {
 // so failing below the floor is never profitable.
 func resolveClick(stars, risk int, sk skills) clickResult {
 	prevTier := tierFor(stars)
-	// one effective chance feeds both roll and payout, so chance boosts trade
-	// payout for survival instead of stacking a free win
-	chance := effChanceFor(stars, risk, sk.Charm)
-	if chance > 0 && sk.TalBonus > 0 {
-		chance = min(100, chance+sk.TalBonus)
+	// charm feeds both roll and payout (higher chance, lower reward), but the
+	// talisman bonus boosts ONLY the roll — the consumed card is its price,
+	// so it must not shrink the risk-mode star reward
+	payChance := effChanceFor(stars, risk, sk.Charm)
+	chance := payChance
+	if payChance > 0 && sk.TalBonus > 0 {
+		chance = min(100, payChance+sk.TalBonus)
 	}
 	// a chance talisman burns on the click no matter the outcome
 	talUsed := sk.TalBonus > 0
@@ -308,7 +310,7 @@ func resolveClick(stars, risk int, sk skills) clickResult {
 		floor := min(sk.Headstart, stars)
 		return clickResult{Stars: floor, Tier: tierFor(floor), TalismanUsed: talUsed}
 	}
-	gain := gainFor(chance, risk)
+	gain := gainFor(payChance, risk)
 	if sk.TalDouble {
 		gain *= 2
 		talUsed = true

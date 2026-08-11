@@ -143,8 +143,10 @@ const RARITY_BURST: Record<Rarity, { colors: string[]; count: number }> = {
   prismatic: { colors: ['#ff0084', '#fcff00', '#00fff0', '#7c00ff', '#ffffff'], count: 140 },
 }
 
-async function onCancelTalisman() {
-  if (!confirm(t('talismanCancelConfirm'))) return
+const cancelTalismanAsk = ref(false)
+
+async function confirmCancelTalisman() {
+  cancelTalismanAsk.value = false
   if (await cancelTalisman()) play('switch')
 }
 
@@ -243,9 +245,10 @@ async function onPrestige() {
   burst(window.innerWidth / 2, window.innerHeight / 2, COIN_COLORS, 80)
 }
 
-async function onDelete() {
-  menuOpen.value = false
-  if (!confirm(t('deleteConfirm'))) return
+const deleteAsk = ref(false)
+
+async function confirmDelete() {
+  deleteAsk.value = false
   if (await deletePlayer()) location.reload()
 }
 
@@ -262,13 +265,12 @@ const refillIn = computed(() => {
 const disabled = computed(
   () => busy.value || !state.value || state.value.quotaLeft <= 0 || state.value.win,
 )
-// include the armed talisman's bonus when it would actually fire (tier match),
-// so the button shows the same P the server will roll
-const displayChance = computed(() => {
-  if (!state.value) return 0
-  const base = effChance(state.value.chance, risk.value, state.value.charmLevel)
-  return Math.min(100, base + talismanBonus(state.value))
-})
+// base chance (risk + charm); the talisman bonus is shown separately as +N%
+// and never feeds the payout, so displayGain stays correct deriving from this
+const displayChance = computed(() =>
+  state.value ? effChance(state.value.chance, risk.value, state.value.charmLevel) : 0,
+)
+const displayBonus = computed(() => (state.value ? talismanBonus(state.value) : 0))
 const displayGain = computed(() => gainFor(displayChance.value, risk.value))
 
 function setRisk(lvl: number) {
@@ -391,7 +393,7 @@ onMounted(async () => {
               </button>
               <button
                 class="block w-full px-3 py-2 text-left text-rose-400 hover:bg-slate-800"
-                @click="onDelete"
+                @click="menuOpen = false; deleteAsk = true"
               >
                 🗑️ {{ t('deleteData') }}
               </button>
@@ -449,7 +451,7 @@ onMounted(async () => {
             class="text-xs font-bold hover:opacity-70"
             :style="{ color: TIER_COLORS[state.talismanTier] }"
             :title="t('talismanCancelConfirm')"
-            @click="onCancelTalisman"
+            @click="cancelTalismanAsk = true"
           >
             🃏 {{ t('tier')[state.talismanTier] }}·{{ t('rarity')[state.talismanRarity as Rarity] }} ✕
           </button>
@@ -473,6 +475,7 @@ onMounted(async () => {
             <TheButton
               :tier="state.tier"
               :chance="displayChance"
+              :bonus="displayBonus"
               :risky="risk > 0"
               :disabled="disabled"
               :prestige="state.prestige"
@@ -600,6 +603,24 @@ onMounted(async () => {
       :cancel-label="t('later')"
       @confirm="confirmDefuse"
       @cancel="defuseAsk = null"
+    />
+    <ConfirmModal
+      v-if="cancelTalismanAsk"
+      :title="`🃏 ${t('disarm')}`"
+      :message="t('talismanCancelConfirm')"
+      :confirm-label="t('disarm')"
+      :cancel-label="t('later')"
+      @confirm="confirmCancelTalisman"
+      @cancel="cancelTalismanAsk = false"
+    />
+    <ConfirmModal
+      v-if="deleteAsk"
+      :title="`🗑️ ${t('deleteData')}`"
+      :message="t('deleteConfirm')"
+      :confirm-label="t('deleteData')"
+      :cancel-label="t('later')"
+      @confirm="confirmDelete"
+      @cancel="deleteAsk = false"
     />
     <div
       v-if="showPrivacy"

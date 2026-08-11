@@ -8,8 +8,8 @@ import katex from 'katex'
 const tex = (s: string) => katex.renderToString(s, { displayMode: true, throwOnError: false })
 
 const oddsMath = {
-  chance: tex(String.raw`P = \min\!\left(100,\; \left\lfloor \tfrac{\mathrm{base}(s)}{r+1} \right\rfloor + 2c + T\right)`),
-  roll: tex(String.raw`\text{success} \iff U < P,\qquad U \sim \mathcal{U}\{0,\dots,99\}`),
+  chance: tex(String.raw`P = \min\!\left(100,\; \left\lfloor \tfrac{\mathrm{base}(s)}{r+1} \right\rfloor + 2c\right)`),
+  roll: tex(String.raw`\text{success} \iff U < \min(100,\ P + T),\qquad U \sim \mathcal{U}\{0,\dots,99\}`),
   gain: tex(String.raw`\mathrm{gain} = \begin{cases} 1 & r = 0 \\ \max\!\bigl(1,\ \operatorname{round}(100/P)\bigr) & r \ge 1 \end{cases}`),
   next: tex(String.raw`s' = \min\!\bigl(s + \mathrm{gain}\cdot D,\ 15\bigr),\qquad D = \begin{cases} 2 & \text{prismatic talisman} \\ 1 & \text{else} \end{cases}`),
   fail: tex(String.raw`s' = \begin{cases} s & \text{holo talisman or }🛡 \\ \min(\mathrm{headstart},\, s) & \text{else} \end{cases}`),

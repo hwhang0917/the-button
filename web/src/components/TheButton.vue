@@ -14,8 +14,9 @@ const props = withDefaults(
     prestige?: number
     shield?: boolean
     talisman?: boolean
+    bonus?: number
   }>(),
-  { prestige: 0, shield: false, talisman: false },
+  { prestige: 0, shield: false, talisman: false, bonus: 0 },
 )
 const emit = defineEmits<{ press: [center: { x: number; y: number }] }>()
 
@@ -133,8 +134,9 @@ function drawButton() {
 
 function syncTexts() {
   label.text = t('press')
-  pct.text = `${props.chance}%`
-  pct.style.fill = props.risky ? '#fda4af' : '#e2e8f0'
+  // the talisman bonus rides the roll only, so it shows as its own +N% tag
+  pct.text = props.bonus > 0 ? `${props.chance}% +${props.bonus}%` : `${props.chance}%`
+  pct.style.fill = props.bonus > 0 ? '#fcd34d' : props.risky ? '#fda4af' : '#e2e8f0'
 }
 
 function applyDisabled() {
@@ -362,7 +364,7 @@ onMounted(async () => {
 })
 
 watch(() => [props.tier, props.risky, props.prestige], () => app && drawButton())
-watch(() => [props.chance, props.risky, lang.value], () => app && syncTexts())
+watch(() => [props.chance, props.risky, props.bonus, lang.value], () => app && syncTexts())
 watch(() => props.disabled, () => app && applyDisabled())
 
 onBeforeUnmount(() => app?.destroy(true, { children: true }))
