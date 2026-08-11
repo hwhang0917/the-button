@@ -45,6 +45,10 @@ let vy = 0
 let phase = 0
 let pressed = false
 let emberAcc = 0
+// purely-aesthetic press charge: holding compresses and trembles the button,
+// releasing pops it harder the longer it was held. never touches the outcome.
+let holdFrames = 0
+const CHARGE_FRAMES = 90 // ~1.5s to full squash
 
 interface Ember {
   sp: Sprite
@@ -205,19 +209,26 @@ onMounted(async () => {
   })
   btn.on('pointerdown', () => {
     pressed = true
+    holdFrames = 0
     targetScale = 0.82
     play('click')
     vy += 1.5
   })
   const release = () => {
+    const charge = Math.min(holdFrames / CHARGE_FRAMES, 1)
     targetScale = 1
     pressed = false
+    holdFrames = 0
+    vScale += 0.06 + 0.2 * charge // bigger pop the longer the hold
+    if (charge > 0.15) {
+      navigator.vibrate?.(Math.round(8 + 30 * charge))
+      for (let i = Math.round(charge * 14); i > 0; i--) spawnEmber()
+    }
   }
   btn.on('pointerupoutside', release)
   btn.on('pointerup', () => {
     if (!pressed) return
     release()
-    vScale += 0.06 // springy overshoot on release
     const r = host.value!.getBoundingClientRect()
     emit('press', { x: r.left + r.width / 2, y: r.top + r.height / 2 })
   })
@@ -237,9 +248,19 @@ onMounted(async () => {
     vy *= damp
     oy += vy * dt
 
+    // holding: squash deeper over time and tremble like a compressed spring
+    let charge = 0
+    if (pressed) {
+      holdFrames += dt
+      charge = Math.min(holdFrames / CHARGE_FRAMES, 1)
+      targetScale = 0.82 - 0.12 * charge
+    }
+    const tremX = (Math.random() - 0.5) * 3 * charge
+    const tremY = (Math.random() - 0.5) * 3 * charge
+
     const breath = 1 + Math.sin(phase * 1.7) * 0.012
     btn.scale.set(scale * breath)
-    btn.position.set(SIZE / 2 + ox, SIZE / 2 + oy)
+    btn.position.set(SIZE / 2 + ox + tremX, SIZE / 2 + oy + tremY)
     btn.rotation = Math.sin(phase * 0.9) * 0.02
 
     // prestige flair: hue-cycled rim/halo for holo+, orbiting sparkles for prismatic
@@ -274,9 +295,9 @@ onMounted(async () => {
       sparkles.forEach((sp) => (sp.visible = false))
     }
 
-    // ember emission scales with how bad the odds are
+    // ember emission scales with how bad the odds are, plus a charging sizzle
     if (!props.disabled) {
-      emberAcc += dt * heat() * (props.risky ? 0.9 : 0.55)
+      emberAcc += dt * (heat() * (props.risky ? 0.9 : 0.55) + charge * 0.4)
       while (emberAcc >= 1) {
         emberAcc -= 1
         spawnEmber()
