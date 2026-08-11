@@ -6,6 +6,17 @@ import { t } from '../i18n'
 
 defineEmits<{ view: [Card] }>()
 
+// the parent re-mounts this component when cards change, so the fold state
+// has to live outside the component
+const FOLD_KEY = 'bt_collection_folded'
+const initiallyOpen = !localStorage.getItem(FOLD_KEY)
+
+function onToggle(e: Event) {
+  const d = e.target as HTMLDetailsElement
+  if (d.open) localStorage.removeItem(FOLD_KEY)
+  else localStorage.setItem(FOLD_KEY, '1')
+}
+
 const owned = computed(() => {
   const m = new Map<string, number>()
   for (const c of cards.value) m.set(`${c.tier}/${c.rarity}`, c.count)
@@ -14,11 +25,18 @@ const owned = computed(() => {
 </script>
 
 <template>
-  <section class="rounded-xl border border-slate-700/60 bg-slate-900/70 p-4 backdrop-blur">
-    <h2 class="mb-3 text-sm font-bold uppercase tracking-widest text-slate-400">
-      🃏 {{ t('collection') }} ({{ cards.length }}/24)
-    </h2>
-    <div class="grid grid-cols-4 gap-2">
+  <details
+    :open="initiallyOpen"
+    class="group rounded-xl border border-slate-700/60 bg-slate-900/70 p-4 backdrop-blur"
+    @toggle="onToggle"
+  >
+    <summary
+      class="flex cursor-pointer list-none items-center justify-between text-sm font-bold uppercase tracking-widest text-slate-400 select-none [&::-webkit-details-marker]:hidden"
+    >
+      <span>🃏 {{ t('collection') }} ({{ cards.length }}/24)</span>
+      <span class="transition-transform group-open:rotate-180">▾</span>
+    </summary>
+    <div class="mt-3 grid grid-cols-4 gap-2">
       <template v-for="tier in TIERS" :key="tier">
         <div
           v-for="rarity in RARITIES"
@@ -52,5 +70,5 @@ const owned = computed(() => {
         </div>
       </template>
     </div>
-  </section>
+  </details>
 </template>
