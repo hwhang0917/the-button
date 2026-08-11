@@ -219,7 +219,8 @@ onMounted(async () => {
   label.position.set(0, -8)
   pct = new Text({
     text: '',
-    style: { fontFamily: 'ui-monospace, monospace', fontSize: 16, fontWeight: '700', fill: '#e2e8f0' },
+    // padding: glyphs (%) can render past the measured width and get clipped
+    style: { fontFamily: 'ui-monospace, monospace', fontSize: 16, fontWeight: '700', fill: '#e2e8f0', padding: 4 },
   })
   pct.anchor.set(0.5)
   pct.position.set(0, 24)
