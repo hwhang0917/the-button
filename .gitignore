@@ -16,6 +16,9 @@ dist-ssr
 *.db
 *.db-*
 
+# go build artifact
+/the-button
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
