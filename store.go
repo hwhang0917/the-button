@@ -40,7 +40,8 @@ func openStore(path string) (*store, error) {
 			headstart_level INTEGER NOT NULL DEFAULT 0,
 			prestige        INTEGER NOT NULL DEFAULT 0,
 			talisman_tier   TEXT NOT NULL DEFAULT '',
-			talisman_rarity TEXT NOT NULL DEFAULT ''
+			talisman_rarity TEXT NOT NULL DEFAULT '',
+			refill_day      TEXT NOT NULL DEFAULT ''
 		);
 		CREATE TABLE IF NOT EXISTS player_quota (
 			player_token TEXT NOT NULL,
@@ -77,6 +78,7 @@ func openStore(path string) (*store, error) {
 		"prestige INTEGER NOT NULL DEFAULT 0",
 		"talisman_tier TEXT NOT NULL DEFAULT ''",
 		"talisman_rarity TEXT NOT NULL DEFAULT ''",
+		"refill_day TEXT NOT NULL DEFAULT ''",
 	} {
 		_, err := db.Exec("ALTER TABLE players ADD COLUMN " + ddl)
 		if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
@@ -98,6 +100,7 @@ type player struct {
 	Prestige       int
 	TalismanTier   string
 	TalismanRarity string
+	RefillDay      string
 }
 
 func (s *store) getOrCreatePlayer(token string) (*player, error) {
@@ -108,10 +111,10 @@ func (s *store) getOrCreatePlayer(token string) (*player, error) {
 	}
 	p := &player{Token: token}
 	err = s.db.QueryRow(`SELECT nickname, stars, best_stars, coins, shield_charges, charm_level, headstart_level,
-		prestige, talisman_tier, talisman_rarity
+		prestige, talisman_tier, talisman_rarity, refill_day
 		FROM players WHERE token = ?`, token).
 		Scan(&p.Nickname, &p.Stars, &p.BestStars, &p.Coins, &p.ShieldCharges, &p.CharmLevel, &p.HeadstartLevel,
-			&p.Prestige, &p.TalismanTier, &p.TalismanRarity)
+			&p.Prestige, &p.TalismanTier, &p.TalismanRarity, &p.RefillDay)
 	if err != nil {
 		return nil, err
 	}
@@ -180,15 +183,16 @@ func (s *store) buyPack(token string, price int, tier, rarity string) (bool, err
 }
 
 // refillQuota buys back the current hour's spent clicks: coins out, the hour
-// bucket's count zeroed. Rejects when broke or when nothing was spent.
-func (s *store) refillQuota(token string, price int) (bool, error) {
+// bucket's count zeroed. Once per day — the refill_day pin rejects a second
+// purchase — and rejected when broke or when nothing was spent.
+func (s *store) refillQuota(token string, price int, day string) (bool, error) {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return false, err
 	}
 	defer tx.Rollback()
-	res, err := tx.Exec(`UPDATE players SET coins = coins - ?, updated_at = ?
-		WHERE token = ? AND coins >= ?`, price, time.Now(), token, price)
+	res, err := tx.Exec(`UPDATE players SET coins = coins - ?, refill_day = ?, updated_at = ?
+		WHERE token = ? AND coins >= ? AND refill_day != ?`, price, day, time.Now(), token, price, day)
 	if err != nil {
 		return false, err
 	}

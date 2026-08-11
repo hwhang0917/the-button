@@ -367,14 +367,15 @@ func TestBuyPackAndRefill(t *testing.T) {
 		t.Fatalf("pack card missing: %v", cards)
 	}
 
-	// refill: rejected with no spent clicks, works after spending
-	if ok, _ := s.refillQuota("a", refillPrice); ok {
+	// refill: rejected with no spent clicks, works after spending, once per day
+	const day = "2026-08-11"
+	if ok, _ := s.refillQuota("a", refillPrice, day); ok {
 		t.Fatal("refill with nothing spent must fail")
 	}
 	if _, err := s.consumeQuota("a", 10); err != nil {
 		t.Fatal(err)
 	}
-	if ok, _ := s.refillQuota("a", refillPrice); !ok {
+	if ok, _ := s.refillQuota("a", refillPrice, day); !ok {
 		t.Fatal("refill failed")
 	}
 	if used, _ := s.quotaUsed("a"); used != 0 {
@@ -383,6 +384,15 @@ func TestBuyPackAndRefill(t *testing.T) {
 	p, _ = s.getOrCreatePlayer("a")
 	if p.Coins != 100-packPrice-refillPrice {
 		t.Fatalf("coins = %d after refill", p.Coins)
+	}
+	if _, err := s.consumeQuota("a", 10); err != nil {
+		t.Fatal(err)
+	}
+	if ok, _ := s.refillQuota("a", refillPrice, day); ok {
+		t.Fatal("second refill on the same day must fail")
+	}
+	if ok, _ := s.refillQuota("a", refillPrice, "2026-08-12"); !ok {
+		t.Fatal("refill on the next day should work")
 	}
 }
 

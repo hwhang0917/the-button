@@ -212,6 +212,7 @@ type stateResponse struct {
 	Prestige       int    `json:"prestige"`
 	TalismanTier   string `json:"talismanTier"`
 	TalismanRarity string `json:"talismanRarity"`
+	RefillUsed     bool   `json:"refillUsed"`
 }
 
 func (s *server) stateFor(p *player, quotaLeft int) stateResponse {
@@ -231,6 +232,7 @@ func (s *server) stateFor(p *player, quotaLeft int) stateResponse {
 		Prestige:       p.Prestige,
 		TalismanTier:   p.TalismanTier,
 		TalismanRarity: p.TalismanRarity,
+		RefillUsed:     p.RefillDay == time.Now().Format("2006-01-02"),
 	}
 }
 
@@ -607,13 +609,13 @@ func (s *server) handleRefill(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	refilled, err := s.store.refillQuota(p.Token, refillPrice)
+	refilled, err := s.store.refillQuota(p.Token, refillPrice, time.Now().Format("2006-01-02"))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "db")
 		return
 	}
 	if !refilled {
-		// broke, or nothing spent this hour
+		// broke, already refilled today, or nothing spent this hour
 		writeError(w, http.StatusConflict, "cannot_refill")
 		return
 	}
