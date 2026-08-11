@@ -120,6 +120,7 @@ export async function prestigeStreak(): Promise<number | null> {
       win: false,
     })
   }
+  loadLeaderboard() // prestige level and stars both feed the ranking
   return d.gained
 }
 
@@ -219,6 +220,7 @@ export async function sellStreak(): Promise<number | null> {
   if (state.value) {
     Object.assign(state.value, { coins: d.coins, stars: d.stars, tier: d.tier, chance: d.chance, win: false })
   }
+  loadLeaderboard() // rank sorts by current stars, so a sell moves the board
   return d.gained
 }
 
