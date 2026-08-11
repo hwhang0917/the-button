@@ -12,6 +12,7 @@ import {
   loadLeaderboard,
   loadState,
   MAX_RISK,
+  nextRarity,
   PRESTIGE_REWARDS,
   prestigeStreak,
   state,
@@ -126,10 +127,24 @@ async function onArm() {
   }
 }
 
+// fusion celebration: burst colors and particle count follow the RESULT rarity
+const RARITY_BURST: Record<Rarity, { colors: string[]; count: number }> = {
+  common: { colors: ['#e2e8f0', '#cbd5e1'], count: 40 },
+  rare: { colors: ['#7dd3fc', '#38bdf8', '#0ea5e9', '#ffffff'], count: 60 },
+  holo: { colors: ['#f0abfc', '#fcd34d', '#22d3ee', '#a78bfa', '#ffffff'], count: 90 },
+  prismatic: { colors: ['#ff0084', '#fcff00', '#00fff0', '#7c00ff', '#ffffff'], count: 140 },
+}
+
 async function onFuse() {
   const v = viewedCard.value
   if (!v) return
-  if (await fuseCards(v.tier, v.rarity)) play('success_gold')
+  const next = nextRarity(v.rarity)
+  if (!next || !(await fuseCards(v.tier, v.rarity))) return
+  play('success_gold')
+  const fx = RARITY_BURST[next]
+  burst(window.innerWidth / 2, window.innerHeight / 2 - 40, fx.colors, fx.count)
+  // flip the popup to the freshly fused card so its rarity effect shows
+  viewedCard.value = { tier: v.tier, rarity: next }
 }
 const showNickname = ref(false)
 const showLink = ref(false)
@@ -498,6 +513,7 @@ onMounted(async () => {
     <CardReveal v-if="droppedCard" :card="droppedCard" @close="droppedCard = null" />
     <CardReveal
       v-if="viewedCard"
+      :key="viewedCard.tier + viewedCard.rarity"
       :card="viewedCard"
       :drop="false"
       :count="viewedCount"
