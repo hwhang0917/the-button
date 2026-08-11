@@ -103,7 +103,8 @@ body::before {
 }
 .flipper {
   transform-style: preserve-3d;
-  transition: transform 0.5s;
+  /* springy overshoot, like the reference's clicked-card pop */
+  transition: transform 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .flipper.flipped {
   transform: rotateY(180deg);
@@ -117,9 +118,21 @@ body::before {
   position: absolute;
   inset: 0;
   backface-visibility: hidden;
+  /* backface-visibility silently fails on some compositors (the reference
+     css warns about this) — swap the faces outright at mid-rotation so the
+     hidden side can never show mirrored */
+  visibility: visible;
+  transition: visibility 0s 0.2s;
 }
 .card-back {
   transform: rotateY(180deg);
+  visibility: hidden;
+}
+.flipper.flipped .card-face {
+  visibility: hidden;
+}
+.flipper.flipped .card-back {
+  visibility: visible;
 }
 /* poke-holo active pop: clicking the card springs it up like the reference's
    clicked card */

@@ -22,7 +22,6 @@ const wrongTierHint = computed(() =>
 const el = ref<HTMLDivElement | null>(null)
 const vars = ref<Record<string, string>>({})
 const flipped = ref(false)
-const active = ref(false)
 
 // our rarities → the reference's data-rarity values its CSS keys off
 const DATA_RARITY: Record<string, string> = {
@@ -86,7 +85,7 @@ function onTouch(e: TouchEvent) {
     <div
       ref="el"
       class="flip-scene"
-      :class="{ active }"
+      :class="{ active: flipped }"
       @mousemove="onMove"
       @mouseleave="vars = {}"
       @touchstart.prevent="onTouch"
@@ -98,10 +97,10 @@ function onTouch(e: TouchEvent) {
           class="card card-tilt h-80 w-56"
           :data-rarity="DATA_RARITY[card.rarity]"
           :style="vars"
-          @click="active = !active"
+          @click="flipped = !flipped"
         >
           <div
-            class="card-face flex flex-col items-center justify-between overflow-hidden rounded-2xl border-2 p-5"
+            class="card-face flex flex-col items-center justify-between rounded-2xl border-2 p-5"
             :style="faceStyle"
           >
             <span class="self-end rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-200">
@@ -119,7 +118,7 @@ function onTouch(e: TouchEvent) {
             <div class="card__glare"></div>
           </div>
           <div
-            class="card-face card-back flex flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl border-2 p-5"
+            class="card-face card-back flex flex-col items-center justify-center gap-4 rounded-2xl border-2 p-5"
             :style="faceStyle"
           >
             <p class="text-4xl">🃏</p>
@@ -168,12 +167,6 @@ function onTouch(e: TouchEvent) {
         @click="$emit('again')"
       >
         🎁 {{ againLabel }}
-      </button>
-      <button
-        class="rounded-full border border-slate-600 px-6 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
-        @click="flipped = !flipped"
-      >
-        🔄 {{ t('flip') }}
       </button>
       <button
         class="rounded-full border border-slate-600 px-6 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
