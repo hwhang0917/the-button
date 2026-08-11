@@ -4,6 +4,9 @@
 html,
 body {
   background: #060814;
+  /* the fail shake translates the whole page; clip the horizontal spill so
+     it never spawns a scrollbar (clip ≠ hidden: no scroll container) */
+  overflow-x: clip;
 }
 
 /* tailwind v4 preflight leaves buttons on cursor: default */
