@@ -71,8 +71,11 @@ body::before {
 }
 /* plain alpha gradients, no mix-blend-mode: blend modes inside a transformed
    rounded overflow-hidden card render half-clipped on Android compositors.
-   commons stay plain: the shine starts at rare */
-.holo-card.rarity-rare::after {
+   commons stay plain: the shine starts at rare. the shared boilerplate must
+   cover every shiny rarity — a rule without content: renders nothing */
+.holo-card.rarity-rare::after,
+.holo-card.rarity-holo::after,
+.holo-card.rarity-prismatic::after {
   content: '';
   position: absolute;
   inset: 0;

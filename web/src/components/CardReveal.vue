@@ -64,7 +64,20 @@ function onTouch(e: TouchEvent) {
       <span class="self-end rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-200">
         {{ t('rarity')[card.rarity] }}
       </span>
-      <img src="/star.png" class="h-24 w-24 drop-shadow-[0_0_20px_#facc15]" alt="" />
+      <img
+        src="/star.png"
+        class="h-24 w-24"
+        :class="
+          card.rarity === 'rare'
+            ? 'star-r1'
+            : card.rarity === 'holo'
+              ? 'star-r2'
+              : card.rarity === 'prismatic'
+                ? 'star-r3'
+                : 'drop-shadow-[0_0_20px_#facc15]'
+        "
+        alt=""
+      />
       <div class="text-center">
         <p class="text-lg font-black uppercase tracking-widest" :style="{ color: TIER_COLORS[card.tier] }">
           {{ t('tier')[card.tier] }}
