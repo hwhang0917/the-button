@@ -10,10 +10,11 @@ var chanceTable = [16]int{100, 90, 81, 72, 63, 55, 48, 41, 35, 29, 24, 19, 15, 1
 
 const maxStars = 15
 
-const (
-	baseCardDropPct  = 5
-	riskyCardDropPct = 10
-)
+// Risk levels 0 (safe) through maxRisk: odds ÷(level+1), star gain and
+// card-drop odds ×(level+1). Level 1 matches the old on/off risky mode.
+const maxRisk = 3
+
+const baseCardDropPct = 5
 
 var tiers = []struct {
 	Name     string
@@ -38,15 +39,11 @@ func tierFor(stars int) string {
 }
 
 // chanceFor returns the success % for the next click at the given star count.
-func chanceFor(stars int, risky bool) int {
+func chanceFor(stars, risk int) int {
 	if stars >= maxStars {
 		return 0
 	}
-	c := chanceTable[stars]
-	if risky {
-		c /= 2
-	}
-	return c
+	return chanceTable[stars] / (risk + 1)
 }
 
 // rollPct returns true with pct% probability, using crypto/rand so results
@@ -78,12 +75,8 @@ type cardDrop struct {
 }
 
 // rollCard rolls the post-success card drop; nil means no drop.
-func rollCard(stars int, risky bool) *cardDrop {
-	dropPct := baseCardDropPct
-	if risky {
-		dropPct = riskyCardDropPct
-	}
-	if !rollPct(dropPct) {
+func rollCard(stars, risk int) *cardDrop {
+	if !rollPct(baseCardDropPct * (risk + 1)) {
 		return nil
 	}
 	w := rarityWeights(stars)
@@ -117,16 +110,12 @@ type clickResult struct {
 
 // resolveClick runs one enchant attempt: roll, apply gain or full reset,
 // then roll the card drop on success.
-func resolveClick(stars int, risky bool) clickResult {
+func resolveClick(stars, risk int) clickResult {
 	prevTier := tierFor(stars)
-	if !rollPct(chanceFor(stars, risky)) {
+	if !rollPct(chanceFor(stars, risk)) {
 		return clickResult{Stars: 0, Tier: tierFor(0)}
 	}
-	gain := 1
-	if risky {
-		gain = 2
-	}
-	newStars := stars + gain
+	newStars := stars + 1 + risk
 	if newStars > maxStars {
 		newStars = maxStars
 	}
@@ -137,6 +126,6 @@ func resolveClick(stars int, risky bool) clickResult {
 		Tier:    tierFor(newStars),
 		TierUp:  tierFor(newStars) != prevTier,
 		Win:     newStars == maxStars,
-		Card:    rollCard(newStars, risky),
+		Card:    rollCard(newStars, risk),
 	}
 }

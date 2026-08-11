@@ -15,14 +15,17 @@ func TestChanceTableMonotonic(t *testing.T) {
 
 func TestResolveClickBounds(t *testing.T) {
 	for stars := 0; stars < maxStars; stars++ {
-		for _, risky := range []bool{false, true} {
-			res := resolveClick(stars, risky)
+		for risk := 0; risk <= maxRisk; risk++ {
+			res := resolveClick(stars, risk)
 			if res.Success {
 				if res.Stars <= stars || res.Stars > maxStars {
-					t.Errorf("stars=%d risky=%v: success moved to %d", stars, risky, res.Stars)
+					t.Errorf("stars=%d risk=%d: success moved to %d", stars, risk, res.Stars)
+				}
+				if want := min(stars+1+risk, maxStars); res.Stars != want {
+					t.Errorf("stars=%d risk=%d: gained to %d, want %d", stars, risk, res.Stars, want)
 				}
 			} else if res.Stars != 0 {
-				t.Errorf("stars=%d risky=%v: fail must reset to 0, got %d", stars, risky, res.Stars)
+				t.Errorf("stars=%d risk=%d: fail must reset to 0, got %d", stars, risk, res.Stars)
 			}
 		}
 	}
@@ -30,7 +33,7 @@ func TestResolveClickBounds(t *testing.T) {
 
 func TestFirstClickAlwaysSucceeds(t *testing.T) {
 	for i := 0; i < 50; i++ {
-		if res := resolveClick(0, false); !res.Success || res.Stars != 1 {
+		if res := resolveClick(0, 0); !res.Success || res.Stars != 1 {
 			t.Fatalf("100%% click failed: %+v", res)
 		}
 	}

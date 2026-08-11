@@ -7,6 +7,7 @@ import {
   loadCards,
   loadLeaderboard,
   loadState,
+  MAX_RISK,
   state,
   wouldRank,
   type Card,
@@ -23,7 +24,7 @@ import CardCollection from './components/CardCollection.vue'
 import CardReveal from './components/CardReveal.vue'
 import NicknameModal from './components/NicknameModal.vue'
 
-const risky = ref(false)
+const risk = ref(0)
 const busy = ref(false)
 const shaking = ref(false)
 const flashing = ref(false)
@@ -54,20 +55,19 @@ const refillIn = computed(() => {
 const disabled = computed(
   () => busy.value || !state.value || state.value.quotaLeft <= 0 || state.value.win,
 )
-const displayChance = computed(() => {
-  if (!state.value) return 0
-  return risky.value ? Math.floor(state.value.chance / 2) : state.value.chance
-})
+const displayChance = computed(() =>
+  state.value ? Math.floor(state.value.chance / (risk.value + 1)) : 0,
+)
 
-function toggleRisky() {
-  risky.value = !risky.value
+function setRisk(lvl: number) {
+  risk.value = lvl
   play('switch')
 }
 
 async function onPress(center: { x: number; y: number }) {
   if (busy.value) return
   busy.value = true
-  const result = await click(risky.value)
+  const result = await click(risk.value)
   busy.value = false
   if (!result) return
 
@@ -170,28 +170,36 @@ onMounted(() => {
           <TheButton
             :tier="state.tier"
             :chance="displayChance"
-            :risky="risky"
+            :risky="risk > 0"
             :disabled="disabled"
             @press="onPress"
           />
 
           <p class="h-6 text-center font-bold" :class="messageColor">{{ message }}</p>
 
-          <label class="flex cursor-pointer items-center gap-2 select-none">
-            <input type="checkbox" :checked="risky" class="peer sr-only" @change="toggleRisky" />
-            <span
-              class="flex h-6 w-11 items-center rounded-full bg-slate-700 px-0.5 transition-colors peer-checked:bg-rose-600"
-            >
-              <span
-                class="h-5 w-5 rounded-full bg-white transition-transform"
-                :class="risky ? 'translate-x-5' : ''"
-              ></span>
-            </span>
-            <span class="text-sm font-bold" :class="risky ? 'text-rose-400' : 'text-slate-400'">
+          <div class="flex items-center gap-3 select-none">
+            <span class="text-sm font-bold" :class="risk ? 'text-rose-400' : 'text-slate-400'">
               🔥 {{ t('riskIt') }}
             </span>
-            <span class="text-xs text-slate-500">{{ t('riskDesc') }}</span>
-          </label>
+            <div class="flex overflow-hidden rounded-full border border-slate-700">
+              <button
+                v-for="lvl in MAX_RISK + 1"
+                :key="lvl - 1"
+                class="px-3 py-1 text-xs font-bold transition-colors"
+                :class="
+                  risk === lvl - 1
+                    ? lvl === 1 ? 'bg-slate-600 text-white' : 'bg-rose-600 text-white'
+                    : 'text-slate-400 hover:bg-slate-800'
+                "
+                @click="setRisk(lvl - 1)"
+              >
+                {{ lvl === 1 ? 'OFF' : '🔥'.repeat(lvl - 1) }}
+              </button>
+            </div>
+            <span class="h-4 text-xs text-slate-500">
+              <template v-if="risk">{{ t('chance') }} 1/{{ risk + 1 }} · ★+{{ risk + 1 }}</template>
+            </span>
+          </div>
 
           <p class="text-sm text-slate-400">
             <template v-if="state.quotaLeft > 0">

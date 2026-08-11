@@ -164,7 +164,7 @@ func (s *server) stateFor(p *player, quotaLeft int) stateResponse {
 		Stars:      p.Stars,
 		BestStars:  p.BestStars,
 		Tier:       tierFor(p.Stars),
-		Chance:     chanceFor(p.Stars, false),
+		Chance:     chanceFor(p.Stars, 0),
 		QuotaLeft:  quotaLeft,
 		Quota:      s.cfg.Quota,
 		Nickname:   p.Nickname,
@@ -195,11 +195,12 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Risky bool `json:"risky"`
+		Risk int `json:"risk"`
 	}
 	if r.Body != nil {
 		json.NewDecoder(r.Body).Decode(&body) // empty body = normal click
 	}
+	body.Risk = min(max(body.Risk, 0), maxRisk)
 	quotaLeft, err := s.store.consumeQuota(s.ipHash(r), s.cfg.Quota)
 	if errors.Is(err, errQuotaExceeded) {
 		writeError(w, http.StatusTooManyRequests, "quota_exceeded")
@@ -209,7 +210,7 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "db")
 		return
 	}
-	res := resolveClick(p.Stars, body.Risky)
+	res := resolveClick(p.Stars, body.Risk)
 	if err := s.store.savePlayerStars(p.Token, res.Stars); err != nil {
 		writeError(w, http.StatusInternalServerError, "db")
 		return
@@ -224,7 +225,7 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 		clickResult
 		Chance    int `json:"chance"`
 		QuotaLeft int `json:"quotaLeft"`
-	}{res, chanceFor(res.Stars, false), quotaLeft})
+	}{res, chanceFor(res.Stars, 0), quotaLeft})
 }
 
 func (s *server) handleNickname(w http.ResponseWriter, r *http.Request) {

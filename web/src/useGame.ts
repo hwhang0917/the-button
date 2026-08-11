@@ -56,12 +56,15 @@ export async function loadCards() {
   cards.value = await (await fetch('/api/cards')).json()
 }
 
+/** Risk levels 0 (safe) to 3: odds ÷(level+1), star gain ×(level+1). Mirrors maxRisk in game.go. */
+export const MAX_RISK = 3
+
 /** Returns the roll result, or null when out of quota / already won. */
-export async function click(risky: boolean): Promise<ClickResult | null> {
+export async function click(risk: number): Promise<ClickResult | null> {
   const res = await fetch('/api/click', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ risky }),
+    body: JSON.stringify({ risk }),
   })
   if (!res.ok) {
     await loadState()
