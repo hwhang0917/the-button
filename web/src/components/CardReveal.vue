@@ -14,6 +14,9 @@ const fuseTarget = computed(() => nextRarity(props.card.rarity))
 const talismanBusy = computed(() => state.value?.talismanTier !== '')
 // arming only works while standing in the card's tier (mirrors the server)
 const inTier = computed(() => state.value?.tier === props.card.tier)
+const wrongTierHint = computed(() =>
+  t('talismanWrongTier').replace('{tier}', t('tier')[props.card.tier]),
+)
 
 const el = ref<HTMLDivElement | null>(null)
 const vars = ref<Record<string, string>>({})
@@ -108,7 +111,7 @@ function onTouch(e: TouchEvent) {
           {{ t('fuse') }} ×3 → {{ t('rarity')[fuseTarget] }}
         </button>
       </div>
-      <p v-if="!inTier" class="text-center text-[10px] text-rose-400/80">{{ t('talismanWrongTier') }}</p>
+      <p v-if="!inTier" class="text-center text-[10px] text-rose-400/80">{{ wrongTierHint }}</p>
       <p v-else-if="talismanBusy" class="text-center text-[10px] text-slate-500">{{ t('talismanArmedHint') }}</p>
     </div>
 
