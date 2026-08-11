@@ -1,6 +1,10 @@
 package main
 
-import "testing"
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
 
 func TestChanceTableMonotonic(t *testing.T) {
 	for i := 1; i < len(chanceTable); i++ {
@@ -62,6 +66,23 @@ func TestTierBoundaries(t *testing.T) {
 	for stars, tier := range want {
 		if got := tierFor(stars); got != tier {
 			t.Errorf("tierFor(%d) = %q, want %q", stars, got, tier)
+		}
+	}
+}
+
+func TestCacheHeaders(t *testing.T) {
+	h := cacheHeaders(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	cases := map[string]string{
+		"/assets/index-abc123.js": cacheForever,
+		"/star.png":               cacheDaily,
+		"/click.wav":              cacheDaily,
+		"/":                       cacheNever,
+	}
+	for path, want := range cases {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
+		if got := rec.Header().Get("Cache-Control"); got != want {
+			t.Errorf("%s: Cache-Control = %q, want %q", path, got, want)
 		}
 	}
 }

@@ -108,10 +108,32 @@ func main() {
 	mux.HandleFunc("POST /api/link/claim", srv.handleLinkClaim)
 	mux.HandleFunc("GET /api/leaderboard", srv.handleLeaderboard)
 	mux.HandleFunc("GET /api/cards", srv.handleCards)
-	mux.Handle("/", http.FileServerFS(dist))
+	mux.Handle("/", cacheHeaders(http.FileServerFS(dist)))
 
 	log.Printf("the button listening on :%s", cfg.Port)
 	log.Fatal(http.ListenAndServe(":"+cfg.Port, mux))
+}
+
+const (
+	cacheForever = "public, max-age=31536000, immutable" // vite-fingerprinted bundles
+	cacheDaily   = "public, max-age=86400"               // media that only changes with a release
+	cacheNever   = "no-cache"                            // HTML shell must pick up new bundle names
+)
+
+// cacheHeaders makes browsers cache the embedded static assets; without it the
+// embed.FS has no modtimes, so nothing was cacheable and every visit re-downloaded.
+func cacheHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasPrefix(r.URL.Path, "/assets/"):
+			w.Header().Set("Cache-Control", cacheForever)
+		case strings.ContainsRune(r.URL.Path[1:], '.'):
+			w.Header().Set("Cache-Control", cacheDaily)
+		default:
+			w.Header().Set("Cache-Control", cacheNever)
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func setTokenCookie(w http.ResponseWriter, token string, maxAge int) {
