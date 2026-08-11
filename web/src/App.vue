@@ -26,7 +26,7 @@ import { defineAsyncComponent, nextTick, watch } from 'vue'
 import { driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
 import { t, lang, toggleLang } from './i18n'
-import { play, preloadAudio, soundCount } from './audio'
+import { play, preloadAudio, soundCount, vibrate } from './audio'
 import { burst, confetti } from './particles'
 import { TIER_COLORS, type Rarity } from './tiers'
 import TheButton from './components/TheButton.vue'
@@ -127,6 +127,7 @@ async function onArm() {
   if (!v) return
   if (await armTalisman(v.tier, v.rarity)) {
     play('switch')
+    vibrate([10, 20, 25]) // charge-up tick as the talisman locks in
     viewedCard.value = null
   }
 }
@@ -153,6 +154,7 @@ async function onDefuse() {
   if (!confirm(t('defuseConfirm').replace('{rarity}', t('rarity')[lower]))) return
   if (await defuseCard(v.tier, v.rarity)) {
     play('switch')
+    vibrate([25, 20, 15]) // decaying pulse: something broke apart
     viewedCard.value = { tier: v.tier, rarity: lower }
   }
 }
@@ -165,6 +167,8 @@ async function onFuse() {
   play('success_gold')
   const fx = RARITY_BURST[next]
   burst(window.innerWidth / 2, window.innerHeight / 2 - 40, fx.colors, fx.count)
+  // fusion rumble grows with the result rarity
+  vibrate(next === 'prismatic' ? [40, 30, 80, 30, 120] : next === 'holo' ? [30, 30, 60] : [20, 30, 40])
   // flip the popup to the freshly fused card so its rarity effect shows
   viewedCard.value = { tier: v.tier, rarity: next }
 }
@@ -255,6 +259,7 @@ const displayGain = computed(() => gainFor(displayChance.value, risk.value))
 function setRisk(lvl: number) {
   risk.value = lvl
   play('switch')
+  vibrate(4 + lvl * 6) // buzz escalates with the risk you're signing up for
 }
 
 // lockout after each roll so results land with suspense instead of spam clicks
@@ -274,15 +279,18 @@ async function onPress(center: { x: number; y: number }) {
     messageColor.value = result.win ? 'text-yellow-300' : 'text-emerald-400'
     burst(center.x, center.y, [TIER_COLORS[result.tier], '#ffffff', '#facc15'], result.tierUp ? 120 : 60)
     play(result.win ? 'win' : `success_${result.tier}`)
+    if (result.tierUp && !result.win) vibrate([30, 30, 70]) // richer than the plain success buzz
     if (result.win) confetti()
   } else if (!result.success && result.talismanUsed && result.stars === starsBefore && starsBefore > 0) {
     message.value = t('talismanSaved')
     messageColor.value = 'text-amber-300'
     play('switch')
+    vibrate([30, 40, 60]) // "phew" double-pulse for a save
   } else if (result.shieldUsed) {
     message.value = t('shieldSaved')
     messageColor.value = 'text-amber-300'
     play('switch')
+    vibrate([30, 40, 60])
   } else {
     message.value = t('fail')
     messageColor.value = 'text-rose-400'

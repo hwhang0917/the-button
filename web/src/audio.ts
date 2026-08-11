@@ -69,6 +69,13 @@ export function scratchTick() {
   src.start()
 }
 
+/** Haptic helper: no-ops where the Vibration API is missing (iOS Safari).
+ * A later call replaces a running pattern, so richer patterns should be
+ * fired AFTER play() to override its generic buzz. */
+export function vibrate(pattern: number | number[]) {
+  navigator.vibrate?.(pattern)
+}
+
 // haptics piggyback on the sound cues; navigator.vibrate is missing on iOS
 // Safari, so the optional call quietly no-ops there
 const buzz: Partial<Record<Sound, number | number[]>> = {

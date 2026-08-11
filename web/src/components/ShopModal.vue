@@ -11,7 +11,7 @@ import {
   type SkillKey,
 } from '../useGame'
 import { t } from '../i18n'
-import { play } from '../audio'
+import { play, vibrate } from '../audio'
 import LotteryModal from './LotteryModal.vue'
 
 defineEmits<{ close: [] }>()
@@ -22,6 +22,7 @@ async function onLottery() {
   const bought = await buyLottery()
   if (bought) {
     play('switch')
+    vibrate([8, 15, 12]) // ticket tearing off the roll
     ticket.value = bought
   }
 }
@@ -68,11 +69,17 @@ const rows = computed(() => {
 
 async function onSell() {
   if (!sellValue.value) return
-  if (await sellStreak()) play('switch')
+  if (await sellStreak()) {
+    play('switch')
+    vibrate([15, 20, 35]) // coins clattering in
+  }
 }
 
 async function onBuy(key: SkillKey) {
-  if (await buySkill(key)) play('switch')
+  if (await buySkill(key)) {
+    play('switch')
+    vibrate([10, 15, 25])
+  }
 }
 </script>
 
