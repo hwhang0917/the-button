@@ -17,9 +17,11 @@ const { chance: eqChance, roll: eqRoll, gain: eqGain, next: eqNext, fail: eqFail
     @click.self="$emit('close')"
   >
     <div class="flex max-h-[85vh] w-full max-w-md flex-col gap-3 overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 p-6">
-      <h2 class="text-center text-lg font-bold text-slate-100">📐 {{ t('oddsTitle') }}</h2>
+      <h2 class="text-center text-lg font-bold text-slate-100">🎲 {{ t('oddsTitle') }}</h2>
 
-      <p class="text-xs text-slate-400">{{ t('oddsVars') }}</p>
+      <ul class="flex flex-col gap-1.5 text-sm text-slate-300">
+        <li v-for="(line, i) in t('oddsSimple')" :key="i">{{ line }}</li>
+      </ul>
 
       <div class="overflow-x-auto rounded-lg bg-slate-800/60 p-2">
         <table class="mx-auto text-center font-mono text-[10px] text-slate-300">
@@ -34,18 +36,29 @@ const { chance: eqChance, roll: eqRoll, gain: eqGain, next: eqNext, fail: eqFail
         </table>
       </div>
 
-      <div class="odds-math" v-html="eqChance"></div>
-      <p class="text-xs text-slate-500">{{ t('oddsChanceDesc') }}</p>
+      <details class="group rounded-lg border border-slate-700/60 bg-slate-800/40 p-3">
+        <summary
+          class="cursor-pointer list-none text-sm font-bold text-slate-300 select-none [&::-webkit-details-marker]:hidden"
+        >
+          {{ t('oddsMore') }} <span class="float-right transition-transform group-open:rotate-180">▾</span>
+        </summary>
+        <div class="mt-3 flex flex-col gap-3">
+          <p class="text-xs text-slate-400">{{ t('oddsVars') }}</p>
 
-      <div class="odds-math" v-html="eqRoll"></div>
-      <p class="text-xs text-slate-500">{{ t('oddsRollDesc') }}</p>
+          <div class="odds-math" v-html="eqChance"></div>
+          <p class="text-xs text-slate-500">{{ t('oddsChanceDesc') }}</p>
 
-      <div class="odds-math" v-html="eqGain"></div>
-      <div class="odds-math" v-html="eqNext"></div>
-      <p class="text-xs text-slate-500">{{ t('oddsGainDesc') }}</p>
+          <div class="odds-math" v-html="eqRoll"></div>
+          <p class="text-xs text-slate-500">{{ t('oddsRollDesc') }}</p>
 
-      <div class="odds-math" v-html="eqFail"></div>
-      <p class="text-xs text-slate-500">{{ t('oddsFailDesc') }}</p>
+          <div class="odds-math" v-html="eqGain"></div>
+          <div class="odds-math" v-html="eqNext"></div>
+          <p class="text-xs text-slate-500">{{ t('oddsGainDesc') }}</p>
+
+          <div class="odds-math" v-html="eqFail"></div>
+          <p class="text-xs text-slate-500">{{ t('oddsFailDesc') }}</p>
+        </div>
+      </details>
 
       <button
         class="rounded-lg border border-slate-600 py-2 text-sm text-slate-300 hover:bg-slate-800"
