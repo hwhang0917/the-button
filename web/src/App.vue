@@ -67,11 +67,14 @@ function setRisk(lvl: number) {
   play('switch')
 }
 
+// lockout after each roll so results land with suspense instead of spam clicks
+const CLICK_COOLDOWN_MS = 800
+
 async function onPress(center: { x: number; y: number }) {
   if (busy.value) return
   busy.value = true
   const result = await click(risk.value)
-  busy.value = false
+  setTimeout(() => (busy.value = false), CLICK_COOLDOWN_MS)
   if (!result) return
 
   if (result.success) {
