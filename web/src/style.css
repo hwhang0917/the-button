@@ -69,6 +69,8 @@ body::before {
   position: relative;
   overflow: hidden;
 }
+/* plain alpha gradients, no mix-blend-mode: blend modes inside a transformed
+   rounded overflow-hidden card render half-clipped on Android compositors */
 .holo-card::after {
   content: '';
   position: absolute;
@@ -77,29 +79,27 @@ body::before {
   background: linear-gradient(
     115deg,
     transparent 25%,
-    rgba(255, 255, 255, 0.5) 45%,
-    rgba(255, 255, 255, 0.15) 50%,
-    rgba(255, 255, 255, 0.5) 55%,
+    rgba(255, 255, 255, 0.28) 45%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.28) 55%,
     transparent 75%
   );
   background-size: 250% 250%;
   background-position: var(--gx, 50%) var(--gy, 50%);
-  mix-blend-mode: overlay;
 }
 .holo-card.rarity-holo::after,
 .holo-card.rarity-prismatic::after {
   background: linear-gradient(
     115deg,
     transparent 15%,
-    rgba(255, 0, 132, 0.55) 35%,
-    rgba(252, 255, 0, 0.45) 45%,
-    rgba(0, 255, 240, 0.55) 55%,
-    rgba(124, 0, 255, 0.45) 65%,
+    rgba(255, 0, 132, 0.35) 35%,
+    rgba(252, 255, 0, 0.28) 45%,
+    rgba(0, 255, 240, 0.35) 55%,
+    rgba(124, 0, 255, 0.3) 65%,
     transparent 85%
   );
   background-size: 300% 300%;
   background-position: var(--gx, 50%) var(--gy, 50%);
-  mix-blend-mode: color-dodge;
 }
 @keyframes prisma-spin {
   0% { filter: hue-rotate(0deg); }
