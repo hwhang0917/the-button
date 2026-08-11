@@ -3,6 +3,7 @@ import { ref } from 'vue'
 const dict = {
   ko: {
     subtitle: '강화 클리커 — 어디까지 올라갈 수 있을까?',
+    loading: '로딩 중…',
     chance: '성공 확률',
     press: '강화',
     riskIt: '리스크 모드',
@@ -58,6 +59,7 @@ const dict = {
   },
   en: {
     subtitle: 'enchant clicker — how far can your streak go?',
+    loading: 'Loading…',
     chance: 'Success rate',
     press: 'ENCHANT',
     riskIt: 'RISK IT',

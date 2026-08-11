@@ -14,7 +14,7 @@ import {
   type Card,
 } from './useGame'
 import { t, lang, toggleLang } from './i18n'
-import { play } from './audio'
+import { play, preloadAudio, soundCount } from './audio'
 import { burst, confetti } from './particles'
 import { TIER_COLORS } from './tiers'
 import TheButton from './components/TheButton.vue'
@@ -26,6 +26,22 @@ import CardReveal from './components/CardReveal.vue'
 import NicknameModal from './components/NicknameModal.vue'
 import LinkModal from './components/LinkModal.vue'
 import ShopModal from './components/ShopModal.vue'
+
+const IMAGE_ASSETS = ['/wallpaper.jpg', '/star.png', '/stich.gif']
+const AUDIO_PRELOAD_TIMEOUT_MS = 4000
+// images + sounds + the three initial API calls
+const loadTotal = IMAGE_ASSETS.length + soundCount + 3
+
+const ready = ref(false)
+const loadProgress = ref(0)
+
+function preloadImage(src: string): Promise<void> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = img.onerror = () => resolve()
+    img.src = src
+  })
+}
 
 const risk = ref(0)
 const busy = ref(false)
@@ -109,12 +125,18 @@ async function onPress(center: { x: number; y: number }) {
   }
 }
 
-onMounted(() => {
-  loadState().then(() => {
-    if (state.value && !state.value.nickname) showNickname.value = true
-  })
-  loadLeaderboard()
-  loadCards()
+onMounted(async () => {
+  const step = () => loadProgress.value++
+  const boot = Promise.all([
+    preloadAudio(step, AUDIO_PRELOAD_TIMEOUT_MS),
+    ...IMAGE_ASSETS.map((src) => preloadImage(src).then(step)),
+    loadState().then(() => {
+      step()
+      if (state.value && !state.value.nickname) showNickname.value = true
+    }),
+    loadLeaderboard().then(step),
+    loadCards().then(step),
+  ])
   let lastHour = new Date().getHours()
   setInterval(() => {
     now.value = Date.now()
@@ -132,6 +154,8 @@ onMounted(() => {
     lastHour = new Date().getHours()
     loadState()
   })
+  await boot
+  ready.value = true
 })
 </script>
 
@@ -191,7 +215,18 @@ onMounted(() => {
       </div>
     </header>
 
-    <main class="mx-auto grid max-w-6xl gap-6 px-4 pb-12 lg:grid-cols-[280px_1fr_280px]">
+    <div v-if="!ready" class="flex flex-col items-center justify-center gap-4 py-32">
+      <p class="animate-pulse text-4xl">🔘</p>
+      <div class="h-2 w-48 overflow-hidden rounded-full bg-slate-800">
+        <div
+          class="h-full rounded-full bg-yellow-400 transition-all duration-200"
+          :style="{ width: `${Math.round((loadProgress / loadTotal) * 100)}%` }"
+        ></div>
+      </div>
+      <p class="text-xs tracking-widest text-slate-500">{{ t('loading') }}</p>
+    </div>
+
+    <main v-else class="mx-auto grid max-w-6xl gap-6 px-4 pb-12 lg:grid-cols-[280px_1fr_280px]">
       <Leaderboard class="order-2 lg:order-1" />
 
       <div class="order-1 flex flex-col items-center gap-5 pt-4 lg:order-2">
@@ -286,7 +321,7 @@ onMounted(() => {
     </footer>
 
     <img
-      v-if="state && state.stars >= 13"
+      v-if="ready && state && state.stars >= 13"
       src="/stich.gif"
       alt="pet"
       class="pet-bounce fixed bottom-4 right-4 z-20 h-24 w-24 object-contain drop-shadow-[0_0_15px_#a78bfa]"
@@ -295,7 +330,7 @@ onMounted(() => {
     <CardReveal v-if="droppedCard" :card="droppedCard" @close="droppedCard = null" />
     <CardReveal v-if="viewedCard" :card="viewedCard" :drop="false" @close="viewedCard = null" />
     <NicknameModal
-      v-if="showNickname"
+      v-if="ready && showNickname"
       @close="showNickname = false"
       @link="showNickname = false; showLink = true"
     />

@@ -13,6 +13,32 @@ for (const f of files) {
   cache.set(f, a)
 }
 
+export const soundCount = files.length
+
+/** Buffers every sound; each resolves on ready, error, or timeout — a stalled
+ * download must not hold the loading screen hostage. */
+export function preloadAudio(onEach: () => void, timeoutMs: number): Promise<void> {
+  return Promise.all(
+    [...cache.values()].map(
+      (a) =>
+        new Promise<void>((resolve) => {
+          let settled = false
+          const done = () => {
+            if (settled) return
+            settled = true
+            onEach()
+            resolve()
+          }
+          if (a.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) return done()
+          setTimeout(done, timeoutMs)
+          a.addEventListener('canplaythrough', done, { once: true })
+          a.addEventListener('error', done, { once: true })
+          a.load()
+        }),
+    ),
+  ).then(() => {})
+}
+
 // haptics piggyback on the sound cues; navigator.vibrate is missing on iOS
 // Safari, so the optional call quietly no-ops there
 const buzz: Partial<Record<Sound, number | number[]>> = {
