@@ -6,6 +6,8 @@
 RNG enchant clicker (강화 시뮬레이터). One button, decreasing odds, full reset on fail.
 All rolls happen server-side with `crypto/rand` — the client only renders.
 
+**▶️ Play now: [button.runfridge.dev](https://button.runfridge.dev)**
+
 ## Build & run
 
 ```sh
