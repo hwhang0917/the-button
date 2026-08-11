@@ -18,6 +18,7 @@ export interface GameState {
   talismanTier: Tier | ''
   talismanRarity: Rarity | ''
   refillUsed: boolean
+  devMode: boolean
 }
 
 export interface Card {

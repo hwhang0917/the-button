@@ -217,6 +217,7 @@ type stateResponse struct {
 	TalismanTier   string `json:"talismanTier"`
 	TalismanRarity string `json:"talismanRarity"`
 	RefillUsed     bool   `json:"refillUsed"`
+	DevMode        bool   `json:"devMode"`
 }
 
 func (s *server) stateFor(p *player, quotaLeft int) stateResponse {
@@ -237,6 +238,7 @@ func (s *server) stateFor(p *player, quotaLeft int) stateResponse {
 		TalismanTier:   p.TalismanTier,
 		TalismanRarity: p.TalismanRarity,
 		RefillUsed:     p.RefillDay == time.Now().Format("2006-01-02"),
+		DevMode:        devMode,
 	}
 }
 

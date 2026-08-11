@@ -366,6 +366,13 @@ onMounted(async () => {
   <div :class="{ shake: shaking }" class="min-h-screen text-slate-200">
     <div v-if="flashing" class="flash-red pointer-events-none fixed inset-0 z-30 bg-rose-600"></div>
 
+    <div
+      v-if="state?.devMode"
+      class="fixed inset-x-0 top-0 z-50 bg-amber-400 py-0.5 text-center text-[11px] font-black tracking-widest text-slate-900"
+    >
+      ⚠ DEV MODE — 100% SUCCESS
+    </div>
+
     <header class="flex items-center justify-between px-4 py-3 sm:px-8">
       <h1 class="text-xl font-black tracking-[0.2em] text-white sm:text-2xl">THE BUTTON</h1>
       <div class="flex items-center gap-3">
@@ -436,37 +443,40 @@ onMounted(async () => {
       <p class="text-xs tracking-widest text-slate-500">{{ t('loading') }}</p>
     </div>
 
-    <main v-else class="mx-auto grid max-w-6xl gap-6 px-4 pb-12 lg:grid-cols-[280px_1fr_280px]">
+    <main v-else class="mx-auto grid max-w-6xl gap-4 px-4 pb-8 sm:gap-6 sm:pb-12 lg:grid-cols-[280px_1fr_280px]">
       <Leaderboard id="tut-rank" class="order-2 lg:order-1" />
 
-      <div class="order-1 flex flex-col items-center gap-5 pt-4 lg:order-2">
-        <p class="text-sm text-slate-400">{{ t('subtitle') }}</p>
+      <div class="order-1 flex flex-col items-center gap-2 pt-1 sm:gap-4 sm:pt-4 lg:order-2">
+        <p class="hidden text-sm text-slate-400 sm:block">{{ t('subtitle') }}</p>
 
         <template v-if="state">
-          <TierBadge :tier="state.tier" />
-          <StarRow :stars="state.stars" :prestige="state.prestige" />
-          <span v-if="state.shieldCharges > 0" class="text-xs font-bold text-sky-300">
-            🛡️×{{ state.shieldCharges }}
-          </span>
-          <button
-            v-if="state.talismanTier"
-            class="text-xs font-bold hover:opacity-70"
-            :style="{ color: TIER_COLORS[state.talismanTier] }"
-            :title="t('talismanCancelConfirm')"
-            @click="cancelTalismanAsk = true"
-          >
-            🃏 {{ t('tier')[state.talismanTier] }}·{{ t('rarity')[state.talismanRarity as Rarity] }} ✕
-          </button>
-          <button
-            v-else
-            class="rounded-full border border-slate-600 px-2 text-xs font-bold text-slate-400 hover:border-amber-400/60 hover:text-amber-300"
-            :title="t('talismanPick')"
-            @click="showTalismanPick = true; play('switch')"
-          >
-            🃏 +
-          </button>
+          <!-- one compact status row keeps the core info above the fold on phones -->
+          <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+            <TierBadge :tier="state.tier" />
+            <StarRow :stars="state.stars" :prestige="state.prestige" />
+            <span v-if="state.shieldCharges > 0" class="text-xs font-bold text-sky-300">
+              🛡️×{{ state.shieldCharges }}
+            </span>
+            <button
+              v-if="state.talismanTier"
+              class="text-xs font-bold hover:opacity-70"
+              :style="{ color: TIER_COLORS[state.talismanTier] }"
+              :title="t('talismanCancelConfirm')"
+              @click="cancelTalismanAsk = true"
+            >
+              🃏 {{ t('tier')[state.talismanTier] }}·{{ t('rarity')[state.talismanRarity as Rarity] }} ✕
+            </button>
+            <button
+              v-else
+              class="rounded-full border border-slate-600 px-2 text-xs font-bold text-slate-400 hover:border-amber-400/60 hover:text-amber-300"
+              :title="t('talismanPick')"
+              @click="showTalismanPick = true; play('switch')"
+            >
+              🃏 +
+            </button>
+          </div>
 
-          <div id="tut-button" class="relative">
+          <div id="tut-button" class="relative -my-3 sm:my-0">
             <button
               class="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-600 bg-slate-900/70 text-[10px] font-bold text-slate-400 hover:text-slate-200"
               :aria-label="t('oddsTitle')"
@@ -487,7 +497,7 @@ onMounted(async () => {
             />
           </div>
 
-          <p class="h-6 text-center font-bold" :class="messageColor">{{ message }}</p>
+          <p class="h-5 text-center text-sm font-bold sm:h-6 sm:text-base" :class="messageColor">{{ message }}</p>
 
           <button
             v-if="state.win"
@@ -523,27 +533,30 @@ onMounted(async () => {
             </span>
           </div>
 
-          <button
-            id="tut-shop"
-            class="rounded-full border border-yellow-500/40 bg-yellow-400/10 px-4 py-1 text-sm font-bold text-yellow-300 hover:bg-yellow-400/20"
-            @click="showShop = true; play('switch')"
-          >
-            🛒 {{ t('shop') }} · 💰 {{ shownCoins }}
-          </button>
+          <!-- shop, quota, and best share one wrapping row instead of three -->
+          <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            <button
+              id="tut-shop"
+              class="rounded-full border border-yellow-500/40 bg-yellow-400/10 px-4 py-1 text-sm font-bold text-yellow-300 hover:bg-yellow-400/20"
+              @click="showShop = true; play('switch')"
+            >
+              🛒 {{ t('shop') }} · 💰 {{ shownCoins }}
+            </button>
 
-          <p id="tut-quota" class="text-sm text-slate-400">
-            <template v-if="state.quotaLeft > 0">
-              {{ t('clicksLeft') }}:
-              <span class="font-mono font-bold text-slate-200">{{ state.quotaLeft }}</span>
-              / {{ state.quota }}
-            </template>
-            <template v-else>
-              {{ t('quotaExhausted') }}
-              <span class="font-mono font-bold text-slate-200">⏳ {{ refillIn }}</span>
-            </template>
-          </p>
+            <p id="tut-quota" class="text-sm text-slate-400">
+              <template v-if="state.quotaLeft > 0">
+                {{ t('clicksLeft') }}:
+                <span class="font-mono font-bold text-slate-200">{{ state.quotaLeft }}</span>
+                / {{ state.quota }}
+              </template>
+              <template v-else>
+                {{ t('quotaExhausted') }}
+                <span class="font-mono font-bold text-slate-200">⏳ {{ refillIn }}</span>
+              </template>
+            </p>
 
-          <p class="text-xs text-slate-500">{{ t('best') }}: ★{{ state.bestStars }}</p>
+            <p class="text-xs text-slate-500">{{ t('best') }}: ★{{ state.bestStars }}</p>
+          </div>
         </template>
       </div>
 
