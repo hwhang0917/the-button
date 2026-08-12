@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { PACK_PRICE, state, type Card } from '../useGame'
+import { state, type Card } from '../useGame'
+import { cfg } from '../config'
 import { t } from '../i18n'
 import { play, vibrate } from '../audio'
 import { burst, confetti } from '../particles'
@@ -10,7 +11,7 @@ import CardReveal from './CardReveal.vue'
 const props = defineProps<{ cards: Card[] }>()
 const emit = defineEmits<{ close: []; again: [] }>()
 
-const canAgain = computed(() => (state.value?.coins ?? 0) >= PACK_PRICE)
+const canAgain = computed(() => (state.value?.coins ?? 0) >= cfg().pack.price)
 
 // sealed -> tearing (brief burst animation) -> revealed (CardReveal takes over)
 const stage = ref<'sealed' | 'tearing' | 'revealed'>('sealed')
@@ -64,7 +65,7 @@ function next() {
       remaining > 0
         ? `${t('packNext')} · ${t('packLeft').replace('{n}', String(remaining))}`
         : canAgain
-          ? `${t('openAnother')} (💰${PACK_PRICE})`
+          ? `${t('openAnother')} (💰${cfg().pack.price})`
           : ''
     "
     @again="remaining > 0 ? next() : emit('again')"

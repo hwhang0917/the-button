@@ -8,14 +8,12 @@ import {
   buyPack,
   loadCards,
   refillQuota,
+  skill,
   streakValue,
-  LOTTERY_PRICE,
-  PACK_PRICE,
-  REFILL_PRICE,
-  SKILLS,
   type Card,
   type SkillKey,
 } from '../useGame'
+import { cfg } from '../config'
 import { t } from '../i18n'
 import { play, vibrate } from '../audio'
 import { burst } from '../particles'
@@ -86,9 +84,9 @@ const rows = computed(() => {
       icon: '🍀',
       name: t('charmName'),
       desc: t('charmDesc'),
-      levelText: `Lv ${s.charmLevel}/${SKILLS.charm.cap}`,
-      price: SKILLS.charm.prices[s.charmLevel] ?? 0,
-      capped: s.charmLevel >= SKILLS.charm.cap,
+      levelText: `Lv ${s.charmLevel}/${skill('charm').cap}`,
+      price: skill('charm').prices[s.charmLevel] ?? 0,
+      capped: s.charmLevel >= skill('charm').cap,
     },
     {
       id: 'tut-shop-headstart',
@@ -96,9 +94,9 @@ const rows = computed(() => {
       icon: '🚀',
       name: t('headstartName'),
       desc: t('headstartDesc'),
-      levelText: `Lv ${s.headstartLevel}/${SKILLS.headstart.cap}`,
-      price: SKILLS.headstart.prices[s.headstartLevel] ?? 0,
-      capped: s.headstartLevel >= SKILLS.headstart.cap,
+      levelText: `Lv ${s.headstartLevel}/${skill('headstart').cap}`,
+      price: skill('headstart').prices[s.headstartLevel] ?? 0,
+      capped: s.headstartLevel >= skill('headstart').cap,
     },
   ]
 })
@@ -155,10 +153,10 @@ async function onBuy(key: SkillKey) {
         </div>
         <button
           class="rounded-lg bg-rose-400 px-3 py-1.5 font-mono text-xs font-bold text-slate-900 hover:bg-rose-300 disabled:opacity-40"
-          :disabled="state.coins < LOTTERY_PRICE"
+          :disabled="state.coins < cfg().lottery.price"
           @click="onLottery"
         >
-          {{ LOTTERY_PRICE }}💰
+          {{ cfg().lottery.price }}💰
         </button>
       </div>
 
@@ -173,10 +171,10 @@ async function onBuy(key: SkillKey) {
         </div>
         <button
           class="rounded-lg bg-violet-400 px-3 py-1.5 font-mono text-xs font-bold text-slate-900 hover:bg-violet-300 disabled:opacity-40"
-          :disabled="state.coins < PACK_PRICE"
+          :disabled="state.coins < cfg().pack.price"
           @click="onPack"
         >
-          {{ PACK_PRICE }}💰
+          {{ cfg().pack.price }}💰
         </button>
       </div>
 
@@ -191,10 +189,10 @@ async function onBuy(key: SkillKey) {
         </div>
         <button
           class="rounded-lg bg-emerald-400 px-3 py-1.5 font-mono text-xs font-bold text-slate-900 hover:bg-emerald-300 disabled:opacity-40"
-          :disabled="state.coins < REFILL_PRICE || state.quotaLeft >= state.quota || state.refillUsed"
+          :disabled="state.coins < cfg().refillPrice || state.quotaLeft >= state.quota || state.refillUsed"
           @click="onRefill"
         >
-          {{ REFILL_PRICE }}💰
+          {{ cfg().refillPrice }}💰
         </button>
       </div>
 

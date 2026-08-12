@@ -1,67 +1,16 @@
+import { cfg, type CardEffect } from './config'
 import { t } from './i18n'
 import type { Rarity, Tier } from './tiers'
 
-/** Mirrors cardEffect in game.go. The server resolves every click — these
- *  fields exist so the UI can name a card and show what it will do. */
-export interface CardEffect {
-  chance?: number
-  guarantee?: boolean
-  bonus?: number
-  mult?: number
-  maxRisk?: boolean
-  tierJump?: boolean
-  bestJump?: boolean
-  keep?: boolean
-  half?: boolean
-  rerolls?: number
-  refund?: boolean
-  coinWin?: number
-  coinLoss?: number
-  card?: boolean
-}
+export type { CardEffect }
 
 export type CardKey = `${Tier}/${Rarity}`
 
 export const cardKey = (tier: Tier, rarity: Rarity) => `${tier}/${rarity}` as CardKey
 
-/** Mirrors cardEffects in game.go — rarity is the power band, the six tier
- *  variants inside a band differ in flavour rather than strength. */
-export const CARD_EFFECTS: Record<CardKey, CardEffect> = {
-  // 커먼
-  'unrank/common': { chance: 5 },
-  'bronze/common': { refund: true },
-  'silver/common': { bonus: 1 },
-  'gold/common': { coinWin: 2 },
-  'platinum/common': { half: true },
-  'diamond/common': { coinLoss: 3 },
-
-  // 레어
-  'unrank/rare': { chance: 10 },
-  'bronze/rare': { keep: true, refund: true },
-  'silver/rare': { rerolls: 1 },
-  'gold/rare': { chance: 5, bonus: 1 },
-  'platinum/rare': { bonus: 2 },
-  'diamond/rare': { card: true },
-
-  // 홀로
-  'unrank/holo': { chance: 20 },
-  'bronze/holo': { keep: true },
-  'silver/holo': { tierJump: true },
-  'gold/holo': { mult: 2 },
-  'platinum/holo': { rerolls: 2 },
-  'diamond/holo': { maxRisk: true },
-
-  // 프리즘
-  'unrank/prismatic': { guarantee: true },
-  'bronze/prismatic': { mult: 3 },
-  'silver/prismatic': { guarantee: true, refund: true },
-  'gold/prismatic': { guarantee: true, bonus: 2 },
-  'platinum/prismatic': { guarantee: true, bestJump: true },
-  'diamond/prismatic': { guarantee: true, bonus: 4, card: true },
-}
-
+/** The card's effect, as published by the server — config.yml owns these. */
 export const effectFor = (tier: Tier, rarity: Rarity): CardEffect =>
-  CARD_EFFECTS[cardKey(tier, rarity)] ?? {}
+  cfg().cards[cardKey(tier, rarity)] ?? {}
 
 export const cardName = (tier: Tier, rarity: Rarity): string =>
   t('cardName')[cardKey(tier, rarity)] ?? ''

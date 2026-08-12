@@ -8,11 +8,13 @@ import katex from 'katex'
 const tex = (s: string) => katex.renderToString(s, { displayMode: true, throwOnError: false })
 
 const oddsMath = {
-  chance: tex(String.raw`P = \min\!\left(100,\; \left\lfloor \tfrac{\mathrm{base}(s)}{r+1} \right\rfloor + 2c\right)`),
+  chance: tex(String.raw`P = \min\!\left(100,\; \left\lfloor \tfrac{\mathrm{base}(s)}{r+1} \right\rfloor + \gamma c\right)`),
   roll: tex(String.raw`\text{success} \iff U < \min(100,\ P + T),\qquad U \sim \mathcal{U}\{0,\dots,99\}`),
   gain: tex(String.raw`g_0 = \begin{cases} 1 & \text{guaranteed-success card, or } r = 0 \\ \max\!\bigl(1,\ \operatorname{round}(100/P)\bigr) & r \ge 1 \end{cases}`),
-  next: tex(String.raw`\mathrm{gain} = g_0 \cdot M + B, \qquad s' = \min(s + \mathrm{gain},\ \mathrm{cap}), \qquad \mathrm{cap} = 15 + 5\min(p,3)`),
-  jackpot: tex(String.raw`\text{jackpot} = 5\,\max\!\bigl(0,\ s + \mathrm{gain} - \mathrm{cap}\bigr)\ 💰`),
+  // the cap stays symbolic: its numbers are config, and the popup's table and
+  // bullets read the live values from /api/config
+  next: tex(String.raw`\mathrm{gain} = g_0 \cdot M + B, \qquad s' = \min(s + \mathrm{gain},\ \mathrm{cap})`),
+  jackpot: tex(String.raw`\text{jackpot} = \omega\,\max\!\bigl(0,\ s + \mathrm{gain} - \mathrm{cap}\bigr)\ 💰`),
   fail: tex(String.raw`s' = \begin{cases} s & \text{a card keeps your stars} \\ \lceil s/2 \rceil & \text{a card keeps half} \\ \min(\mathrm{headstart},\, s) & \text{else} \end{cases}`),
 }
 

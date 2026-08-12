@@ -1,14 +1,24 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { saveNickname, loadLeaderboard } from '../useGame'
+import { cfg } from '../config'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ close: []; link: [] }>()
 const name = ref('')
 const saving = ref(false)
 const taken = ref(false)
-// mirrors nicknameRe in main.go
-const valid = computed(() => /^[A-Za-z0-9_가-힣]{2,16}$/.test(name.value.trim()))
+// same pattern the server builds from config; lengths come from /api/config
+const placeholder = computed(() =>
+  t('nicknamePlaceholder')
+    .replace('{min}', String(cfg().nickname.minLen))
+    .replace('{max}', String(cfg().nickname.maxLen)),
+)
+const valid = computed(() =>
+  new RegExp(`^[A-Za-z0-9_가-힣]{${cfg().nickname.minLen},${cfg().nickname.maxLen}}$`).test(
+    name.value.trim(),
+  ),
+)
 
 async function submit() {
   const n = name.value.trim()
@@ -34,7 +44,7 @@ async function submit() {
       <h2 class="text-center text-lg font-bold text-slate-100">🏆 {{ t('nicknameTitle') }}</h2>
       <input
         v-model="name"
-        :placeholder="t('nicknamePlaceholder')"
+        :placeholder="placeholder"
         maxlength="16"
         autofocus
         class="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100 outline-none focus:border-yellow-400"

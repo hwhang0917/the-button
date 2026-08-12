@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { LOTTERY_PRICE, LOTTERY_PRIZES, state } from '../useGame'
+import { state } from '../useGame'
+import { cfg } from '../config'
+
+// prize ladder, richest first — the reveal effects are keyed off its index
+const prizes = () => cfg().lottery.prizes.map((p) => p.prize)
 import { t } from '../i18n'
 import { play, scratchTick, vibrate } from '../audio'
 import { burst, confetti } from '../particles'
@@ -9,7 +13,7 @@ import { COIN_COLORS } from '../useCoinCounter'
 const props = defineProps<{ prize: number; finalCoins: number }>()
 defineEmits<{ close: []; again: [] }>()
 
-const canAgain = computed(() => (state.value?.coins ?? 0) >= LOTTERY_PRICE)
+const canAgain = computed(() => (state.value?.coins ?? 0) >= cfg().lottery.price)
 
 const CW = 256
 const CH = 112
@@ -21,7 +25,7 @@ let scratching = false
 let strokes = 0
 
 const tierLabel = computed(() => {
-  const idx = LOTTERY_PRIZES.indexOf(props.prize)
+  const idx = prizes().indexOf(props.prize)
   return idx >= 0 ? t('lotteryTiers')[idx] : ''
 })
 
@@ -80,7 +84,7 @@ function finish() {
   const cx = window.innerWidth / 2
   const cy = window.innerHeight / 2
   // celebration scales with the prize tier
-  switch (LOTTERY_PRIZES.indexOf(props.prize)) {
+  switch (prizes().indexOf(props.prize)) {
     case 0: // jackpot: full fireworks
       play('win')
       confetti()
@@ -165,7 +169,7 @@ function onMove(e: PointerEvent) {
         class="rounded-full border border-amber-400/70 px-6 py-1.5 text-sm font-bold text-amber-300 hover:bg-amber-500/20"
         @click="$emit('again')"
       >
-        🎫 {{ t('scratchAgain') }} (💰{{ LOTTERY_PRICE }})
+        🎫 {{ t('scratchAgain') }} (💰{{ cfg().lottery.price }})
       </button>
       <button
         class="rounded-full border border-slate-600 px-6 py-1.5 text-sm text-slate-300 hover:bg-slate-800"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { PRESTIGE_SKIN_CAP } from '../useGame'
+import { cfg } from '../config'
 
 const props = withDefaults(defineProps<{ stars: number; prestige?: number; max?: number }>(), {
   prestige: 0,
@@ -9,7 +9,7 @@ const props = withDefaults(defineProps<{ stars: number; prestige?: number; max?:
 const GROUP = 5
 
 // visuals cap at prismatic even though prestige keeps counting
-const skin = computed(() => Math.min(props.prestige, PRESTIGE_SKIN_CAP))
+const skin = computed(() => Math.min(props.prestige, cfg().prestigeSkinCap))
 const filledClass = computed(() =>
   skin.value > 0 ? `star-r${skin.value}` : 'drop-shadow-[0_0_6px_#facc15]',
 )

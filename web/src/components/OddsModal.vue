@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import 'katex/dist/katex.min.css'
+import { cfg } from '../config'
 import { t } from '../i18n'
 
 defineEmits<{ close: [] }>()
 
-const CHANCE_TABLE = [100, 90, 81, 72, 63, 55, 48, 41, 35, 29, 24, 19, 15, 11, 8, 5]
+// the live table, so retuning chance_table in config.yml updates this popup too
+const CHANCE_TABLE = cfg().chanceTable
 
 // equations pre-rendered by KaTeX at build time (vite.config.ts); mirrors
-// game.go: effChanceFor + talisman bonus, rollPct, gainFor, fail chain
+// game/resolve.go: EffChanceFor + card bonus, roll, GainFor, fail chain
 const { chance: eqChance, roll: eqRoll, gain: eqGain, next: eqNext, jackpot: eqJackpot, fail: eqFail } = __ODDS_MATH__
 </script>
 

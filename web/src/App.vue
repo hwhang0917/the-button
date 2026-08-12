@@ -13,11 +13,10 @@ import {
   loadCards,
   loadLeaderboard,
   loadState,
-  MAX_RISK,
   nextRarity,
   offline,
   prevRarity,
-  PRESTIGE_REWARDS,
+  prestigeReward,
   prestigeStreak,
   startHealthCheck,
   state,
@@ -33,6 +32,7 @@ import { burst, confetti } from './particles'
 import { COIN_COLORS, useCoinCounter } from './useCoinCounter'
 import { TIER_COLORS, type Rarity, type Tier } from './tiers'
 import { cardName } from './cards'
+import { cfg, loadConfig } from './config'
 import TheButton from './components/TheButton.vue'
 import StarRow from './components/StarRow.vue'
 import TierBadge from './components/TierBadge.vue'
@@ -237,8 +237,8 @@ watch(modalOpen, (open) => {
 
 const shownCoins = useCoinCounter(() => state.value?.coins ?? 0)
 
-const prestigeReward = computed(() =>
-  state.value ? PRESTIGE_REWARDS[Math.min(state.value.prestige, PRESTIGE_REWARDS.length - 1)] : 0,
+const nextPrestigeReward = computed(() =>
+  state.value ? prestigeReward(state.value.prestige) : 0,
 )
 
 async function onPrestige() {
@@ -339,6 +339,9 @@ async function onPress(center: { x: number; y: number }) {
 
 onMounted(async () => {
   const step = () => loadProgress.value++
+  // config first: prices, odds and card effects all read from it, and the
+  // whole <main> renders only once `ready` flips, so nothing reads it early
+  await loadConfig()
   const boot = Promise.all([
     preloadAudio(step, AUDIO_PRELOAD_TIMEOUT_MS),
     ...IMAGE_ASSETS.map((src) => preloadImage(src).then(step)),
@@ -519,7 +522,7 @@ onMounted(async () => {
             class="animate-pulse rounded-full border-2 border-fuchsia-400 bg-fuchsia-500/20 px-8 py-3 text-lg font-black tracking-widest text-fuchsia-200 hover:bg-fuchsia-500/30"
             @click="onPrestige"
           >
-            ✨ {{ t('prestige') }} +{{ prestigeReward }}💰
+            ✨ {{ t('prestige') }} +{{ nextPrestigeReward }}💰
           </button>
 
           <div id="tut-risk" class="flex flex-col items-center gap-1 select-none">
@@ -529,7 +532,7 @@ onMounted(async () => {
               </span>
               <div class="flex overflow-hidden rounded-full border border-slate-700">
                 <button
-                  v-for="lvl in MAX_RISK + 1"
+                  v-for="lvl in cfg().maxRisk + 1"
                   :key="lvl - 1"
                   class="px-2.5 py-1 text-xs font-bold transition-colors sm:px-3"
                   :class="
