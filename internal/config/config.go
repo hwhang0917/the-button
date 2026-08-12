@@ -93,6 +93,7 @@ type gameFile struct {
 type economyFile struct {
 	Charm     game.Skill   `yaml:"charm"`
 	Headstart game.Skill   `yaml:"headstart"`
+	Stamina   game.Skill   `yaml:"stamina"`
 	Lottery   game.Lottery `yaml:"lottery"`
 	Pack      struct {
 		Price          int            `yaml:"price"`
@@ -172,6 +173,7 @@ func defaultFile() file {
 
 	f.Economy.Charm = r.Charm
 	f.Economy.Headstart = r.Headstart
+	f.Economy.Stamina = r.Stamina
 	f.Economy.Lottery = r.Lottery
 	f.Economy.Pack.Price = r.Pack.Price
 	f.Economy.Pack.BonusPct = r.Pack.BonusPct
@@ -248,6 +250,7 @@ func (f file) toConfig() Config {
 			Cards:             f.Cards,
 			Charm:             f.Economy.Charm,
 			Headstart:         f.Economy.Headstart,
+			Stamina:           f.Economy.Stamina,
 			Lottery:           f.Economy.Lottery,
 			Pack: game.Pack{
 				Price:    f.Economy.Pack.Price,

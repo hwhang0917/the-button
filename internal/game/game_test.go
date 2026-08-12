@@ -432,3 +432,36 @@ func TestResolveEffects(t *testing.T) {
 		t.Fatalf("동전 한 닢 must refund the click: %+v", res)
 	}
 }
+
+// TestQuotaForScalesWithBase is the point of the stamina skill: the bonus has to
+// stay proportional to whatever quota the server is configured for, because a
+// flat "+5 clicks" is a rounding error at 120 and doubles the game at 3.
+func TestQuotaForScalesWithBase(t *testing.T) {
+	for _, base := range []int{1, 3, 10, 40, 120} {
+		r := Default()
+		r.Quota = base
+		prev := r.QuotaFor(0)
+		if prev != base {
+			t.Fatalf("base=%d: level 0 must be the plain quota, got %d", base, prev)
+		}
+		for lvl := 1; lvl <= r.Stamina.Cap(); lvl++ {
+			q := r.QuotaFor(lvl)
+			if q <= prev {
+				t.Errorf("base=%d level=%d: %d does not beat %d — every level must buy something", base, lvl, q, prev)
+			}
+			prev = q
+		}
+		// ~1.25^5 = 3.05x, with rounding and the +1 floor pulling small bases up
+		if ratio := float64(prev) / float64(base); ratio < 2.9 {
+			t.Errorf("base=%d: maxed to %d, only %.2fx — the ladder should roughly triple", base, prev, ratio)
+		}
+	}
+	// levels beyond the ladder must not keep compounding
+	r := Default()
+	if over, capped := r.QuotaFor(r.Stamina.Cap()+9), r.QuotaFor(r.Stamina.Cap()); over != capped {
+		t.Errorf("past the cap quota kept growing: %d vs %d", over, capped)
+	}
+	if r.QuotaFor(-1) != r.Quota {
+		t.Error("a negative level must fall back to the base quota")
+	}
+}

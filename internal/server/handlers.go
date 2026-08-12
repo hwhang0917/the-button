@@ -26,11 +26,12 @@ type stateResponse struct {
 	Coins          int    `json:"coins"`
 	CharmLevel     int    `json:"charmLevel"`
 	HeadstartLevel int    `json:"headstartLevel"`
+	StaminaLevel   int    `json:"staminaLevel"`
 	Prestige       int    `json:"prestige"`
 	TalismanTier   string `json:"talismanTier"`
 	TalismanRarity string `json:"talismanRarity"`
 	RefillUsed     bool   `json:"refillUsed"`
-	DevMode        bool   `json:"s.cfg.DevMode"`
+	DevMode        bool   `json:"devMode"`
 }
 
 func (s *Server) stateFor(p *store.Player, quotaLeft int) stateResponse {
@@ -43,12 +44,13 @@ func (s *Server) stateFor(p *store.Player, quotaLeft int) stateResponse {
 		Chance:         rules.ChanceFor(p.Stars, 0, cap),
 		MaxStars:       cap,
 		QuotaLeft:      quotaLeft,
-		Quota:          s.cfg.Rules.Quota,
+		Quota:          rules.QuotaFor(p.StaminaLevel),
 		Nickname:       p.Nickname,
 		Win:            p.Stars >= cap,
 		Coins:          p.Coins,
 		CharmLevel:     p.CharmLevel,
 		HeadstartLevel: p.HeadstartLevel,
+		StaminaLevel:   p.StaminaLevel,
 		Prestige:       p.Prestige,
 		TalismanTier:   p.TalismanTier,
 		TalismanRarity: p.TalismanRarity,
@@ -67,7 +69,7 @@ func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "db")
 		return
 	}
-	writeJSON(w, http.StatusOK, s.stateFor(p, max(0, s.cfg.Rules.Quota-used)))
+	writeJSON(w, http.StatusOK, s.stateFor(p, max(0, s.cfg.Rules.QuotaFor(p.StaminaLevel)-used)))
 }
 
 func (s *Server) handleClick(w http.ResponseWriter, r *http.Request) {
@@ -88,7 +90,7 @@ func (s *Server) handleClick(w http.ResponseWriter, r *http.Request) {
 		json.NewDecoder(r.Body).Decode(&body) // empty body = normal click
 	}
 	body.Risk = min(max(body.Risk, 0), rules.MaxRisk)
-	quotaLeft, err := s.store.ConsumeQuota(p.Token, s.cfg.Rules.Quota)
+	quotaLeft, err := s.store.ConsumeQuota(p.Token, rules.QuotaFor(p.StaminaLevel))
 	if errors.Is(err, store.ErrQuotaExceeded) {
 		s.events.Log("quota_empty", events.PID(p.Token), nil)
 		writeError(w, http.StatusTooManyRequests, "quota_exceeded")
@@ -429,7 +431,7 @@ func (s *Server) handleRefill(w http.ResponseWriter, r *http.Request) {
 	s.events.Log("refill", events.PID(p.Token), nil)
 	writeJSON(w, http.StatusOK, map[string]int{
 		"coins":     p.Coins - rules.RefillPrice,
-		"quotaLeft": s.cfg.Rules.Quota,
+		"quotaLeft": s.cfg.Rules.QuotaFor(p.StaminaLevel),
 	})
 }
 
@@ -454,6 +456,8 @@ func (s *Server) handleBuy(w http.ResponseWriter, r *http.Request) {
 		col, cur = "charm_level", &p.CharmLevel
 	case "headstart":
 		col, cur = "headstart_level", &p.HeadstartLevel
+	case "stamina":
+		col, cur = "stamina_level", &p.StaminaLevel
 	default:
 		writeError(w, http.StatusBadRequest, "bad_skill")
 		return
@@ -478,6 +482,8 @@ func (s *Server) handleBuy(w http.ResponseWriter, r *http.Request) {
 		"coins":          p.Coins - price,
 		"charmLevel":     p.CharmLevel,
 		"headstartLevel": p.HeadstartLevel,
+		"staminaLevel":   p.StaminaLevel,
+		"quota":          s.cfg.Rules.QuotaFor(p.StaminaLevel),
 	})
 }
 

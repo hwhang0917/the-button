@@ -75,6 +75,7 @@ type Rules struct {
 	// instead of being strictly better.
 	Charm       Skill   `json:"charm"`
 	Headstart   Skill   `json:"headstart"`
+	Stamina     Skill   `json:"stamina"`
 	Lottery     Lottery `json:"lottery"`
 	Pack        Pack    `json:"pack"`
 	RefillPrice int     `json:"refillPrice"`
@@ -111,6 +112,10 @@ func Default() Rules {
 		Cards:             DefaultCards(),
 		Charm:             Skill{BonusPct: 2, Prices: []int{10, 30, 90, 270, 810}},
 		Headstart:         Skill{Prices: []int{20, 100, 400}},
+		// compounding +25%/level: at the default quota of 10 a maxed player
+		// reaches 31 clicks an hour, about the session length the hourly bucket
+		// is actually fun at. Priced steeply because it compounds income.
+		Stamina: Skill{BonusPct: 25, Prices: []int{20, 60, 180, 540, 1620}},
 		// Exponential ladder (×5 per rung) with a 1-in-1000 jackpot; EV ≈ 12.2
 		// (81% payback), wins ~1 in 3.3 tickets — still a coin sink.
 		Lottery: Lottery{Price: 15, Prizes: []LotteryPrize{
@@ -147,6 +152,20 @@ func (r Rules) MaxStarsFor(prestige int) int {
 	return r.MaxStars + r.PrestigeStarBonus*min(prestige, r.PrestigeSkinCap)
 }
 
+// QuotaFor is the hourly click allowance at a stamina level. Each level
+// compounds the configured base rather than adding a fixed number, because the
+// base is a config knob: a flat "+5 clicks" would be a rounding error at
+// quota 120 and would double the game at quota 3. Compounding is applied step
+// by step, and every level is worth at least one click, so a small base still
+// gets a real upgrade instead of rounding away to nothing.
+func (r Rules) QuotaFor(level int) int {
+	q := r.Quota
+	for range min(max(level, 0), r.Stamina.Cap()) {
+		q = max(q+1, (q*(100+r.Stamina.BonusPct)+50)/100)
+	}
+	return q
+}
+
 // PrestigeRewardFor is the payout for prestiging from the given level; every
 // lap past the ladder pays the top reward.
 func (r Rules) PrestigeRewardFor(prestige int) int {
@@ -161,6 +180,8 @@ func (r Rules) PriceFor(skill string, level int) (int, bool) {
 		return r.Charm.PriceAt(level)
 	case "headstart":
 		return r.Headstart.PriceAt(level)
+	case "stamina":
+		return r.Stamina.PriceAt(level)
 	}
 	return 0, false
 }
@@ -215,6 +236,12 @@ func (r Rules) Validate() error {
 	}
 	if err := validateSkill("economy.headstart", r.Headstart); err != nil {
 		return err
+	}
+	if err := validateSkill("economy.stamina", r.Stamina); err != nil {
+		return err
+	}
+	if r.Stamina.BonusPct < 1 {
+		return fmt.Errorf("economy.stamina.bonus_pct must be at least 1, got %d", r.Stamina.BonusPct)
 	}
 	if err := r.validateDraws(); err != nil {
 		return err

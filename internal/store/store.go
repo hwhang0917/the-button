@@ -40,6 +40,7 @@ func Open(path string, shieldRefund int) (*Store, error) {
 			shield_charges  INTEGER NOT NULL DEFAULT 0,
 			charm_level     INTEGER NOT NULL DEFAULT 0,
 			headstart_level INTEGER NOT NULL DEFAULT 0,
+			stamina_level   INTEGER NOT NULL DEFAULT 0,
 			prestige        INTEGER NOT NULL DEFAULT 0,
 			talisman_tier   TEXT NOT NULL DEFAULT '',
 			talisman_rarity TEXT NOT NULL DEFAULT '',
@@ -77,6 +78,7 @@ func Open(path string, shieldRefund int) (*Store, error) {
 		"shield_charges INTEGER NOT NULL DEFAULT 0",
 		"charm_level INTEGER NOT NULL DEFAULT 0",
 		"headstart_level INTEGER NOT NULL DEFAULT 0",
+		"stamina_level INTEGER NOT NULL DEFAULT 0",
 		"prestige INTEGER NOT NULL DEFAULT 0",
 		"talisman_tier TEXT NOT NULL DEFAULT ''",
 		"talisman_rarity TEXT NOT NULL DEFAULT ''",
@@ -107,6 +109,7 @@ type Player struct {
 	Coins          int
 	CharmLevel     int
 	HeadstartLevel int
+	StaminaLevel   int
 	Prestige       int
 	TalismanTier   string
 	TalismanRarity string
@@ -121,10 +124,10 @@ func (s *Store) GetOrCreatePlayer(token string) (*Player, error) {
 	}
 	p := &Player{Token: token}
 	err = s.db.QueryRow(`SELECT nickname, stars, best_stars, coins, charm_level, headstart_level,
-		prestige, talisman_tier, talisman_rarity, refill_day
+		stamina_level, prestige, talisman_tier, talisman_rarity, refill_day
 		FROM players WHERE token = ?`, token).
 		Scan(&p.Nickname, &p.Stars, &p.BestStars, &p.Coins, &p.CharmLevel, &p.HeadstartLevel,
-			&p.Prestige, &p.TalismanTier, &p.TalismanRarity, &p.RefillDay)
+			&p.StaminaLevel, &p.Prestige, &p.TalismanTier, &p.TalismanRarity, &p.RefillDay)
 	if err != nil {
 		return nil, err
 	}

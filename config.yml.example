@@ -75,6 +75,13 @@ economy:
     prices: [10, 30, 90, 270, 810]
   headstart:
     prices: [20, 100, 400]
+  # stamina compounds the hourly quota by bonus_pct per level rather than adding
+  # a fixed number, so it stays proportional to whatever game.quota is set to:
+  # +25% x5 lands a base of 10 on 31 and a base of 120 on 368. Every level is
+  # worth at least one click, so small bases still get a real upgrade.
+  stamina:
+    bonus_pct: 25
+    prices: [20, 60, 180, 540, 1620]
 
   lottery:
     price: 15

@@ -108,3 +108,31 @@ func TestConfigEndpoint(t *testing.T) {
 		t.Errorf("maxStars = %v, want %d", got["maxStars"], r.MaxStars)
 	}
 }
+
+// TestStateResponseKeys pins the /api/state field names the client reads.
+// A bulk rename during the package split once mangled a struct tag into
+// `json:"s.cfg.DevMode"`, which silently killed the DEV_MODE warning ribbon —
+// nothing else in the build could catch that.
+func TestStateResponseKeys(t *testing.T) {
+	body, err := json.Marshal(stateResponse{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"stars", "bestStars", "tier", "chance", "maxStars", "quotaLeft", "quota",
+		"nickname", "win", "coins", "charmLevel", "headstartLevel", "staminaLevel",
+		"prestige", "talismanTier", "talismanRarity", "refillUsed", "devMode",
+	}
+	for _, key := range want {
+		if _, ok := got[key]; !ok {
+			t.Errorf("missing %q — the client reads it", key)
+		}
+	}
+	if len(got) != len(want) {
+		t.Errorf("state has %d fields, expected exactly %d: %v", len(got), len(want), got)
+	}
+}

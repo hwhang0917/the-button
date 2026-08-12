@@ -40,6 +40,7 @@ export interface ServerConfig {
   cards: Record<string, CardEffect>
   charm: { bonusPct: number; prices: number[] }
   headstart: { bonusPct: number; prices: number[] }
+  stamina: { bonusPct: number; prices: number[] }
   lottery: { price: number; prizes: { prize: number; permille: number }[] }
   pack: { price: number; bonusPct: number[]; tiers: Weight[]; rarities: Weight[] }
   refillPrice: number

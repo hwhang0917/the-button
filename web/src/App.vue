@@ -75,6 +75,7 @@ const TUT_SELECTORS = [
   '#tut-shop-pack',
   '#tut-shop-refill',
   '#tut-shop-charm',
+  '#tut-shop-stamina',
   '#tut-shop-headstart',
   '#tut-collection',
   '#tut-rank',

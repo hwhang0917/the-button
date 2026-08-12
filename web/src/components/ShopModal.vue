@@ -89,6 +89,16 @@ const rows = computed(() => {
       capped: s.charmLevel >= skill('charm').cap,
     },
     {
+      id: 'tut-shop-stamina',
+      key: 'stamina' as SkillKey,
+      icon: '🔋',
+      name: t('staminaName'),
+      desc: t('staminaDesc').replace('{n}', String(cfg().stamina.bonusPct)),
+      levelText: `Lv ${s.staminaLevel}/${skill('stamina').cap}`,
+      price: skill('stamina').prices[s.staminaLevel] ?? 0,
+      capped: s.staminaLevel >= skill('stamina').cap,
+    },
+    {
       id: 'tut-shop-headstart',
       key: 'headstart' as SkillKey,
       icon: '🚀',
