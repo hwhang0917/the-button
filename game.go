@@ -20,11 +20,9 @@ func maxStarsFor(prestige int) int {
 // marginal sell value so deep risk stays a gamble, not income.
 const overflowCoinPer = 5
 
-// Risk levels 0 (safe) through maxRisk: odds ÷(level+1), card-drop odds
-// ×(level+1), and the star payout scales with the odds taken (see gainFor).
+// Risk levels 0 (safe) through maxRisk: odds ÷(level+1), and the star payout
+// scales with the odds taken (see gainFor).
 const maxRisk = 3
-
-const baseCardDropPct = 5
 
 // Skill shop: streaks sell for triangle-number coins; skills persist on the
 // player row. Charm adds to the effective chance AFTER the risk division and
@@ -34,8 +32,11 @@ const (
 	charmBonusPct = 2 // success % per charm level
 	charmCap      = 5
 	headstartCap  = 3
-	shieldPrice   = 25
 )
+
+// retiredShieldRefund is what the removed 🛡️ protection scroll used to cost;
+// the store bootstrap pays it back per unspent charge exactly once.
+const retiredShieldRefund = 25
 
 var (
 	charmPrices     = [charmCap]int{10, 30, 90, 270, 810}
@@ -67,9 +68,13 @@ var lotteryTable = []struct{ prize, permille int }{
 	{15, 250},  // 4등 25% (money back)
 }
 
-// Card pack: one random card from any tier, higher tiers rarer. A pity path
-// for talisman supply and collection completion; always yields a card.
+// Card pack: the only source of cards. Tier and rarity are rolled per card,
+// higher tiers and rarer finishes less likely.
 const packPrice = 30
+
+// packBonusPct are the independent odds of a 2nd and 3rd card on top of the
+// guaranteed one, so a pack averages 1.65 cards for its price.
+var packBonusPct = [2]int{45, 20}
 
 // Quota refill: buy back this hour's spent clicks. 10 clicks yield ~14 coins
 // on average, so 60 is a deeply negative-EV convenience — fun, not income.
@@ -117,6 +122,21 @@ func rollPack() (string, string) {
 	return tier, rarity
 }
 
+// rollPackCards draws a pack's contents: one guaranteed card plus a bonus roll
+// per packBonusPct entry.
+func rollPackCards() []cardDrop {
+	tier, rarity := rollPack()
+	drawn := []cardDrop{{Tier: tier, Rarity: rarity}}
+	for _, pct := range packBonusPct {
+		if !rollPct(pct) {
+			continue
+		}
+		tier, rarity := rollPack()
+		drawn = append(drawn, cardDrop{Tier: tier, Rarity: rarity})
+	}
+	return drawn
+}
+
 // rollLottery returns the prize for one ticket, 0 for 꽝.
 func rollLottery() int {
 	n, err := rand.Int(rand.Reader, big.NewInt(1000))
@@ -133,12 +153,73 @@ func rollLottery() int {
 	return 0
 }
 
-// Talisman one-shot effects by card rarity (armed via the collection, fires
-// only while the streak is inside the card's tier).
-const (
-	talCommonPct = 5  // +chance on the next in-tier click
-	talRarePct   = 10 // +chance on the next in-tier click
-)
+// cardEffect is one card's talisman payload. A card is armed from the
+// collection and fires on the very next click whatever the outcome — there is
+// no tier gate, so the decision is purely *when* to spend it. The zero value
+// is inert, which is why each entry below names only the fields it uses.
+type cardEffect struct {
+	Chance    int  // + roll chance (the roll only, never the payout)
+	Guarantee bool // the roll always wins; the payout drops to the safe-mode rate
+	Bonus     int  // + flat stars on success
+	Mult      int  // × star gain (0 means 1)
+	MaxRisk   bool // settle the payout as if risk == maxRisk
+	TierJump  bool // success lands at least on the next tier's first star
+	BestJump  bool // success lands at least on the personal best
+	Keep      bool // fail keeps every star
+	Half      bool // fail keeps ceil(stars/2)
+	Rerolls   int  // extra rolls granted on a fail
+	Refund    bool // the click doesn't consume quota
+	CoinWin   int  // 💰 per star held after a success
+	CoinLoss  int  // 💰 per star lost to a fail
+	Card      bool // a free pack card on success
+}
+
+func (e cardEffect) armed() bool { return e != cardEffect{} }
+
+// cardEffects is the whole card design: all 24 (tier, rarity) pairs, keyed
+// "tier/rarity". Rarity is the power band — the six tier variants inside a
+// band are comparable in strength and differ in flavour, so "any prismatic" is
+// the jackpot and *which* prismatic is the collection chase.
+//
+// Guarantee must never pair with Mult (TestCardEffectTable enforces it): a
+// guaranteed win settles at the safe-mode rate, because settling it at
+// gainFor(payChance, maxRisk) would hand out round(100/2)=50 stars plus the
+// overflow jackpot on every ★14 risk-3 click, farmable forever.
+var cardEffects = map[string]cardEffect{
+	// 커먼 — small, always useful
+	"unrank/common":   {Chance: 5},    // 🐣 병아리 부적
+	"bronze/common":   {Refund: true}, // 🥉 동전 한 닢
+	"silver/common":   {Bonus: 1},     // 🥈 은빛 덤
+	"gold/common":     {CoinWin: 2},   // 🥇 황금손
+	"platinum/common": {Half: true},   // 💍 완충 반지
+	"diamond/common":  {CoinLoss: 3},  // 💎 보험금
+
+	// 레어 — meaningful
+	"unrank/rare":   {Chance: 10},               // 🌱 네잎클로버
+	"bronze/rare":   {Keep: true, Refund: true}, // 🛡️ 되감기
+	"silver/rare":   {Rerolls: 1},               // 🗡️ 한 번 더
+	"gold/rare":     {Chance: 5, Bonus: 1},      // 👑 왕관
+	"platinum/rare": {Bonus: 2},                 // 🔱 삼지창
+	"diamond/rare":  {Card: true},               // 🦄 유니콘
+
+	// 홀로 — strong
+	"unrank/holo":   {Chance: 20},     // 🍀 여신의 미소
+	"bronze/holo":   {Keep: true},     // 🏺 불사조 항아리
+	"silver/holo":   {TierJump: true}, // 🌙 달빛 사다리
+	"gold/holo":     {Mult: 2},        // 🏆 곱배기
+	"platinum/holo": {Rerolls: 2},     // 🔮 예언구
+	"diamond/holo":  {MaxRisk: true},  // 🐉 용의 심장
+
+	// 프리즘 — the jokers
+	"unrank/prismatic":   {Guarantee: true},                       // 🌈 무지개
+	"bronze/prismatic":   {Mult: 3},                               // 🔥 폭주
+	"silver/prismatic":   {Guarantee: true, Refund: true},         // ❄️ 절대영도
+	"gold/prismatic":     {Guarantee: true, Bonus: 2},             // ⚡ 벼락
+	"platinum/prismatic": {Guarantee: true, BestJump: true},       // 🌊 해일
+	"diamond/prismatic":  {Guarantee: true, Bonus: 4, Card: true}, // 🌌 특이점
+}
+
+func effectFor(tier, rarity string) cardEffect { return cardEffects[tier+"/"+rarity] }
 
 func validTier(name string) bool {
 	for _, t := range tiers {
@@ -184,11 +265,7 @@ func prevRarity(r string) (string, bool) {
 type skills struct {
 	Charm     int
 	Headstart int
-	Shield    bool
-	// active talisman effects, pre-resolved by the handler for the current tier
-	TalBonus  int  // +chance from a common/rare talisman
-	TalShield bool // holo: keep stars on fail
-	TalDouble bool // prismatic: double stars on success
+	Card      cardEffect // the armed card, inert when nothing is armed
 }
 
 // effChanceFor is the roll chance after risk division and charm bonus.
@@ -212,8 +289,6 @@ func streakValue(stars, floor int) int {
 // ok=false when the skill is unknown or capped.
 func priceFor(skill string, level int) (int, bool) {
 	switch skill {
-	case "shield":
-		return shieldPrice, true // uncapped consumable
 	case "charm":
 		if level >= charmCap {
 			return 0, false
@@ -261,6 +336,17 @@ func tierFor(stars int) string {
 	return name
 }
 
+// nextTierMin is the first star count of the tier above the one holding stars,
+// or 0 at the top of the ladder — the 🌙 달빛 사다리 card jumps to it.
+func nextTierMin(stars int) int {
+	for _, t := range tiers {
+		if t.MinStars > stars {
+			return t.MinStars
+		}
+	}
+	return 0
+}
+
 // chanceFor returns the success % for the next click at the given star count.
 // Stars past the table (prestige-raised caps) roll at the 5% floor.
 func chanceFor(stars, risk, cap int) int {
@@ -301,99 +387,95 @@ func rollPct(pct int) bool {
 
 var rarities = []string{"common", "rare", "holo", "prismatic"}
 
-// rarityWeights shifts toward rarer finishes the deeper the streak.
-func rarityWeights(stars int) [4]int {
-	common := 60 - 3*stars
-	if common < 10 {
-		common = 10
-	}
-	return [4]int{common, 25 + stars, 12 + stars, 3 + stars}
-}
-
 type cardDrop struct {
 	Tier   string `json:"tier"`
 	Rarity string `json:"rarity"`
 }
 
-// rollCard rolls the post-success card drop; nil means no drop.
-func rollCard(stars, risk int) *cardDrop {
-	if !rollPct(baseCardDropPct * (risk + 1)) {
-		return nil
-	}
-	w := rarityWeights(stars)
-	total := 0
-	for _, v := range w {
-		total += v
-	}
-	n, err := rand.Int(rand.Reader, big.NewInt(int64(total)))
-	if err != nil {
-		return nil
-	}
-	pick := int(n.Int64())
-	for i, v := range w {
-		if pick < v {
-			return &cardDrop{Tier: tierFor(stars), Rarity: rarities[i]}
-		}
-		pick -= v
-	}
-	return nil // unreachable
-}
-
 type clickResult struct {
-	Success    bool      `json:"success"`
-	Stars      int       `json:"stars"`
-	Gained     int       `json:"gained"`
-	Tier       string    `json:"tier"`
-	TierUp     bool      `json:"tierUp"`
-	Win        bool      `json:"win"`
+	Success      bool      `json:"success"`
+	Stars        int       `json:"stars"`
+	Gained       int       `json:"gained"`
+	Tier         string    `json:"tier"`
+	TierUp       bool      `json:"tierUp"`
+	Win          bool      `json:"win"`
 	Card         *cardDrop `json:"card"`
-	ShieldUsed   bool      `json:"shieldUsed"`
 	TalismanUsed bool      `json:"talismanUsed"`
-	Jackpot      int       `json:"jackpot"` // coins for stars rolled past the cap
+	Refund       bool      `json:"refund"`  // the click is handed back to the quota
+	Jackpot      int       `json:"jackpot"` // coins from overflow and card effects
 }
 
-// resolveClick runs one enchant attempt: roll, apply gain or reset, then roll
-// the card drop on success. A shield keeps the stars on fail; otherwise the
-// reset lands at the head-start floor — but never above where the streak was,
-// so failing below the floor is never profitable.
-func resolveClick(stars, risk int, sk skills, cap int) clickResult {
+// resolveClick runs one enchant attempt: roll, then apply the gain or the
+// reset. The armed card (sk.Card) is the only fail protection in the game and
+// burns on this click whatever the outcome. Without a keeping card the reset
+// lands at the head-start floor — but never above where the streak was, so
+// failing below the floor is never profitable.
+func resolveClick(stars, risk int, sk skills, cap, best int) clickResult {
 	prevTier := tierFor(stars)
-	// charm feeds both roll and payout (higher chance, lower reward), but the
-	// talisman bonus boosts ONLY the roll — the consumed card is its price,
-	// so it must not shrink the risk-mode star reward
-	payChance := effChanceFor(stars, risk, sk.Charm, cap)
-	chance := payChance
-	if payChance > 0 && sk.TalBonus > 0 {
-		chance = min(100, payChance+sk.TalBonus)
+	e := sk.Card
+	// charm feeds both roll and payout (higher chance, lower reward), but a
+	// card's chance bonus boosts ONLY the roll — the consumed card is its
+	// price, so it must not shrink the risk-mode star reward
+	payRisk := risk
+	if e.MaxRisk {
+		payRisk = maxRisk
 	}
-	// a chance talisman burns on the click no matter the outcome
-	talUsed := sk.TalBonus > 0
-	if !rollPct(chance) {
-		if sk.TalShield {
-			// the scoped talisman saves before a purchased scroll would
-			return clickResult{Stars: stars, Tier: prevTier, TalismanUsed: true}
+	payChance := effChanceFor(stars, payRisk, sk.Charm, cap)
+	chance := min(100, effChanceFor(stars, risk, sk.Charm, cap)+e.Chance)
+
+	success := e.Guarantee || rollPct(chance)
+	for r := 0; !success && r < e.Rerolls; r++ {
+		success = rollPct(chance)
+	}
+
+	if !success {
+		newStars := min(sk.Headstart, stars)
+		switch {
+		case e.Keep:
+			newStars = stars
+		case e.Half:
+			// never worse than the head-start floor would have been
+			newStars = max((stars+1)/2, newStars)
 		}
-		if sk.Shield {
-			return clickResult{Stars: stars, Tier: prevTier, ShieldUsed: true, TalismanUsed: talUsed}
+		return clickResult{
+			Stars:        newStars,
+			Tier:         tierFor(newStars),
+			TalismanUsed: e.armed(),
+			Refund:       e.Refund,
+			Jackpot:      e.CoinLoss * (stars - newStars),
 		}
-		floor := min(sk.Headstart, stars)
-		return clickResult{Stars: floor, Tier: tierFor(floor), TalismanUsed: talUsed}
 	}
-	gain := gainFor(payChance, risk)
-	if sk.TalDouble {
-		gain *= 2
-		talUsed = true
+
+	// a guaranteed win settles at the safe-mode rate — see cardEffects
+	gain := 1
+	if !e.Guarantee {
+		gain = gainFor(payChance, payRisk)
 	}
+	gain *= max(1, e.Mult)
+	gain += e.Bonus
 	newStars := min(stars+gain, cap)
+	// jumps are floors, so they can lift a streak but never cut one short
+	if e.TierJump {
+		newStars = max(newStars, min(nextTierMin(stars), cap))
+	}
+	if e.BestJump {
+		newStars = max(newStars, min(best, cap))
+	}
+	var card *cardDrop
+	if e.Card {
+		tier, rarity := rollPack()
+		card = &cardDrop{Tier: tier, Rarity: rarity}
+	}
 	return clickResult{
 		Success:      true,
 		Stars:        newStars,
 		Gained:       newStars - stars,
 		Tier:         tierFor(newStars),
 		TierUp:       tierFor(newStars) != prevTier,
-		Win:          newStars == cap,
-		Card:         rollCard(newStars, risk),
-		TalismanUsed: talUsed,
-		Jackpot:      overflowCoinPer * max(0, stars+gain-cap),
+		Win:          newStars >= cap,
+		Card:         card,
+		TalismanUsed: e.armed(),
+		Refund:       e.Refund,
+		Jackpot:      overflowCoinPer*max(0, stars+gain-cap) + e.CoinWin*newStars,
 	}
 }

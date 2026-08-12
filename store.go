@@ -85,6 +85,15 @@ func openStore(path string) (*store, error) {
 			return nil, err
 		}
 	}
+	// the 🛡️ protection scroll was retired once cards took over fail protection;
+	// refund what players had banked. Runs after the ALTER loop so the column is
+	// guaranteed to exist, and self-disables once every row is at zero — so it
+	// can live here permanently. shield_charges stays as a dead column: dropping
+	// it would mean a full table rebuild for nothing.
+	if _, err := db.Exec(`UPDATE players SET coins = coins + ? * shield_charges, shield_charges = 0
+		WHERE shield_charges > 0`, retiredShieldRefund); err != nil {
+		return nil, err
+	}
 	return &store{db: db}, nil
 }
 
@@ -94,7 +103,6 @@ type player struct {
 	Stars          int
 	BestStars      int
 	Coins          int
-	ShieldCharges  int
 	CharmLevel     int
 	HeadstartLevel int
 	Prestige       int
@@ -110,10 +118,10 @@ func (s *store) getOrCreatePlayer(token string) (*player, error) {
 		return nil, err
 	}
 	p := &player{Token: token}
-	err = s.db.QueryRow(`SELECT nickname, stars, best_stars, coins, shield_charges, charm_level, headstart_level,
+	err = s.db.QueryRow(`SELECT nickname, stars, best_stars, coins, charm_level, headstart_level,
 		prestige, talisman_tier, talisman_rarity, refill_day
 		FROM players WHERE token = ?`, token).
-		Scan(&p.Nickname, &p.Stars, &p.BestStars, &p.Coins, &p.ShieldCharges, &p.CharmLevel, &p.HeadstartLevel,
+		Scan(&p.Nickname, &p.Stars, &p.BestStars, &p.Coins, &p.CharmLevel, &p.HeadstartLevel,
 			&p.Prestige, &p.TalismanTier, &p.TalismanRarity, &p.RefillDay)
 	if err != nil {
 		return nil, err
@@ -135,18 +143,6 @@ func (s *store) buySkill(token, col string, price, cur int) (bool, error) {
 	return n == 1, err
 }
 
-// consumeShield burns one charge; the guard makes two racing fails fight over
-// the last charge instead of both being saved by it.
-func (s *store) consumeShield(token string) (bool, error) {
-	res, err := s.db.Exec(`UPDATE players SET shield_charges = shield_charges - 1
-		WHERE token = ? AND shield_charges > 0`, token)
-	if err != nil {
-		return false, err
-	}
-	n, err := res.RowsAffected()
-	return n == 1, err
-}
-
 // playLottery settles a ticket in one statement: price out, prize in. The
 // prize deliberately never touches `earned` — gross winnings would let bulk
 // tickets buy leaderboard rank while losing coins net.
@@ -160,8 +156,8 @@ func (s *store) playLottery(token string, price, prize int) (bool, error) {
 	return n == 1, err
 }
 
-// buyPack deducts the pack price and grants the rolled card atomically.
-func (s *store) buyPack(token string, price int, tier, rarity string) (bool, error) {
+// buyPack deducts the pack price and grants every rolled card atomically.
+func (s *store) buyPack(token string, price int, drawn []cardDrop) (bool, error) {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return false, err
@@ -175,9 +171,11 @@ func (s *store) buyPack(token string, price int, tier, rarity string) (bool, err
 	if n, _ := res.RowsAffected(); n != 1 {
 		return false, nil
 	}
-	if _, err := tx.Exec(`INSERT INTO cards (player_token, tier, rarity, count) VALUES (?, ?, ?, 1)
-		ON CONFLICT (player_token, tier, rarity) DO UPDATE SET count = count + 1`, token, tier, rarity); err != nil {
-		return false, err
+	for _, c := range drawn {
+		if _, err := tx.Exec(`INSERT INTO cards (player_token, tier, rarity, count) VALUES (?, ?, ?, 1)
+			ON CONFLICT (player_token, tier, rarity) DO UPDATE SET count = count + 1`, token, c.Tier, c.Rarity); err != nil {
+			return false, err
+		}
 	}
 	return true, tx.Commit()
 }

@@ -21,7 +21,7 @@ func TestResolveClickBounds(t *testing.T) {
 	for _, cap := range []int{maxStars, 30} {
 		for stars := 0; stars < cap; stars++ {
 			for risk := 0; risk <= maxRisk; risk++ {
-				res := resolveClick(stars, risk, skills{}, cap)
+				res := resolveClick(stars, risk, skills{}, cap, 0)
 				if res.Success {
 					if res.Stars <= stars || res.Stars > cap {
 						t.Errorf("cap=%d stars=%d risk=%d: success moved to %d", cap, stars, risk, res.Stars)
@@ -77,7 +77,7 @@ func TestGainForPaysTheOddsBack(t *testing.T) {
 
 func TestFirstClickAlwaysSucceeds(t *testing.T) {
 	for i := 0; i < 50; i++ {
-		if res := resolveClick(0, 0, skills{}, maxStars); !res.Success || res.Stars != 1 {
+		if res := resolveClick(0, 0, skills{}, maxStars, 0); !res.Success || res.Stars != 1 {
 			t.Fatalf("100%% click failed: %+v", res)
 		}
 	}
@@ -156,38 +156,18 @@ func TestStreakValue(t *testing.T) {
 	}
 }
 
-func TestResolveClickShield(t *testing.T) {
-	fails := 0
-	for i := 0; i < 200; i++ {
-		res := resolveClick(14, 0, skills{Shield: true}, maxStars) // 8% base: fails dominate
-		if res.Success {
-			if res.ShieldUsed {
-				t.Fatal("success must not consume a shield")
-			}
-			continue
-		}
-		fails++
-		if !res.ShieldUsed || res.Stars != 14 {
-			t.Fatalf("shielded fail should keep stars: %+v", res)
-		}
-	}
-	if fails == 0 {
-		t.Fatal("no fails observed in 200 rolls at 8%")
-	}
-}
-
 func TestHeadstartFloor(t *testing.T) {
 	sawFail := false
 	for i := 0; i < 100; i++ {
 		// risk 3 at ★14 → 2% odds: fails are near-certain
-		if res := resolveClick(14, maxRisk, skills{Headstart: 3}, maxStars); !res.Success {
+		if res := resolveClick(14, maxRisk, skills{Headstart: 3}, maxStars, 0); !res.Success {
 			sawFail = true
 			if res.Stars != 3 {
 				t.Fatalf("fail should land at the floor, got %d", res.Stars)
 			}
 		}
 		// below the floor a fail must never gain stars
-		if res := resolveClick(1, maxRisk, skills{Headstart: 3}, maxStars); !res.Success && res.Stars > 1 {
+		if res := resolveClick(1, maxRisk, skills{Headstart: 3}, maxStars, 0); !res.Success && res.Stars > 1 {
 			t.Fatalf("fail below floor gained stars: %d", res.Stars)
 		}
 	}
@@ -251,16 +231,6 @@ func TestSkillStore(t *testing.T) {
 		t.Fatalf("coins=%d charm=%d after buy", p.Coins, p.CharmLevel)
 	}
 
-	if ok, _ := s.consumeShield("a"); ok {
-		t.Fatal("consuming with 0 charges must fail")
-	}
-	if ok, _ := s.buySkill("a", "shield_charges", 25, 0); !ok {
-		t.Fatal("shield buy failed")
-	}
-	if ok, _ := s.consumeShield("a"); !ok {
-		t.Fatal("consume with a charge failed")
-	}
-
 	if err := s.savePlayerStars("a", 5, 0); err != nil {
 		t.Fatal(err)
 	}
@@ -271,7 +241,7 @@ func TestSkillStore(t *testing.T) {
 		t.Fatal("stale stars pin must reject the sell")
 	}
 	p, _ = s.getOrCreatePlayer("a")
-	if p.Stars != 0 || p.Coins != 80 { // 90 - 25 shield + 15 sale
+	if p.Stars != 0 || p.Coins != 105 { // 100 - 10 charm + 15 sale
 		t.Fatalf("stars=%d coins=%d after sell", p.Stars, p.Coins)
 	}
 }
@@ -372,13 +342,14 @@ func TestBuyPackAndRefill(t *testing.T) {
 	if _, err := s.getOrCreatePlayer("a"); err != nil {
 		t.Fatal(err)
 	}
-	if ok, _ := s.buyPack("a", packPrice, "gold", "rare"); ok {
+	drawn := []cardDrop{{Tier: "gold", Rarity: "rare"}, {Tier: "unrank", Rarity: "common"}}
+	if ok, _ := s.buyPack("a", packPrice, drawn); ok {
 		t.Fatal("broke pack purchase must fail")
 	}
 	if _, err := s.db.Exec(`UPDATE players SET coins = 200 WHERE token = 'a'`); err != nil {
 		t.Fatal(err)
 	}
-	if ok, _ := s.buyPack("a", packPrice, "gold", "rare"); !ok {
+	if ok, _ := s.buyPack("a", packPrice, drawn); !ok {
 		t.Fatal("funded pack purchase failed")
 	}
 	p, _ := s.getOrCreatePlayer("a")
@@ -386,8 +357,13 @@ func TestBuyPackAndRefill(t *testing.T) {
 		t.Fatalf("coins = %d after pack", p.Coins)
 	}
 	cards, _ := s.getCards("a")
-	if len(cards) != 1 || cards[0].Count != 1 {
-		t.Fatalf("pack card missing: %v", cards)
+	if len(cards) != len(drawn) {
+		t.Fatalf("every drawn card must land: %v", cards)
+	}
+	for _, c := range cards {
+		if c.Count != 1 {
+			t.Fatalf("card %s/%s count = %d", c.Tier, c.Rarity, c.Count)
+		}
 	}
 
 	// refill: rejected with no spent clicks, works after spending, once per day
@@ -539,42 +515,192 @@ func TestNextRarity(t *testing.T) {
 	}
 }
 
-func TestResolveClickTalisman(t *testing.T) {
-	// chance talisman burns on the click regardless of outcome, boosts only the
-	// roll, and must NOT shrink the risk-mode payout
-	base := gainFor(chanceFor(5, 1, maxStars), 1)
-	for i := 0; i < 100; i++ {
-		res := resolveClick(5, 1, skills{TalBonus: talRarePct}, maxStars)
-		if !res.TalismanUsed {
-			t.Fatal("chance talisman must burn on any outcome")
-		}
-		if res.Success && res.Gained != base {
-			t.Fatalf("talisman must not change the payout: gained %d, want %d", res.Gained, base)
-		}
-	}
-	// holo talisman saves before the purchased shield
-	sawFail := false
-	for i := 0; i < 200; i++ {
-		res := resolveClick(14, maxRisk, skills{TalShield: true, Shield: true}, maxStars)
-		if !res.Success {
-			sawFail = true
-			if !res.TalismanUsed || res.ShieldUsed || res.Stars != 14 {
-				t.Fatalf("talisman must save before shield: %+v", res)
+// TestCardEffectTable guards the design invariants of the 24-card set rather
+// than any single card's numbers.
+func TestCardEffectTable(t *testing.T) {
+	for _, tier := range tiers {
+		for _, rarity := range rarities {
+			e, ok := cardEffects[tier.Name+"/"+rarity]
+			if !ok {
+				t.Errorf("no effect defined for %s/%s", tier.Name, rarity)
+				continue
+			}
+			if !e.armed() {
+				t.Errorf("%s/%s is inert — every card must do something", tier.Name, rarity)
+			}
+			// a guaranteed win settles at the safe-mode rate; letting a
+			// multiplier ride on top would print stars and overflow coins
+			if e.Guarantee && e.Mult != 0 {
+				t.Errorf("%s/%s pairs Guarantee with Mult", tier.Name, rarity)
+			}
+			if e.Chance > 20 {
+				t.Errorf("%s/%s chance bonus %d exceeds the +20 ceiling", tier.Name, rarity, e.Chance)
 			}
 		}
 	}
-	if !sawFail {
-		t.Fatal("no fails at 2% odds")
+	if len(cardEffects) != len(tiers)*len(rarities) {
+		t.Fatalf("cardEffects has %d entries, want %d", len(cardEffects), len(tiers)*len(rarities))
 	}
-	// prismatic doubles the gain, clamped at maxStars
-	for i := 0; i < 200; i++ {
-		res := resolveClick(0, 0, skills{TalDouble: true}, maxStars)
-		if !res.Success {
-			t.Fatal("100% click failed")
+	// effectFor must stay inert for an empty slot
+	if effectFor("", "").armed() {
+		t.Fatal("an empty talisman slot must resolve to no effect")
+	}
+}
+
+func TestResolveClickEffects(t *testing.T) {
+	// Chance boosts only the roll — never the risk-mode payout
+	base := gainFor(chanceFor(5, 1, maxStars), 1)
+	for i := 0; i < 100; i++ {
+		res := resolveClick(5, 1, skills{Card: cardEffects["unrank/rare"]}, maxStars, 0)
+		if !res.TalismanUsed {
+			t.Fatal("an armed card must burn on any outcome")
 		}
-		if res.Stars != 2 || !res.TalismanUsed {
-			t.Fatalf("double talisman: %+v", res)
+		if res.Success && res.Gained != base {
+			t.Fatalf("chance card must not change the payout: gained %d, want %d", res.Gained, base)
 		}
+	}
+	// Guarantee settles at the safe-mode rate even at max risk: the exploit
+	// regression — gainFor(2, 3) would pay 50 stars plus overflow coins
+	for i := 0; i < 50; i++ {
+		res := resolveClick(14, maxRisk, skills{Card: cardEffects["unrank/prismatic"]}, maxStars, 0)
+		if !res.Success || res.Gained != 1 || res.Jackpot != 0 {
+			t.Fatalf("guaranteed win must gain exactly 1 with no jackpot: %+v", res)
+		}
+	}
+	// Guarantee + Bonus: ⚡ 벼락 is a flat 3-star step, 🌌 특이점 a 5-star one
+	for key, want := range map[string]int{"gold/prismatic": 3, "diamond/prismatic": 5} {
+		res := resolveClick(0, maxRisk, skills{Card: cardEffects[key]}, maxStars, 0)
+		if !res.Success || res.Gained != want {
+			t.Fatalf("%s gained %d, want %d", key, res.Gained, want)
+		}
+	}
+	// 🌌 특이점 also hands over a card
+	if res := resolveClick(0, 0, skills{Card: cardEffects["diamond/prismatic"]}, maxStars, 0); res.Card == nil {
+		t.Fatal("특이점 must drop a card on success")
+	}
+	// Mult scales the risk payout
+	for i := 0; i < 50; i++ {
+		res := resolveClick(0, 0, skills{Card: cardEffects["gold/holo"]}, maxStars, 0)
+		if !res.Success || res.Gained != 2 {
+			t.Fatalf("×2 card: %+v", res)
+		}
+	}
+	// Keep holds every star on a fail; Half rounds up and CoinLoss pays out
+	sawKeep, sawHalf, sawInsured := false, false, false
+	for i := 0; i < 300; i++ {
+		if res := resolveClick(14, maxRisk, skills{Card: cardEffects["bronze/holo"]}, maxStars, 0); !res.Success {
+			sawKeep = true
+			if res.Stars != 14 {
+				t.Fatalf("불사조 must keep the streak: %+v", res)
+			}
+		}
+		if res := resolveClick(7, maxRisk, skills{Card: cardEffects["platinum/common"]}, maxStars, 0); !res.Success {
+			sawHalf = true
+			if res.Stars != 4 {
+				t.Fatalf("완충 반지 on ★7 should land on ★4, got %d", res.Stars)
+			}
+		}
+		if res := resolveClick(10, maxRisk, skills{Card: cardEffects["diamond/common"]}, maxStars, 0); !res.Success {
+			sawInsured = true
+			if res.Jackpot != 3*10 {
+				t.Fatalf("보험금 should pay 3 per lost star: %+v", res)
+			}
+		}
+	}
+	if !sawKeep || !sawHalf || !sawInsured {
+		t.Fatal("no fails observed at 2% odds")
+	}
+	// CoinWin pays per star held after the win
+	if res := resolveClick(0, 0, skills{Card: cardEffects["gold/common"]}, maxStars, 0); res.Jackpot != 2 {
+		t.Fatalf("황금손 should pay 2 per star held: %+v", res)
+	}
+	// TierJump and BestJump are floors, never a downgrade
+	if res := resolveClick(1, 0, skills{Card: cardEffects["silver/holo"]}, maxStars, 0); res.Stars != 4 {
+		t.Fatalf("사다리 from ★1 should reach silver at ★4, got %d", res.Stars)
+	}
+	if res := resolveClick(0, 0, skills{Card: cardEffects["platinum/prismatic"]}, maxStars, 9); res.Stars != 9 {
+		t.Fatalf("해일 should restore the personal best, got %d", res.Stars)
+	}
+	if res := resolveClick(6, 0, skills{Card: cardEffects["platinum/prismatic"]}, maxStars, 2); res.Stars != 7 {
+		t.Fatalf("해일 must never cut a streak short, got %d", res.Stars)
+	}
+	// Rerolls convert fails that a bare click would have kept
+	saved := 0
+	for i := 0; i < 400; i++ {
+		if res := resolveClick(14, maxRisk, skills{Card: cardEffects["platinum/holo"]}, maxStars, 0); res.Success {
+			saved++
+		}
+	}
+	if saved == 0 {
+		t.Fatal("2 rerolls at 2% never landed in 400 tries")
+	}
+	// MaxRisk keeps the safe click's odds but settles at the max-risk payout.
+	// ★0 rolls at a guaranteed 100% while paying gainFor(100/4, 3) = 4.
+	want := gainFor(chanceFor(0, maxRisk, maxStars), maxRisk)
+	res := resolveClick(0, 0, skills{Card: cardEffects["diamond/holo"]}, maxStars, 0)
+	if !res.Success || res.Gained != want {
+		t.Fatalf("용의 심장 should settle at the max-risk payout %d: %+v", want, res)
+	}
+	// Refund is reported so the handler can hand the click back
+	if res := resolveClick(0, 0, skills{Card: cardEffects["bronze/common"]}, maxStars, 0); !res.Refund {
+		t.Fatalf("동전 한 닢 must refund the click: %+v", res)
+	}
+}
+
+func TestRollPackCards(t *testing.T) {
+	total := 0
+	const runs = 10000
+	for i := 0; i < runs; i++ {
+		drawn := rollPackCards()
+		if len(drawn) < 1 || len(drawn) > 1+len(packBonusPct) {
+			t.Fatalf("pack drew %d cards", len(drawn))
+		}
+		for _, c := range drawn {
+			if !validTier(c.Tier) || !validRarity(c.Rarity) {
+				t.Fatalf("pack drew an invalid card %s/%s", c.Tier, c.Rarity)
+			}
+		}
+		total += len(drawn)
+	}
+	// 1 + 0.45 + 0.20 = 1.65 expected; wide bounds keep this non-flaky
+	if mean := float64(total) / runs; mean < 1.55 || mean > 1.75 {
+		t.Errorf("pack averages %.2f cards, want ~1.65", mean)
+	}
+}
+
+// TestShieldRefund covers the one-time migration that retired the 🛡️ scroll.
+func TestShieldRefund(t *testing.T) {
+	path := t.TempDir() + "/test.db"
+	s, err := openStore(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.getOrCreatePlayer("a"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.db.Exec(`UPDATE players SET coins = 5, shield_charges = 2 WHERE token = 'a'`); err != nil {
+		t.Fatal(err)
+	}
+	s.db.Close()
+
+	s, err = openStore(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, _ := s.getOrCreatePlayer("a")
+	if p.Coins != 5+2*retiredShieldRefund {
+		t.Fatalf("coins = %d after the refund", p.Coins)
+	}
+	s.db.Close()
+
+	// second boot must be a no-op, not a second payout
+	s, err = openStore(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, _ = s.getOrCreatePlayer("a")
+	if p.Coins != 5+2*retiredShieldRefund {
+		t.Fatalf("refund paid twice: coins = %d", p.Coins)
 	}
 }
 

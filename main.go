@@ -245,7 +245,6 @@ type stateResponse struct {
 	Nickname       string `json:"nickname"`
 	Win            bool   `json:"win"`
 	Coins          int    `json:"coins"`
-	ShieldCharges  int    `json:"shieldCharges"`
 	CharmLevel     int    `json:"charmLevel"`
 	HeadstartLevel int    `json:"headstartLevel"`
 	Prestige       int    `json:"prestige"`
@@ -268,7 +267,6 @@ func (s *server) stateFor(p *player, quotaLeft int) stateResponse {
 		Nickname:       p.Nickname,
 		Win:            p.Stars >= cap,
 		Coins:          p.Coins,
-		ShieldCharges:  p.ShieldCharges,
 		CharmLevel:     p.CharmLevel,
 		HeadstartLevel: p.HeadstartLevel,
 		Prestige:       p.Prestige,
@@ -322,22 +320,9 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 	sk := skills{
 		Charm:     p.CharmLevel,
 		Headstart: p.HeadstartLevel,
-		Shield:    p.ShieldCharges > 0,
+		Card:      effectFor(p.TalismanTier, p.TalismanRarity), // inert when nothing is armed
 	}
-	// the armed talisman only acts while the streak is inside its tier
-	if p.TalismanTier != "" && p.TalismanTier == tierFor(p.Stars) {
-		switch p.TalismanRarity {
-		case "common":
-			sk.TalBonus = talCommonPct
-		case "rare":
-			sk.TalBonus = talRarePct
-		case "holo":
-			sk.TalShield = true
-		case "prismatic":
-			sk.TalDouble = true
-		}
-	}
-	res := resolveClick(p.Stars, body.Risk, sk, cap)
+	res := resolveClick(p.Stars, body.Risk, sk, cap, p.BestStars)
 	if res.TalismanUsed {
 		if err := s.store.clearTalisman(p.Token); err != nil {
 			writeError(w, http.StatusInternalServerError, "db")
@@ -352,7 +337,6 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 		"risk":         body.Risk,
 		"chance":       effChanceFor(p.Stars, body.Risk, p.CharmLevel, cap),
 		"success":      res.Success,
-		"shield_used":  res.ShieldUsed,
 		"tier_up":      res.TierUp,
 		"win":          res.Win,
 		"jackpot":      res.Jackpot,
@@ -361,27 +345,17 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 		"headstart":    p.HeadstartLevel,
 		"prestige":     p.Prestige,
 	})
-	shieldCharges := p.ShieldCharges
-	if res.ShieldUsed {
-		burned, err := s.store.consumeShield(p.Token)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "db")
-			return
-		}
-		if burned {
-			shieldCharges--
-		} else {
-			// a racing click burned the last charge first: real reset
-			res.ShieldUsed = false
-			res.Stars = min(p.HeadstartLevel, p.Stars)
-			res.Tier = tierFor(res.Stars)
-		}
-	}
 	// first time above the lifetime-best tier: refund clicks equal to the new
 	// tier's rank (gating on best stops farming the free bronze click)
 	bonus := 0
 	if res.TierUp && tierRank(res.Tier) > tierRank(tierFor(p.BestStars)) {
 		bonus = tierRank(res.Tier)
+	}
+	// a refunding card hands this click straight back
+	if res.Refund {
+		bonus++
+	}
+	if bonus > 0 {
 		if err := s.store.grantQuota(p.Token, bonus); err != nil {
 			writeError(w, http.StatusInternalServerError, "db")
 			return
@@ -402,11 +376,10 @@ func (s *server) handleClick(w http.ResponseWriter, r *http.Request) {
 		Chance         int    `json:"chance"`
 		QuotaLeft      int    `json:"quotaLeft"`
 		BonusClicks    int    `json:"bonusClicks"`
-		ShieldCharges  int    `json:"shieldCharges"`
 		TalismanTier   string `json:"talismanTier"`
 		TalismanRarity string `json:"talismanRarity"`
 		Coins          int    `json:"coins"`
-	}{res, chanceFor(res.Stars, 0, cap), quotaLeft + bonus, bonus, shieldCharges, p.TalismanTier, p.TalismanRarity, p.Coins + res.Jackpot})
+	}{res, chanceFor(res.Stars, 0, cap), quotaLeft + bonus, bonus, p.TalismanTier, p.TalismanRarity, p.Coins + res.Jackpot})
 }
 
 // handleSell converts the whole streak to coins and drops stars to the
@@ -505,7 +478,8 @@ func (s *server) handleLottery(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleTalisman consumes one copy of a card and arms it as the single
-// talisman slot; the effect fires later, on a click inside the card's tier.
+// talisman slot; the effect fires on the very next click, whatever tier the
+// streak is standing in.
 func (s *server) handleTalisman(w http.ResponseWriter, r *http.Request) {
 	p, ok := s.player(w, r)
 	if !ok {
@@ -521,12 +495,6 @@ func (s *server) handleTalisman(w http.ResponseWriter, r *http.Request) {
 	}
 	if !validTier(body.Tier) || !validRarity(body.Rarity) {
 		writeError(w, http.StatusBadRequest, "bad_card")
-		return
-	}
-	// arming is restricted to the tier you're standing in: the effect only
-	// fires in-tier anyway, and this keeps the mental model obvious
-	if tierFor(p.Stars) != body.Tier {
-		writeError(w, http.StatusConflict, "wrong_tier")
 		return
 	}
 	armed, err := s.store.armTalisman(p.Token, body.Tier, body.Rarity)
@@ -626,14 +594,15 @@ func (s *server) handleFuse(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
-// handlePack sells one random-card pack: any tier, higher tiers rarer.
+// handlePack sells one card pack: 1-3 cards, any tier, higher tiers rarer.
+// Packs are the only source of cards.
 func (s *server) handlePack(w http.ResponseWriter, r *http.Request) {
 	p, ok := s.player(w, r)
 	if !ok {
 		return
 	}
-	tier, rarity := rollPack()
-	bought, err := s.store.buyPack(p.Token, packPrice, tier, rarity)
+	drawn := rollPackCards()
+	bought, err := s.store.buyPack(p.Token, packPrice, drawn)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "db")
 		return
@@ -642,11 +611,10 @@ func (s *server) handlePack(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "cannot_buy")
 		return
 	}
-	s.events.log("pack", pid(p.Token), map[string]any{"tier": tier, "rarity": rarity})
+	s.events.log("pack", pid(p.Token), map[string]any{"cards": drawn})
 	writeJSON(w, http.StatusOK, map[string]any{
-		"tier":   tier,
-		"rarity": rarity,
-		"coins":  p.Coins - packPrice,
+		"cards": drawn,
+		"coins": p.Coins - packPrice,
 	})
 }
 
@@ -689,8 +657,6 @@ func (s *server) handleBuy(w http.ResponseWriter, r *http.Request) {
 	var col string
 	var cur *int
 	switch body.Skill {
-	case "shield":
-		col, cur = "shield_charges", &p.ShieldCharges
 	case "charm":
 		col, cur = "charm_level", &p.CharmLevel
 	case "headstart":
@@ -717,7 +683,6 @@ func (s *server) handleBuy(w http.ResponseWriter, r *http.Request) {
 	s.events.log("buy", pid(p.Token), map[string]any{"skill": body.Skill, "price": price, "level": *cur})
 	writeJSON(w, http.StatusOK, map[string]int{
 		"coins":          p.Coins - price,
-		"shieldCharges":  p.ShieldCharges,
 		"charmLevel":     p.CharmLevel,
 		"headstartLevel": p.HeadstartLevel,
 	})
