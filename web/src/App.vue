@@ -236,12 +236,6 @@ const drawerVisible = () => !desktop.matches
 desktop.addEventListener('change', (e) => {
   if (e.matches) panel.value = ''
 })
-const DRAWER =
-  'fixed inset-y-0 right-0 z-30 w-[85vw] max-w-xs overflow-y-auto overscroll-contain border-l ' +
-  'border-slate-700 bg-slate-950 p-4 pt-14 transition-transform duration-200 ' +
-  'relative lg:static lg:z-auto lg:w-auto lg:max-w-none lg:translate-x-0 lg:overflow-visible ' +
-  'lg:border-0 lg:bg-transparent lg:p-0 lg:pt-0 lg:transition-none'
-
 const modalOpen = computed(() =>
   Boolean(
     droppedCard.value ||
@@ -499,7 +493,7 @@ onMounted(async () => {
         @click="panel = ''"
       ></div>
 
-      <aside :class="[DRAWER, panel === 'rank' ? 'translate-x-0' : 'translate-x-full', 'lg:order-1']">
+      <aside class="drawer lg:order-1" :class="{ open: panel === 'rank' }">
         <button
           class="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100 lg:hidden"
           :aria-label="t('later')"
@@ -642,9 +636,7 @@ onMounted(async () => {
         </template>
       </div>
 
-      <aside
-        :class="[DRAWER, panel === 'collection' ? 'translate-x-0' : 'translate-x-full', 'lg:order-3']"
-      >
+      <aside class="drawer lg:order-3" :class="{ open: panel === 'collection' }">
         <button
           class="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100 lg:hidden"
           :aria-label="t('later')"

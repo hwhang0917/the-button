@@ -9,6 +9,43 @@ body {
   overflow-x: clip;
 }
 
+/* Reference panels (rank, collection) are a right-hand drawer on phones and a
+   plain grid column from lg up. Written as one explicit rule rather than a
+   string of utilities: `fixed` and `relative` are the same specificity, so
+   which one wins came down to Tailwind's internal ordering — that is what broke
+   the mobile layout in v1.1.0. */
+.drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  z-index: 30;
+  width: 85vw;
+  max-width: 20rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-left: 1px solid #334155;
+  background: #020617;
+  padding: 3.5rem 1rem 1rem;
+  transform: translateX(100%);
+  transition: transform 0.2s ease;
+}
+.drawer.open {
+  transform: translateX(0);
+}
+@media (min-width: 64rem) {
+  .drawer,
+  .drawer.open {
+    position: static;
+    width: auto;
+    max-width: none;
+    overflow: visible;
+    border: 0;
+    background: none;
+    padding: 0;
+    transform: none;
+    transition: none;
+  }
+}
+
 /* tailwind v4 preflight leaves buttons on cursor: default */
 button:not(:disabled) {
   cursor: pointer;
