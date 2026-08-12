@@ -64,7 +64,7 @@ function preloadImage(src: string): Promise<void> {
 }
 
 const TUTORIAL_SEEN_KEY = 'bt_tutorial_seen'
-// order matches the t('tutorial') steps; indexes 4-8 live inside the shop modal
+// order matches the t('tutorial') steps
 const TUT_SELECTORS = [
   '#tut-button',
   '#tut-risk',
@@ -79,16 +79,23 @@ const TUT_SELECTORS = [
   '#tut-collection',
   '#tut-rank',
 ]
-const TUT_SHOP_FIRST = 4
-const TUT_SHOP_LAST = 9
+// which drawer holds a step's target on phones; the rest sit in the main column
+const TUT_PANEL: Record<string, 'rank' | 'collection'> = {
+  '#tut-collection': 'collection',
+  '#tut-rank': 'rank',
+}
 
 function startTutorial() {
   localStorage.setItem(TUTORIAL_SEEN_KEY, '1')
   const steps = t('tutorial')
-  // the in-shop steps need the modal mounted before they can be highlighted,
-  // so the boundary steps swap the modal in/out and then advance manually
-  const swapShop = (open: boolean, move: () => void) => async () => {
-    showShop.value = open
+  // driver measures a target the moment it highlights it, so each step first
+  // puts the UI into the state that target needs — the shop modal for the shop
+  // rows, the right drawer on phones — and only then advances. Both are derived
+  // from the selector, so reordering the tour cannot desync them.
+  const goto = (i: number, move: () => void) => async () => {
+    const sel = TUT_SELECTORS[i] ?? ''
+    showShop.value = sel.startsWith('#tut-shop-')
+    panel.value = drawerVisible() ? (TUT_PANEL[sel] ?? '') : ''
     await nextTick()
     move()
   }
@@ -99,20 +106,19 @@ function startTutorial() {
     doneBtnText: t('tutDone'),
     onDestroyed: () => {
       showShop.value = false
+      panel.value = ''
     },
     steps: TUT_SELECTORS.map((element, i) => ({
       element,
       popover: {
         title: steps[i].title,
         description: steps[i].desc,
-        ...(i === TUT_SHOP_FIRST - 1 && { onNextClick: swapShop(true, () => d.moveNext()) }),
-        ...(i === TUT_SHOP_FIRST && { onPrevClick: swapShop(false, () => d.movePrevious()) }),
-        ...(i === TUT_SHOP_LAST && { onNextClick: swapShop(false, () => d.moveNext()) }),
-        ...(i === TUT_SHOP_LAST + 1 && { onPrevClick: swapShop(true, () => d.movePrevious()) }),
+        onNextClick: goto(i + 1, () => d.moveNext()),
+        onPrevClick: goto(i - 1, () => d.movePrevious()),
       },
     })),
   })
-  d.drive()
+  goto(0, () => d.drive())()
 }
 
 const risk = ref(0)
@@ -218,6 +224,24 @@ watch([ready, showNickname], async () => {
 })
 const menuOpen = ref(false)
 
+// The leaderboard and the collection are reference material, not part of the
+// loop, so on phones they slide in from the right instead of stacking below the
+// button and forcing a scroll. One <aside> serves both roles: a fixed drawer up
+// to lg, a plain grid column from lg up.
+const panel = ref<'' | 'rank' | 'collection'>('')
+const desktop = matchMedia('(min-width: 1024px)')
+const drawerVisible = () => !desktop.matches
+// resizing up turns the drawer back into a static column, so drop the state or
+// the body scroll lock would stay stuck on a desktop-width page
+desktop.addEventListener('change', (e) => {
+  if (e.matches) panel.value = ''
+})
+const DRAWER =
+  'fixed inset-y-0 right-0 z-30 w-[85vw] max-w-xs overflow-y-auto overscroll-contain border-l ' +
+  'border-slate-700 bg-slate-950 p-4 pt-14 transition-transform duration-200 ' +
+  'relative lg:static lg:z-auto lg:w-auto lg:max-w-none lg:translate-x-0 lg:overflow-visible ' +
+  'lg:border-0 lg:bg-transparent lg:p-0 lg:pt-0 lg:transition-none'
+
 const modalOpen = computed(() =>
   Boolean(
     droppedCard.value ||
@@ -227,7 +251,8 @@ const modalOpen = computed(() =>
       showShop.value ||
       showPrivacy.value ||
       showOdds.value ||
-      showTalismanPick.value,
+      showTalismanPick.value ||
+      panel.value,
   ),
 )
 // modals cover the page; freeze the body so the background can't scroll under them
@@ -466,8 +491,25 @@ onMounted(async () => {
       <p class="text-xs tracking-widest text-slate-500">{{ t('loading') }}</p>
     </div>
 
-    <main v-else class="mx-auto grid max-w-6xl gap-4 px-4 pb-8 sm:gap-6 sm:pb-12 lg:grid-cols-[280px_1fr_280px]">
-      <Leaderboard id="tut-rank" class="order-2 lg:order-1" />
+    <main v-else class="mx-auto grid max-w-6xl gap-4 px-4 pb-2 sm:gap-6 sm:pb-12 lg:grid-cols-[280px_1fr_280px]">
+      <!-- one shared backdrop for whichever drawer is open -->
+      <div
+        v-if="panel"
+        class="fixed inset-0 z-20 bg-black/60 backdrop-blur-sm lg:hidden"
+        @click="panel = ''"
+      ></div>
+
+      <aside :class="[DRAWER, panel === 'rank' ? 'translate-x-0' : 'translate-x-full', 'lg:order-1']">
+        <button
+          class="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100 lg:hidden"
+          :aria-label="t('later')"
+          @click="panel = ''"
+        >
+          ✕
+        </button>
+        <Leaderboard id="tut-rank" />
+
+      </aside>
 
       <div class="order-1 flex flex-col items-center gap-2 pt-1 sm:gap-4 sm:pt-4 lg:order-2">
         <p class="hidden text-sm text-slate-400 sm:block">{{ t('subtitle') }}</p>
@@ -577,10 +619,39 @@ onMounted(async () => {
 
             <p class="text-xs text-slate-500">{{ t('best') }}: ★{{ state.bestStars }}</p>
           </div>
+
+          <!-- phones: the two reference panels live in drawers, so the core
+               loop above fits without scrolling. lg lays them out as columns
+               and these triggers disappear. -->
+          <div class="flex items-center gap-2 lg:hidden">
+            <button
+              class="rounded-full border border-slate-700 bg-slate-800/60 px-4 py-1 text-xs font-bold text-slate-300 hover:border-slate-500 hover:text-slate-100"
+              @click="panel = 'rank'; play('switch')"
+            >
+              🏆 {{ t('leaderboard') }}
+            </button>
+            <button
+              class="rounded-full border border-slate-700 bg-slate-800/60 px-4 py-1 text-xs font-bold text-slate-300 hover:border-slate-500 hover:text-slate-100"
+              @click="panel = 'collection'; play('switch')"
+            >
+              🃏 {{ t('collection') }}
+            </button>
+          </div>
         </template>
       </div>
 
-      <CardCollection id="tut-collection" class="order-3" :key="cards.length" @view="viewedCard = $event" />
+      <aside
+        :class="[DRAWER, panel === 'collection' ? 'translate-x-0' : 'translate-x-full', 'lg:order-3']"
+      >
+        <button
+          class="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100 lg:hidden"
+          :aria-label="t('later')"
+          @click="panel = ''"
+        >
+          ✕
+        </button>
+        <CardCollection id="tut-collection" :key="cards.length" @view="viewedCard = $event" />
+      </aside>
     </main>
 
     <footer class="flex items-center justify-center gap-4 pb-6 text-slate-500">

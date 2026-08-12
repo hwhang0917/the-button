@@ -370,5 +370,12 @@ onBeforeUnmount(() => app?.destroy(true, { children: true }))
 </script>
 
 <template>
-  <div ref="host" class="h-[280px] w-[280px] select-none" />
+  <!-- shrinks on short viewports so the core loop still fits without scrolling.
+       Pixi maps pointers through getBoundingClientRect, and the press centre
+       comes off the host's rect, so CSS scaling keeps both accurate. The
+       important modifier is needed because autoDensity writes an inline size. -->
+  <div
+    ref="host"
+    class="h-[min(280px,38dvh)] w-[min(280px,38dvh)] select-none [&>canvas]:!h-full [&>canvas]:!w-full"
+  />
 </template>
