@@ -6,8 +6,11 @@ services:
     environment:
       QUOTA: ${QUOTA:-10}
       EVENTS_DIR: /data/events
+      # CONFIG_PATH: /data/config.yml
     volumes:
       - data:/data
+      # to retune the game, drop a config.yml next to this file and uncomment:
+      # - ./config.yml:/data/config.yml:ro
     restart: unless-stopped
 
 volumes:

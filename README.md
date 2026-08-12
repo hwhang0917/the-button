@@ -16,15 +16,56 @@ go build -o thebutton .
 ./thebutton
 ```
 
-## Config (env)
+## Config
+
+Settings resolve in three layers, each overriding the one before:
+
+```
+built-in defaults  ->  config.yml  ->  environment variables
+```
+
+Running with no `config.yml` is normal — you get the defaults. Copy
+[`config.yml.example`](config.yml.example) to `config.yml` (or point
+`CONFIG_PATH` at it) to retune **anything**: the chance table, tiers, rarities,
+all 24 card effects, every price and probability, and the quota. It documents
+every key and is set to the shipped defaults throughout, so it doubles as "what
+is the game currently tuned to?".
+
+An invalid config is fatal at boot — a missing card, a pack table that doesn't
+total 1000‰, a card pairing `guarantee` with `mult` — rather than silently
+half-applied. The server publishes the tunables the UI needs at `GET
+/api/config`, so the frontend can't drift from what you configured.
+
+> Numbers are free to change. **Renaming or adding a tier or rarity** also needs
+> frontend artwork and copy (`TIER_COLORS` and `CARD_EMOJI` in
+> `web/src/tiers.ts`, `cardName` in `web/src/i18n.ts`) — those are presentation
+> and the TypeScript union types, not config.
+
+Env vars win last, so a container stays tunable without mounting a file:
 
 | Var | Required | Default | |
 |---|---|---|---|
+| `CONFIG_PATH` | no | `./config.yml` | absent file = built-in defaults; a path you set explicitly must exist |
 | `PORT` | no | `8080` | |
 | `DB_PATH` | no | `./thebutton.db` | SQLite file |
 | `QUOTA` | no | `10` | clicks per player per hour (resets on the clock hour) |
 | `EVENTS_DIR` | no | — | anonymous NDJSON gameplay events for analytics; unset = telemetry off |
 | `DEV_MODE` | no | — | any value forces every roll to succeed (clicks at any risk) — local testing only |
+
+## Layout
+
+```
+main.go              embed web/dist, wire everything up, serve
+internal/config      defaults -> config.yml -> env, validated at boot
+internal/game        the rules: tiers, rarities, cards, odds, resolve
+internal/store       SQLite
+internal/events      anonymous NDJSON analytics
+internal/server      HTTP handlers and middleware
+web/                 Vue 3 + Tailwind + PixiJS frontend
+```
+
+`main.go` stays at the root because `//go:embed` cannot reach above its own
+directory, which is what keeps this a single binary.
 
 ## Dev
 
