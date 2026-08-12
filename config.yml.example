@@ -1,0 +1,164 @@
+# The Button — full configuration reference.
+#
+# Copy to config.yml (or point CONFIG_PATH at it) and edit. Every key is
+# OPTIONAL: anything you omit keeps its built-in default, and running with no
+# config.yml at all is normal — you only need the keys you actually change.
+#
+# Precedence, lowest to highest:
+#   built-in defaults  ->  this file  ->  environment variables
+# so PORT / DB_PATH / EVENTS_DIR / QUOTA / DEV_MODE still override the file and
+# docker-compose.yml keeps working without mounting anything.
+#
+# Everything below is set to its default, so this file is also the answer to
+# "what is the game currently tuned to?". An invalid config is fatal at boot
+# rather than silently half-applied.
+#
+# LIMIT: you can retune any NUMBER here freely. Renaming a tier or rarity, or
+# adding one, also needs frontend artwork and copy — TIER_COLORS and CARD_EMOJI
+# in web/src/tiers.ts, plus cardName in web/src/i18n.ts — because those are
+# presentation and the TypeScript union types, not config.
+
+server:
+  port: "8080"
+  db_path: ./thebutton.db
+  # anonymous NDJSON gameplay events for analytics; empty disables telemetry
+  events_dir: ""
+  leaderboard_size: 20
+  nickname:
+    min_len: 2
+    max_len: 16
+  link:
+    ttl: 10m # how long a device-link code stays claimable
+    code_len: 8
+    claim_fail_limit: 20 # failed claims per minute before the endpoint locks
+
+game:
+  # every roll succeeds — local testing only, never production
+  dev_mode: false
+  quota: 10 # clicks per player per hour, refilled on the clock hour
+
+  # chance_table[n] is the % chance of going from n to n+1 stars. Must start at
+  # 100 so the first click is free. Stars past the end of the table (reachable
+  # once prestige raises the cap) roll at the last entry.
+  chance_table: [100, 90, 81, 72, 63, 55, 48, 41, 35, 29, 24, 19, 15, 11, 8, 5]
+
+  # risk levels 0 (safe) through max_risk: odds are divided by (level+1) and the
+  # payout scales with the odds taken
+  max_risk: 3
+  max_stars: 15
+
+  # stars rolled past the cap pay this each. Keep it below the marginal sell
+  # value of a star, or deep risk becomes income instead of a gamble.
+  overflow_coin_per: 5
+
+  prestige:
+    star_bonus: 5 # the cap gains this per prestige level
+    skin_cap: 3 # distinct star skins; prestige itself keeps counting past this
+    rewards: [300, 450, 600] # every lap past the end pays the last entry
+
+  # min_stars must start at 0 and ascend
+  tiers:
+    - {name: unrank, min_stars: 0}
+    - {name: bronze, min_stars: 1}
+    - {name: silver, min_stars: 4}
+    - {name: gold, min_stars: 7}
+    - {name: platinum, min_stars: 10}
+    - {name: diamond, min_stars: 13}
+
+  # weakest first: fusion walks up this ladder, defusion walks down
+  rarities: [common, rare, holo, prismatic]
+
+economy:
+  # each skill's cap is however many prices you list
+  charm:
+    bonus_pct: 2 # success % per level
+    prices: [10, 30, 90, 270, 810]
+  headstart:
+    prices: [20, 100, 400]
+
+  lottery:
+    price: 15
+    # permille odds; whatever is left over is 꽝, so these must total under 1000.
+    # The default is an exponential ladder at ~81% payback — a coin sink.
+    prizes:
+      - {prize: 2000, permille: 1} # 1등 0.1%
+      - {prize: 400, permille: 8} # 2등 0.8%
+      - {prize: 80, permille: 40} # 3등 4%
+      - {prize: 15, permille: 250} # 4등 25% (money back)
+
+  pack:
+    price: 30
+    # independent odds of a 2nd and 3rd card on top of the guaranteed one;
+    # [45, 20] averages 1.65 cards per pack
+    bonus_pct: [45, 20]
+    # each table must total exactly 1000‰ and name only declared tiers/rarities
+    tier_permille: {unrank: 320, bronze: 260, silver: 180, gold: 120, platinum: 80, diamond: 40}
+    rarity_permille: {common: 600, rare: 250, holo: 120, prismatic: 30}
+
+  refill_price: 60 # buy back this hour's spent clicks, once a day
+
+  # fusion is deliberately lossy: fuse_cost in, one out; defusing one returns
+  # defuse_yield, which must be less than fuse_cost
+  fuse_cost: 3
+  defuse_yield: 2
+
+  # one-time refund per unspent charge of the retired 🛡️ protection scroll
+  retired_shield_refund: 25
+
+# One entry per tier × rarity — all 24 must be present, and each card must do
+# something. Entries merge by key, so overriding one card is a two-line config;
+# but a card entry replaces that card's effect WHOLESALE, so state every field
+# you want it to have.
+#
+# Fields (omitted = off):
+#   chance N     + N% to the roll only — never shrinks the risk-mode payout
+#   guarantee    the roll always wins. Settles at the safe-mode rate (+1 base),
+#                and may NOT be combined with mult: paying a free win at the
+#                risk-scaled rate mints ~50 stars plus overflow coins.
+#   bonus N      + N flat stars on success
+#   mult N       × N star gain
+#   max_risk     settle the payout as if you had taken max risk (odds unchanged)
+#   tier_jump    success lands at least on the next tier's first star
+#   best_jump    success lands at least on your personal best
+#   keep         a fail keeps every star
+#   half         a fail keeps ceil(stars/2)
+#   rerolls N    N extra rolls after a fail
+#   refund       the click doesn't consume quota
+#   coin_win N   N 💰 per star held after a success
+#   coin_loss N  N 💰 per star lost to a fail
+#   card         a free pack card on success
+#
+# Rarity is the power band; the six tier variants inside a band are comparable
+# in strength and differ in flavour.
+cards:
+  # 커먼 — small, always useful
+  unrank/common: {chance: 5} # 🐣 병아리 부적
+  bronze/common: {refund: true} # 🥉 동전 한 닢
+  silver/common: {bonus: 1} # 🥈 은빛 덤
+  gold/common: {coin_win: 2} # 🥇 황금손
+  platinum/common: {half: true} # 💍 완충 반지
+  diamond/common: {coin_loss: 3} # 💎 보험금
+
+  # 레어 — meaningful
+  unrank/rare: {chance: 10} # 🌱 네잎클로버
+  bronze/rare: {keep: true, refund: true} # 🛡️ 되감기
+  silver/rare: {rerolls: 1} # 🗡️ 한 번 더
+  gold/rare: {chance: 5, bonus: 1} # 👑 왕관
+  platinum/rare: {bonus: 2} # 🔱 삼지창
+  diamond/rare: {card: true} # 🦄 유니콘
+
+  # 홀로 — strong
+  unrank/holo: {chance: 20} # 🍀 여신의 미소
+  bronze/holo: {keep: true} # 🏺 불사조 항아리
+  silver/holo: {tier_jump: true} # 🌙 달빛 사다리
+  gold/holo: {mult: 2} # 🏆 곱배기
+  platinum/holo: {rerolls: 2} # 🔮 예언구
+  diamond/holo: {max_risk: true} # 🐉 용의 심장
+
+  # 프리즘 — the jokers
+  unrank/prismatic: {guarantee: true} # 🌈 무지개
+  bronze/prismatic: {mult: 3} # 🔥 폭주
+  silver/prismatic: {guarantee: true, refund: true} # ❄️ 절대영도
+  gold/prismatic: {guarantee: true, bonus: 2} # ⚡ 벼락
+  platinum/prismatic: {guarantee: true, best_jump: true} # 🌊 해일
+  diamond/prismatic: {guarantee: true, bonus: 4, card: true} # 🌌 특이점

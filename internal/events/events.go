@@ -1,4 +1,4 @@
-package main
+package events
 
 import (
 	"crypto/sha256"
@@ -10,18 +10,18 @@ import (
 	"time"
 )
 
-// eventLogger appends anonymous gameplay events as NDJSON, one file per day,
+// Logger appends anonymous gameplay events as NDJSON, one file per day,
 // for offline analysis with DuckDB (read_json('events/*.ndjson')). Telemetry
 // is best-effort by design: a nil logger no-ops and a full queue drops events
 // rather than ever stalling gameplay.
 const eventQueueSize = 256
 
-type eventLogger struct {
+type Logger struct {
 	ch chan map[string]any
 }
 
-// newEventLogger returns nil (telemetry off) when dir is empty.
-func newEventLogger(dir string) *eventLogger {
+// New returns nil (telemetry off) when dir is empty.
+func New(dir string) *Logger {
 	if dir == "" {
 		return nil
 	}
@@ -29,12 +29,12 @@ func newEventLogger(dir string) *eventLogger {
 		log.Printf("events: disabled, cannot create %s: %v", dir, err)
 		return nil
 	}
-	l := &eventLogger{ch: make(chan map[string]any, eventQueueSize)}
+	l := &Logger{ch: make(chan map[string]any, eventQueueSize)}
 	go l.write(dir)
 	return l
 }
 
-func (l *eventLogger) write(dir string) {
+func (l *Logger) write(dir string) {
 	var f *os.File
 	var day string
 	for e := range l.ch {
@@ -58,7 +58,7 @@ func (l *eventLogger) write(dir string) {
 }
 
 // log queues one event; safe on a nil logger, never blocks.
-func (l *eventLogger) log(typ, pid string, fields map[string]any) {
+func (l *Logger) Log(typ, pid string, fields map[string]any) {
 	if l == nil {
 		return
 	}
@@ -74,7 +74,7 @@ func (l *eventLogger) log(typ, pid string, fields map[string]any) {
 
 // pid is the pseudonymous analytics id: a one-way hash prefix of the session
 // token. Links a player's events without storing anything reversible.
-func pid(token string) string {
+func PID(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])[:12]
 }

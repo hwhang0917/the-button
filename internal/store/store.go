@@ -1,4 +1,4 @@
-package main
+package store
 
 import (
 	"database/sql"
@@ -7,19 +7,21 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hwhang0917/the-button/internal/game"
+
 	_ "modernc.org/sqlite"
 )
 
 var (
-	errQuotaExceeded = errors.New("daily quota exceeded")
-	errNicknameTaken = errors.New("nickname taken")
+	ErrQuotaExceeded = errors.New("daily quota exceeded")
+	ErrNicknameTaken = errors.New("nickname taken")
 )
 
-type store struct {
+type Store struct {
 	db *sql.DB
 }
 
-func openStore(path string) (*store, error) {
+func Open(path string, shieldRefund int) (*Store, error) {
 	db, err := sql.Open("sqlite", path+"?_time_format=sqlite&_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)")
 	if err != nil {
 		return nil, err
@@ -91,13 +93,13 @@ func openStore(path string) (*store, error) {
 	// can live here permanently. shield_charges stays as a dead column: dropping
 	// it would mean a full table rebuild for nothing.
 	if _, err := db.Exec(`UPDATE players SET coins = coins + ? * shield_charges, shield_charges = 0
-		WHERE shield_charges > 0`, retiredShieldRefund); err != nil {
+		WHERE shield_charges > 0`, shieldRefund); err != nil {
 		return nil, err
 	}
-	return &store{db: db}, nil
+	return &Store{db: db}, nil
 }
 
-type player struct {
+type Player struct {
 	Token          string
 	Nickname       string
 	Stars          int
@@ -111,13 +113,13 @@ type player struct {
 	RefillDay      string
 }
 
-func (s *store) getOrCreatePlayer(token string) (*player, error) {
+func (s *Store) GetOrCreatePlayer(token string) (*Player, error) {
 	_, err := s.db.Exec(`INSERT INTO players (token, updated_at) VALUES (?, ?)
 		ON CONFLICT (token) DO NOTHING`, token, time.Now())
 	if err != nil {
 		return nil, err
 	}
-	p := &player{Token: token}
+	p := &Player{Token: token}
 	err = s.db.QueryRow(`SELECT nickname, stars, best_stars, coins, charm_level, headstart_level,
 		prestige, talisman_tier, talisman_rarity, refill_day
 		FROM players WHERE token = ?`, token).
@@ -132,7 +134,7 @@ func (s *store) getOrCreatePlayer(token string) (*player, error) {
 // buySkill spends coins on one unit of a skill column. The current-value pin
 // keeps concurrent buys from skipping the price ladder or double-spending.
 // col comes from a fixed whitelist in the handler, never from user input.
-func (s *store) buySkill(token, col string, price, cur int) (bool, error) {
+func (s *Store) BuySkill(token, col string, price, cur int) (bool, error) {
 	q := fmt.Sprintf(`UPDATE players SET coins = coins - ?, %s = %s + 1, updated_at = ?
 		WHERE token = ? AND coins >= ? AND %s = ?`, col, col, col)
 	res, err := s.db.Exec(q, price, time.Now(), token, price, cur)
@@ -146,7 +148,7 @@ func (s *store) buySkill(token, col string, price, cur int) (bool, error) {
 // playLottery settles a ticket in one statement: price out, prize in. The
 // prize deliberately never touches `earned` — gross winnings would let bulk
 // tickets buy leaderboard rank while losing coins net.
-func (s *store) playLottery(token string, price, prize int) (bool, error) {
+func (s *Store) PlayLottery(token string, price, prize int) (bool, error) {
 	res, err := s.db.Exec(`UPDATE players SET coins = coins - ? + ?, updated_at = ?
 		WHERE token = ? AND coins >= ?`, price, prize, time.Now(), token, price)
 	if err != nil {
@@ -157,7 +159,7 @@ func (s *store) playLottery(token string, price, prize int) (bool, error) {
 }
 
 // buyPack deducts the pack price and grants every rolled card atomically.
-func (s *store) buyPack(token string, price int, drawn []cardDrop) (bool, error) {
+func (s *Store) BuyPack(token string, price int, drawn []game.Card) (bool, error) {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return false, err
@@ -183,7 +185,7 @@ func (s *store) buyPack(token string, price int, drawn []cardDrop) (bool, error)
 // refillQuota buys back the current hour's spent clicks: coins out, the hour
 // bucket's count zeroed. Once per day — the refill_day pin rejects a second
 // purchase — and rejected when broke or when nothing was spent.
-func (s *store) refillQuota(token string, price int, day string) (bool, error) {
+func (s *Store) RefillQuota(token string, price int, day string) (bool, error) {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return false, err
@@ -210,7 +212,7 @@ func (s *store) refillQuota(token string, price int, day string) (bool, error) {
 
 // sellStreak converts the streak to coins; the stars pin rejects a stale sell
 // when another request already changed the streak.
-func (s *store) sellStreak(token string, gain, toStars, fromStars int) (bool, error) {
+func (s *Store) SellStreak(token string, gain, toStars, fromStars int) (bool, error) {
 	res, err := s.db.Exec(`UPDATE players SET coins = coins + ?, stars = ?, updated_at = ?
 		WHERE token = ? AND stars = ?`, gain, toStars, time.Now(), token, fromStars)
 	if err != nil {
@@ -222,7 +224,7 @@ func (s *store) sellStreak(token string, gain, toStars, fromStars int) (bool, er
 
 // prestigeStreak cashes a maxed streak: big payout, unbounded prestige level
 // bump (prismatic laps keep counting), reset to the floor.
-func (s *store) prestigeStreak(token string, reward, toStars, fromStars int) (bool, error) {
+func (s *Store) PrestigeStreak(token string, reward, toStars, fromStars int) (bool, error) {
 	res, err := s.db.Exec(`UPDATE players SET coins = coins + ?, prestige = prestige + 1,
 		stars = ?, updated_at = ?
 		WHERE token = ? AND stars = ?`,
@@ -236,7 +238,7 @@ func (s *store) prestigeStreak(token string, reward, toStars, fromStars int) (bo
 
 // deletePlayer wipes the player row, cards, and quota. A recreated account
 // starts with fresh clicks — accepted; there is nothing else to key quota on.
-func (s *store) deletePlayer(token string) error {
+func (s *Store) DeletePlayer(token string) error {
 	for _, q := range []string{
 		`DELETE FROM cards WHERE player_token = ?`,
 		`DELETE FROM player_quota WHERE player_token = ?`,
@@ -251,7 +253,7 @@ func (s *store) deletePlayer(token string) error {
 
 // savePlayerStars persists a roll result; coinDelta credits an overflow
 // jackpot in the same write.
-func (s *store) savePlayerStars(token string, stars, coinDelta int) error {
+func (s *Store) SavePlayerStars(token string, stars, coinDelta int) error {
 	now := time.Now()
 	_, err := s.db.Exec(`UPDATE players SET stars = ?, updated_at = ?,
 		coins = coins + ?,
@@ -261,7 +263,7 @@ func (s *store) savePlayerStars(token string, stars, coinDelta int) error {
 	return err
 }
 
-func (s *store) setNickname(token, nickname string) error {
+func (s *Store) SetNickname(token, nickname string) error {
 	// friendly pre-check; the unique index backstops the lookup-to-update race
 	var taken bool
 	err := s.db.QueryRow(`SELECT EXISTS(
@@ -271,7 +273,7 @@ func (s *store) setNickname(token, nickname string) error {
 		return err
 	}
 	if taken {
-		return errNicknameTaken
+		return ErrNicknameTaken
 	}
 	_, err = s.db.Exec(`UPDATE players SET nickname = ?, updated_at = ? WHERE token = ?`,
 		nickname, time.Now(), token)
@@ -284,9 +286,9 @@ func bucketKey(t time.Time) string {
 	return t.Format("2006-01-02T15")
 }
 
-// consumeQuota spends one click for the current hour, or errQuotaExceeded if none left.
+// consumeQuota spends one click for the current hour, or ErrQuotaExceeded if none left.
 // Returns clicks remaining after the spend.
-func (s *store) consumeQuota(token string, limit int) (int, error) {
+func (s *Store) ConsumeQuota(token string, limit int) (int, error) {
 	res, err := s.db.Exec(`INSERT INTO player_quota (player_token, day, count) VALUES (?, ?, 1)
 		ON CONFLICT (player_token, day) DO UPDATE SET count = count + 1 WHERE count < ?`,
 		token, bucketKey(time.Now()), limit)
@@ -294,9 +296,9 @@ func (s *store) consumeQuota(token string, limit int) (int, error) {
 		return 0, err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return 0, errQuotaExceeded
+		return 0, ErrQuotaExceeded
 	}
-	used, err := s.quotaUsed(token)
+	used, err := s.QuotaUsed(token)
 	if err != nil {
 		return 0, err
 	}
@@ -305,13 +307,13 @@ func (s *store) consumeQuota(token string, limit int) (int, error) {
 
 // grantQuota hands back bonus clicks in the current hour bucket; the count may
 // go negative, which just means extra headroom until the next refill.
-func (s *store) grantQuota(token string, n int) error {
+func (s *Store) GrantQuota(token string, n int) error {
 	_, err := s.db.Exec(`UPDATE player_quota SET count = count - ? WHERE player_token = ? AND day = ?`,
 		n, token, bucketKey(time.Now()))
 	return err
 }
 
-func (s *store) quotaUsed(token string) (int, error) {
+func (s *Store) QuotaUsed(token string) (int, error) {
 	var used int
 	err := s.db.QueryRow(`SELECT count FROM player_quota WHERE player_token = ? AND day = ?`,
 		token, bucketKey(time.Now())).Scan(&used)
@@ -321,7 +323,7 @@ func (s *store) quotaUsed(token string) (int, error) {
 	return used, err
 }
 
-func (s *store) addCard(token, tier, rarity string) error {
+func (s *Store) AddCard(token, tier, rarity string) error {
 	_, err := s.db.Exec(`INSERT INTO cards (player_token, tier, rarity, count) VALUES (?, ?, ?, 1)
 		ON CONFLICT (player_token, tier, rarity) DO UPDATE SET count = count + 1`,
 		token, tier, rarity)
@@ -331,7 +333,7 @@ func (s *store) addCard(token, tier, rarity string) error {
 // armTalisman consumes one copy of a card and arms it as the player's single
 // talisman slot. Card rows are never deleted — a row at count 0 stays as the
 // permanent "discovered" marker for the collection.
-func (s *store) armTalisman(token, tier, rarity string) (bool, error) {
+func (s *Store) ArmTalisman(token, tier, rarity string) (bool, error) {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return false, err
@@ -356,13 +358,13 @@ func (s *store) armTalisman(token, tier, rarity string) (bool, error) {
 	return true, tx.Commit()
 }
 
-func (s *store) clearTalisman(token string) error {
+func (s *Store) ClearTalisman(token string) error {
 	_, err := s.db.Exec(`UPDATE players SET talisman_tier = '', talisman_rarity = '' WHERE token = ?`, token)
 	return err
 }
 
 // cancelTalisman disarms the slot and refunds the card copy.
-func (s *store) cancelTalisman(token string) (bool, error) {
+func (s *Store) CancelTalisman(token string) (bool, error) {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return false, err
@@ -387,8 +389,8 @@ func (s *store) cancelTalisman(token string) (bool, error) {
 	return true, tx.Commit()
 }
 
-// defuseCard breaks one card into defuseYield copies of the rarity below.
-func (s *store) defuseCard(token, tier, rarity, lower string) (bool, error) {
+// DefuseCard breaks one card into yield copies of the rarity below.
+func (s *Store) DefuseCard(token, tier, rarity, lower string, yield int) (bool, error) {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return false, err
@@ -404,21 +406,21 @@ func (s *store) defuseCard(token, tier, rarity, lower string) (bool, error) {
 	}
 	if _, err := tx.Exec(`INSERT INTO cards (player_token, tier, rarity, count) VALUES (?, ?, ?, ?)
 		ON CONFLICT (player_token, tier, rarity) DO UPDATE SET count = count + ?`,
-		token, tier, lower, defuseYield, defuseYield); err != nil {
+		token, tier, lower, yield, yield); err != nil {
 		return false, err
 	}
 	return true, tx.Commit()
 }
 
-// fuseCards burns 3 copies of a card into 1 of the next rarity, same tier.
-func (s *store) fuseCards(token, tier, rarity, next string) (bool, error) {
+// FuseCards burns cost copies of a card into 1 of the next rarity, same tier.
+func (s *Store) FuseCards(token, tier, rarity, next string, cost int) (bool, error) {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return false, err
 	}
 	defer tx.Rollback()
-	res, err := tx.Exec(`UPDATE cards SET count = count - 3
-		WHERE player_token = ? AND tier = ? AND rarity = ? AND count >= 3`, token, tier, rarity)
+	res, err := tx.Exec(`UPDATE cards SET count = count - ?
+		WHERE player_token = ? AND tier = ? AND rarity = ? AND count >= ?`, cost, token, tier, rarity, cost)
 	if err != nil {
 		return false, err
 	}
@@ -432,21 +434,21 @@ func (s *store) fuseCards(token, tier, rarity, next string) (bool, error) {
 	return true, tx.Commit()
 }
 
-type ownedCard struct {
+type OwnedCard struct {
 	Tier   string `json:"tier"`
 	Rarity string `json:"rarity"`
 	Count  int    `json:"count"`
 }
 
-func (s *store) getCards(token string) ([]ownedCard, error) {
+func (s *Store) GetCards(token string) ([]OwnedCard, error) {
 	rows, err := s.db.Query(`SELECT tier, rarity, count FROM cards WHERE player_token = ?`, token)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	cards := []ownedCard{}
+	cards := []OwnedCard{}
 	for rows.Next() {
-		var c ownedCard
+		var c OwnedCard
 		if err := rows.Scan(&c.Tier, &c.Rarity, &c.Count); err != nil {
 			return nil, err
 		}
@@ -455,7 +457,9 @@ func (s *store) getCards(token string) ([]ownedCard, error) {
 	return cards, rows.Err()
 }
 
-type rankEntry struct {
+// RankEntry carries no tier: naming a star count is the rule layer's job, so
+// the server fills it in from the same ladder the rest of the game uses.
+type RankEntry struct {
 	Nickname  string `json:"nickname"`
 	Stars     int    `json:"stars"`
 	BestStars int    `json:"bestStars"`
@@ -463,7 +467,7 @@ type rankEntry struct {
 	Prestige  int    `json:"prestige"`
 }
 
-func (s *store) leaderboard(limit int) ([]rankEntry, error) {
+func (s *Store) Leaderboard(limit int) ([]RankEntry, error) {
 	rows, err := s.db.Query(`SELECT nickname, stars, best_stars, prestige FROM players
 		WHERE nickname != ''
 		ORDER BY prestige DESC, stars DESC, best_stars DESC, best_at ASC LIMIT ?`, limit)
@@ -471,13 +475,12 @@ func (s *store) leaderboard(limit int) ([]rankEntry, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	entries := []rankEntry{}
+	entries := []RankEntry{}
 	for rows.Next() {
-		var e rankEntry
+		var e RankEntry
 		if err := rows.Scan(&e.Nickname, &e.Stars, &e.BestStars, &e.Prestige); err != nil {
 			return nil, err
 		}
-		e.Tier = tierFor(e.Stars)
 		entries = append(entries, e)
 	}
 	return entries, rows.Err()

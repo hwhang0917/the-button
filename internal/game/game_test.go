@@ -1,0 +1,434 @@
+package game
+
+import "testing"
+
+// alwaysLose is the mirror of AlwaysWin: every percentage roll fails. Together
+// they replace the old "loop 200 times and hope a 2% roll lands" patterns with
+// exact assertions.
+type alwaysLose struct{ CryptoRNG }
+
+func (alwaysLose) Pct(int) bool { return false }
+
+// seqRNG plays a scripted sequence of roll outcomes, then loses forever. Used
+// to drive the reroll cards down an exact path.
+type seqRNG struct {
+	outcomes []bool
+	i        int
+}
+
+func (s *seqRNG) Pct(int) bool {
+	if s.i >= len(s.outcomes) {
+		return false
+	}
+	v := s.outcomes[s.i]
+	s.i++
+	return v
+}
+
+func (s *seqRNG) Intn(n int) int { return CryptoRNG{}.Intn(n) }
+
+// withRNG is the usual fixture: the shipped rules with chance under test control.
+func withRNG(rng RNG) Rules {
+	r := Default()
+	r.RNG = rng
+	return r
+}
+
+func TestDefaultIsValid(t *testing.T) {
+	if err := Default().Validate(); err != nil {
+		t.Fatalf("the shipped rules must pass validation: %v", err)
+	}
+}
+
+func TestChanceTableMonotonic(t *testing.T) {
+	table := Default().ChanceTable
+	for i := 1; i < len(table); i++ {
+		if table[i] >= table[i-1] {
+			t.Errorf("chance_table[%d]=%d is not below chance_table[%d]=%d", i, table[i], i-1, table[i-1])
+		}
+	}
+	if table[0] != 100 {
+		t.Errorf("first click must be guaranteed, got %d", table[0])
+	}
+}
+
+func TestResolveBounds(t *testing.T) {
+	r := Default()
+	for _, cap := range []int{r.MaxStars, 30} {
+		for stars := 0; stars < cap; stars++ {
+			for risk := 0; risk <= r.MaxRisk; risk++ {
+				res := r.Resolve(Click{Stars: stars, Risk: risk, Cap: cap})
+				if res.Success {
+					if res.Stars <= stars || res.Stars > cap {
+						t.Fatalf("cap=%d stars=%d risk=%d: success moved to %d", cap, stars, risk, res.Stars)
+					}
+					gain := GainFor(r.ChanceFor(stars, risk, cap), risk)
+					if want := min(stars+gain, cap); res.Stars != want {
+						t.Fatalf("cap=%d stars=%d risk=%d: gained to %d, want %d", cap, stars, risk, res.Stars, want)
+					}
+					if want := r.OverflowCoinPer * max(0, stars+gain-cap); res.Jackpot != want {
+						t.Fatalf("cap=%d stars=%d risk=%d: jackpot %d, want %d", cap, stars, risk, res.Jackpot, want)
+					}
+				} else if res.Stars != 0 {
+					t.Fatalf("cap=%d stars=%d risk=%d: fail must reset to 0, got %d", cap, stars, risk, res.Stars)
+				}
+			}
+		}
+	}
+}
+
+func TestMaxStarsFor(t *testing.T) {
+	r := Default()
+	for prestige, want := range map[int]int{0: 15, 1: 20, 2: 25, 3: 30, 9: 30} {
+		if got := r.MaxStarsFor(prestige); got != want {
+			t.Errorf("MaxStarsFor(%d) = %d, want %d", prestige, got, want)
+		}
+	}
+	// the veteran zone rolls at the table's 5% floor, never 0, until the cap
+	for stars := 15; stars < 30; stars++ {
+		if got := r.ChanceFor(stars, 0, 30); got != 5 {
+			t.Errorf("ChanceFor(%d, 0, 30) = %d, want 5", stars, got)
+		}
+	}
+	if got := r.ChanceFor(30, 0, 30); got != 0 {
+		t.Errorf("chance at the cap must be 0, got %d", got)
+	}
+}
+
+func TestGainForPaysTheOddsBack(t *testing.T) {
+	cases := []struct{ chance, risk, want int }{
+		{100, 0, 1}, // safe mode is always one star
+		{5, 0, 1},
+		{50, 1, 2},
+		{33, 2, 3},
+		{25, 3, 4},
+		{10, 1, 10},
+		{2, 3, 50},
+		{0, 3, 1}, // a dead chance still cannot divide by zero
+	}
+	for _, c := range cases {
+		if got := GainFor(c.chance, c.risk); got != c.want {
+			t.Errorf("GainFor(%d, %d) = %d, want %d", c.chance, c.risk, got, c.want)
+		}
+	}
+}
+
+func TestFirstClickAlwaysSucceeds(t *testing.T) {
+	// ★0 is a 100% roll, so even an RNG that refuses everything must succeed
+	r := withRNG(alwaysLose{})
+	if res := r.Resolve(Click{Cap: r.MaxStars}); !res.Success || res.Stars != 1 {
+		t.Fatalf("100%% click failed: %+v", res)
+	}
+}
+
+func TestTierBoundaries(t *testing.T) {
+	r := Default()
+	want := map[int]string{0: "unrank", 1: "bronze", 3: "bronze", 4: "silver",
+		7: "gold", 10: "platinum", 13: "diamond", 15: "diamond"}
+	for stars, tier := range want {
+		if got := r.TierFor(stars); got != tier {
+			t.Errorf("TierFor(%d) = %q, want %q", stars, got, tier)
+		}
+	}
+}
+
+func TestTierRankLadder(t *testing.T) {
+	r := Default()
+	for i, tier := range r.Tiers {
+		if got := r.TierRank(tier.Name); got != i {
+			t.Errorf("TierRank(%q) = %d, want %d", tier.Name, got, i)
+		}
+	}
+}
+
+func TestNextTierMin(t *testing.T) {
+	r := Default()
+	for stars, want := range map[int]int{0: 1, 1: 4, 5: 7, 9: 10, 12: 13, 13: 0, 20: 0} {
+		if got := r.NextTierMin(stars); got != want {
+			t.Errorf("NextTierMin(%d) = %d, want %d", stars, got, want)
+		}
+	}
+}
+
+func TestStreakValue(t *testing.T) {
+	cases := []struct{ stars, floor, want int }{
+		{0, 0, 0},
+		{5, 0, 15},
+		{5, 3, 9}, // only the stars above the floor pay
+		{3, 5, 0}, // below the floor there is nothing to sell
+		{15, 0, 120},
+	}
+	for _, c := range cases {
+		if got := StreakValue(c.stars, c.floor); got != c.want {
+			t.Errorf("StreakValue(%d, %d) = %d, want %d", c.stars, c.floor, got, c.want)
+		}
+	}
+}
+
+func TestHeadstartFloor(t *testing.T) {
+	r := withRNG(alwaysLose{})
+	res := r.Resolve(Click{Stars: 14, Risk: r.MaxRisk, Cap: r.MaxStars, Headstart: 3})
+	if res.Success || res.Stars != 3 {
+		t.Fatalf("a fail should land on the floor: %+v", res)
+	}
+	// below the floor a fail must never gain stars
+	res = r.Resolve(Click{Stars: 1, Risk: r.MaxRisk, Cap: r.MaxStars, Headstart: 3})
+	if res.Stars > 1 {
+		t.Fatalf("fail below the floor gained stars: %d", res.Stars)
+	}
+}
+
+func TestEffChance(t *testing.T) {
+	r := Default()
+	if got := r.EffChanceFor(0, 0, r.Charm.Cap(), r.MaxStars); got != 100 {
+		t.Errorf("charm must not push past 100, got %d", got)
+	}
+	// charm adds after the risk division
+	if got := r.EffChanceFor(4, 1, 2, r.MaxStars); got != 63/2+4 {
+		t.Errorf("EffChanceFor(4, 1, 2) = %d, want %d", got, 63/2+4)
+	}
+	if got := r.EffChanceFor(r.MaxStars, 0, 0, r.MaxStars); got != 0 {
+		t.Errorf("a maxed streak has no chance left, got %d", got)
+	}
+}
+
+func TestPriceLadders(t *testing.T) {
+	r := Default()
+	for _, s := range []Skill{r.Charm, r.Headstart} {
+		for i := 1; i < len(s.Prices); i++ {
+			if s.Prices[i] <= s.Prices[i-1] {
+				t.Errorf("prices must ascend: %v", s.Prices)
+			}
+		}
+		if _, ok := s.PriceAt(s.Cap()); ok {
+			t.Error("a capped skill must not price another level")
+		}
+		if _, ok := s.PriceAt(0); !ok {
+			t.Error("level 0 must be purchasable")
+		}
+	}
+	if _, ok := r.PriceFor("nonesuch", 0); ok {
+		t.Error("an unknown skill must not price")
+	}
+}
+
+func TestPrestigeReward(t *testing.T) {
+	r := Default()
+	// past the ladder every prismatic lap pays the top reward
+	for prestige, want := range map[int]int{0: 300, 1: 450, 2: 600, 3: 600, 12: 600} {
+		if got := r.PrestigeRewardFor(prestige); got != want {
+			t.Errorf("PrestigeRewardFor(%d) = %d, want %d", prestige, got, want)
+		}
+	}
+}
+
+func TestLotteryTable(t *testing.T) {
+	r := Default()
+	total := 0
+	for i, p := range r.Lottery.Prizes {
+		total += p.Permille
+		if i > 0 && p.Prize >= r.Lottery.Prizes[i-1].Prize {
+			t.Errorf("prizes must descend: %v", r.Lottery.Prizes)
+		}
+	}
+	if total >= 1000 {
+		t.Fatalf("win chances must leave room for 꽝, got %d‰", total)
+	}
+	valid := map[int]bool{0: true}
+	for _, p := range r.Lottery.Prizes {
+		valid[p.Prize] = true
+	}
+	for range 2000 {
+		if prize := r.RollLottery(); !valid[prize] {
+			t.Fatalf("lottery paid an off-table prize: %d", prize)
+		}
+	}
+}
+
+func TestPackTables(t *testing.T) {
+	r := Default()
+	diamonds, prismatics := 0, 0
+	const runs = 10000
+	for range runs {
+		c := r.RollPack()
+		if !r.ValidTier(c.Tier) || !r.ValidRarity(c.Rarity) {
+			t.Fatalf("rolled an invalid card %s/%s", c.Tier, c.Rarity)
+		}
+		if c.Tier == "diamond" {
+			diamonds++
+		}
+		if c.Rarity == "prismatic" {
+			prismatics++
+		}
+	}
+	// 4% / 3% expected; generous non-flaky bounds
+	if diamonds > 1000 || prismatics > 800 {
+		t.Errorf("high-end draws suspiciously common: diamond %d prismatic %d", diamonds, prismatics)
+	}
+}
+
+func TestRollPackCards(t *testing.T) {
+	r := Default()
+	total := 0
+	const runs = 10000
+	for range runs {
+		drawn := r.RollPackCards()
+		if len(drawn) < 1 || len(drawn) > 1+len(r.Pack.BonusPct) {
+			t.Fatalf("pack drew %d cards", len(drawn))
+		}
+		total += len(drawn)
+	}
+	// 1 + 0.45 + 0.20 = 1.65 expected; wide bounds keep this non-flaky
+	if mean := float64(total) / runs; mean < 1.55 || mean > 1.75 {
+		t.Errorf("pack averages %.2f cards, want ~1.65", mean)
+	}
+}
+
+func TestRarityLadder(t *testing.T) {
+	r := Default()
+	for _, c := range []struct{ from, want string }{
+		{"common", "rare"}, {"rare", "holo"}, {"holo", "prismatic"},
+	} {
+		if got, ok := r.NextRarity(c.from); !ok || got != c.want {
+			t.Errorf("NextRarity(%q) = %q, %v", c.from, got, ok)
+		}
+		if got, ok := r.PrevRarity(c.want); !ok || got != c.from {
+			t.Errorf("PrevRarity(%q) = %q, %v", c.want, got, ok)
+		}
+	}
+	if _, ok := r.NextRarity("prismatic"); ok {
+		t.Error("the top rarity must not fuse further")
+	}
+	if _, ok := r.PrevRarity("common"); ok {
+		t.Error("the bottom rarity must not defuse further")
+	}
+}
+
+// TestCardEffectTable guards the design invariants of the card set rather than
+// any single card's numbers. Validate enforces the same rules at boot, so this
+// also covers a hand-edited config.yml.
+func TestCardEffectTable(t *testing.T) {
+	r := Default()
+	for _, tier := range r.Tiers {
+		for _, rarity := range r.Rarities {
+			key := Card{Tier: tier.Name, Rarity: rarity}.Key()
+			e, ok := r.Cards[key]
+			if !ok {
+				t.Errorf("no effect defined for %s", key)
+				continue
+			}
+			if !e.Armed() {
+				t.Errorf("%s is inert — every card must do something", key)
+			}
+			if e.Guarantee && e.Mult != 0 {
+				t.Errorf("%s pairs Guarantee with Mult", key)
+			}
+			if e.Chance > 20 {
+				t.Errorf("%s chance bonus %d exceeds the +20 ceiling", key, e.Chance)
+			}
+		}
+	}
+	if len(r.Cards) != len(r.Tiers)*len(r.Rarities) {
+		t.Fatalf("cards has %d entries, want %d", len(r.Cards), len(r.Tiers)*len(r.Rarities))
+	}
+	if r.EffectFor("", "").Armed() {
+		t.Fatal("an empty talisman slot must resolve to no effect")
+	}
+}
+
+func TestResolveEffects(t *testing.T) {
+	base := Default()
+	win := withRNG(AlwaysWin{})
+	lose := withRNG(alwaysLose{})
+
+	// Chance boosts only the roll — never the risk-mode payout
+	want := GainFor(base.ChanceFor(5, 1, base.MaxStars), 1)
+	res := win.Resolve(Click{Stars: 5, Risk: 1, Cap: win.MaxStars, Card: base.Cards["unrank/rare"]})
+	if !res.TalismanUsed {
+		t.Fatal("an armed card must burn on any outcome")
+	}
+	if res.Gained != want {
+		t.Fatalf("a chance card must not change the payout: gained %d, want %d", res.Gained, want)
+	}
+	if res = lose.Resolve(Click{Stars: 5, Risk: 1, Cap: lose.MaxStars, Card: base.Cards["unrank/rare"]}); !res.TalismanUsed {
+		t.Fatal("an armed card must burn on a fail too")
+	}
+
+	// Guarantee settles at the safe-mode rate even at max risk. This is the
+	// exploit regression: the risk-scaled rate would pay GainFor(2, 3) = 50
+	// stars plus ~245 overflow coins on a click nobody had to win.
+	res = lose.Resolve(Click{Stars: 14, Risk: lose.MaxRisk, Cap: lose.MaxStars, Card: base.Cards["unrank/prismatic"]})
+	if !res.Success || res.Gained != 1 || res.Jackpot != 0 {
+		t.Fatalf("a guaranteed win must gain exactly 1 with no jackpot: %+v", res)
+	}
+
+	// Guarantee + Bonus: ⚡ 벼락 is a flat 3-star step, 🌌 특이점 a 5-star one
+	for key, want := range map[string]int{"gold/prismatic": 3, "diamond/prismatic": 5} {
+		res := lose.Resolve(Click{Risk: lose.MaxRisk, Cap: lose.MaxStars, Card: base.Cards[key]})
+		if !res.Success || res.Gained != want {
+			t.Fatalf("%s gained %d, want %d", key, res.Gained, want)
+		}
+	}
+	if res = lose.Resolve(Click{Cap: lose.MaxStars, Card: base.Cards["diamond/prismatic"]}); res.Card == nil {
+		t.Fatal("특이점 must drop a card on success")
+	}
+
+	// Mult scales the payout
+	if res = win.Resolve(Click{Cap: win.MaxStars, Card: base.Cards["gold/holo"]}); res.Gained != 2 {
+		t.Fatalf("×2 card: %+v", res)
+	}
+
+	// Keep holds every star on a fail
+	if res = lose.Resolve(Click{Stars: 14, Cap: lose.MaxStars, Card: base.Cards["bronze/holo"]}); res.Success || res.Stars != 14 {
+		t.Fatalf("불사조 must keep the streak: %+v", res)
+	}
+	// Half rounds up, and never lands below the head-start floor
+	if res = lose.Resolve(Click{Stars: 7, Cap: lose.MaxStars, Card: base.Cards["platinum/common"]}); res.Stars != 4 {
+		t.Fatalf("완충 반지 on ★7 should land on ★4, got %d", res.Stars)
+	}
+	if res = lose.Resolve(Click{Stars: 4, Cap: lose.MaxStars, Headstart: 3, Card: base.Cards["platinum/common"]}); res.Stars != 3 {
+		t.Fatalf("완충 반지 must not land below the floor, got %d", res.Stars)
+	}
+	// CoinLoss pays per star surrendered
+	if res = lose.Resolve(Click{Stars: 10, Cap: lose.MaxStars, Card: base.Cards["diamond/common"]}); res.Jackpot != 3*10 {
+		t.Fatalf("보험금 should pay 3 per lost star: %+v", res)
+	}
+	// CoinWin pays per star held after the win
+	if res = win.Resolve(Click{Cap: win.MaxStars, Card: base.Cards["gold/common"]}); res.Jackpot != 2 {
+		t.Fatalf("황금손 should pay 2 per star held: %+v", res)
+	}
+
+	// TierJump and BestJump are floors, never a downgrade
+	if res = win.Resolve(Click{Stars: 1, Cap: win.MaxStars, Card: base.Cards["silver/holo"]}); res.Stars != 4 {
+		t.Fatalf("사다리 from ★1 should reach silver at ★4, got %d", res.Stars)
+	}
+	if res = lose.Resolve(Click{Cap: lose.MaxStars, Best: 9, Card: base.Cards["platinum/prismatic"]}); res.Stars != 9 {
+		t.Fatalf("해일 should restore the personal best, got %d", res.Stars)
+	}
+	if res = lose.Resolve(Click{Stars: 6, Cap: lose.MaxStars, Best: 2, Card: base.Cards["platinum/prismatic"]}); res.Stars != 7 {
+		t.Fatalf("해일 must never cut a streak short, got %d", res.Stars)
+	}
+
+	// Rerolls: 🔮 예언구 gets two extra rolls, so a win on the third lands and
+	// a fourth-roll win is already too late
+	r := withRNG(&seqRNG{outcomes: []bool{false, false, true}})
+	if res = r.Resolve(Click{Stars: 14, Risk: r.MaxRisk, Cap: r.MaxStars, Card: base.Cards["platinum/holo"]}); !res.Success {
+		t.Fatal("예언구 should convert a fail on its second reroll")
+	}
+	r = withRNG(&seqRNG{outcomes: []bool{false, false, false, true}})
+	if res = r.Resolve(Click{Stars: 14, Risk: r.MaxRisk, Cap: r.MaxStars, Card: base.Cards["platinum/holo"]}); res.Success {
+		t.Fatal("예언구 must stop after two rerolls")
+	}
+
+	// MaxRisk keeps the safe click's odds but settles at the max-risk payout:
+	// ★0 rolls at a guaranteed 100% while paying GainFor(100/4, 3) = 4
+	want = GainFor(base.ChanceFor(0, base.MaxRisk, base.MaxStars), base.MaxRisk)
+	if res = lose.Resolve(Click{Cap: lose.MaxStars, Card: base.Cards["diamond/holo"]}); !res.Success || res.Gained != want {
+		t.Fatalf("용의 심장 should settle at the max-risk payout %d: %+v", want, res)
+	}
+
+	// Refund is reported so the handler can hand the click back
+	if res = win.Resolve(Click{Cap: win.MaxStars, Card: base.Cards["bronze/common"]}); !res.Refund {
+		t.Fatalf("동전 한 닢 must refund the click: %+v", res)
+	}
+}
