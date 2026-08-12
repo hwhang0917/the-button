@@ -32,3 +32,8 @@ dist-ssr
 
 # build output
 /thebutton
+
+# local tuning copied from config.yml.example — deployment-specific, and an
+# accidental `dev_mode: true` here would rig every roll. Track one deliberately
+# with `git add -f config.yml`.
+/config.yml
