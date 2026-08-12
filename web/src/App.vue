@@ -285,8 +285,10 @@ function setRisk(lvl: number) {
   vibrate(4 + lvl * 6) // buzz escalates with the risk you're signing up for
 }
 
-// lockout after each roll so results land with suspense instead of spam clicks
-const CLICK_COOLDOWN_MS = 800
+// `busy` already covers the whole in-flight request, so this is only a short
+// debounce against a double-fire on release — keep it well under the fail shake
+// (500ms) so the button never feels like it is holding you back
+const CLICK_COOLDOWN_MS = 150
 
 async function onPress(center: { x: number; y: number }) {
   if (busy.value) return
@@ -475,34 +477,34 @@ onMounted(async () => {
           <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
             <TierBadge :tier="state.tier" />
             <StarRow :stars="state.stars" :prestige="state.prestige" :max="state.maxStars" />
+            <!-- the talisman slot sits at TierBadge's size so the row reads as
+                 one system, and stays a comfortable tap target on phones -->
             <button
               v-if="state.talismanTier"
-              class="text-xs font-bold hover:opacity-70"
+              class="inline-flex items-center gap-1.5 rounded-full px-4 py-1 text-sm font-bold hover:opacity-80"
               :class="{ 'shield-hit': saveFlash }"
-              :style="{ color: TIER_COLORS[state.talismanTier] }"
+              :style="{
+                color: TIER_COLORS[state.talismanTier],
+                border: `1px solid ${TIER_COLORS[state.talismanTier]}66`,
+                background: `${TIER_COLORS[state.talismanTier]}1a`,
+              }"
               :title="t('talismanCancelConfirm')"
               @click="cancelTalismanAsk = true"
             >
-              🃏 {{ cardName(state.talismanTier, state.talismanRarity as Rarity) }} ✕
+              🃏 {{ cardName(state.talismanTier, state.talismanRarity as Rarity) }}
+              <span class="text-slate-400">✕</span>
             </button>
             <button
               v-else
-              class="rounded-full border border-slate-600 px-2 text-xs font-bold text-slate-400 hover:border-amber-400/60 hover:text-amber-300"
+              class="inline-flex items-center gap-1.5 rounded-full border border-dashed border-amber-400/50 bg-amber-400/5 px-4 py-1 text-sm font-bold text-amber-300/80 hover:border-amber-400 hover:bg-amber-400/15 hover:text-amber-200"
               :title="t('talismanPick')"
               @click="showTalismanPick = true; play('switch')"
             >
-              🃏 +
+              🃏 {{ t('talismanSlotEmpty') }}
             </button>
           </div>
 
-          <div id="tut-button" class="relative -my-3 sm:my-0">
-            <button
-              class="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-600 bg-slate-900/70 text-[10px] font-bold text-slate-400 hover:text-slate-200"
-              :aria-label="t('oddsTitle')"
-              @click="showOdds = true; play('switch')"
-            >
-              ℹ
-            </button>
+          <div id="tut-button" class="-my-3 sm:my-0">
             <TheButton
               :tier="state.tier"
               :chance="displayChance"
@@ -595,6 +597,9 @@ onMounted(async () => {
           />
         </svg>
       </a>
+      <button class="text-xs underline hover:text-slate-300" @click="showOdds = true; play('switch')">
+        {{ t('oddsLink') }}
+      </button>
       <button class="text-xs underline hover:text-slate-300" @click="showPrivacy = true">
         {{ t('privacy') }}
       </button>
