@@ -32,6 +32,7 @@ import { play, preloadAudio, soundCount, vibrate } from './audio'
 import { burst, confetti } from './particles'
 import { COIN_COLORS, useCoinCounter } from './useCoinCounter'
 import { TIER_COLORS, type Rarity, type Tier } from './tiers'
+import { cardName } from './cards'
 import TheButton from './components/TheButton.vue'
 import StarRow from './components/StarRow.vue'
 import TierBadge from './components/TierBadge.vue'
@@ -73,14 +74,13 @@ const TUT_SELECTORS = [
   '#tut-shop-lottery',
   '#tut-shop-pack',
   '#tut-shop-refill',
-  '#tut-shop-shield',
   '#tut-shop-charm',
   '#tut-shop-headstart',
   '#tut-collection',
   '#tut-rank',
 ]
 const TUT_SHOP_FIRST = 4
-const TUT_SHOP_LAST = 10
+const TUT_SHOP_LAST = 9
 
 function startTutorial() {
   localStorage.setItem(TUTORIAL_SEEN_KEY, '1')
@@ -148,8 +148,8 @@ const RARITY_BURST: Record<Rarity, { colors: string[]; count: number }> = {
 }
 
 const cancelTalismanAsk = ref(false)
-// red pulse on the 🛡️ counter as a charge burns
-const shieldFlash = ref(false)
+// red pulse on the 🃏 chip as a card burns to save the streak
+const saveFlash = ref(false)
 
 async function confirmCancelTalisman() {
   cancelTalismanAsk.value = false
@@ -312,18 +312,13 @@ async function onPress(center: { x: number; y: number }) {
     play(result.win ? 'win' : `success_${result.tier}`)
     if (result.tierUp && !result.win) vibrate([30, 30, 70]) // richer than the plain success buzz
     if (result.win) confetti()
-  } else if (!result.success && result.talismanUsed && result.stars === starsBefore && starsBefore > 0) {
+  } else if (result.talismanUsed && result.stars > 0 && result.stars === starsBefore) {
     message.value = t('talismanSaved')
     messageColor.value = 'text-amber-300'
     play('shield')
     vibrate([30, 40, 60]) // "phew" double-pulse for a save
-  } else if (result.shieldUsed) {
-    message.value = t('shieldSaved')
-    messageColor.value = 'text-amber-300'
-    play('shield')
-    vibrate([30, 40, 60])
-    shieldFlash.value = true
-    setTimeout(() => (shieldFlash.value = false), 900)
+    saveFlash.value = true
+    setTimeout(() => (saveFlash.value = false), 900)
   } else {
     message.value = t('fail')
     messageColor.value = 'text-rose-400'
@@ -477,22 +472,15 @@ onMounted(async () => {
           <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
             <TierBadge :tier="state.tier" />
             <StarRow :stars="state.stars" :prestige="state.prestige" :max="state.maxStars" />
-            <!-- stays mounted at 0 while flashing so the burn is visible -->
-            <span
-              v-if="state.shieldCharges > 0 || shieldFlash"
-              class="text-xs font-bold"
-              :class="shieldFlash ? 'shield-hit text-rose-400' : 'text-sky-300'"
-            >
-              🛡️×{{ state.shieldCharges }}
-            </span>
             <button
               v-if="state.talismanTier"
               class="text-xs font-bold hover:opacity-70"
+              :class="{ 'shield-hit': saveFlash }"
               :style="{ color: TIER_COLORS[state.talismanTier] }"
               :title="t('talismanCancelConfirm')"
               @click="cancelTalismanAsk = true"
             >
-              🃏 {{ t('tier')[state.talismanTier] }}·{{ t('rarity')[state.talismanRarity as Rarity] }} ✕
+              🃏 {{ cardName(state.talismanTier, state.talismanRarity as Rarity) }} ✕
             </button>
             <button
               v-else
@@ -519,7 +507,6 @@ onMounted(async () => {
               :risky="risk > 0"
               :disabled="disabled"
               :prestige="state.prestige"
-              :shield="state.shieldCharges > 0"
               :talisman="!!state.talismanTier"
               @press="onPress"
             />

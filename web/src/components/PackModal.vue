@@ -7,13 +7,24 @@ import { burst, confetti } from '../particles'
 import { COIN_COLORS } from '../useCoinCounter'
 import CardReveal from './CardReveal.vue'
 
-const props = defineProps<{ card: Card }>()
+const props = defineProps<{ cards: Card[] }>()
 const emit = defineEmits<{ close: []; again: [] }>()
 
 const canAgain = computed(() => (state.value?.coins ?? 0) >= PACK_PRICE)
 
 // sealed -> tearing (brief burst animation) -> revealed (CardReveal takes over)
 const stage = ref<'sealed' | 'tearing' | 'revealed'>('sealed')
+// a pack holds 1-3 cards, revealed one at a time
+const shown = ref(0)
+const current = computed(() => props.cards[shown.value])
+const remaining = computed(() => props.cards.length - shown.value - 1)
+
+// the tear theatre is scaled to the best card in the pack, so a prismatic
+// still announces itself even when it comes out last
+const BANDS = ['common', 'rare', 'holo', 'prismatic']
+const best = computed(() =>
+  props.cards.reduce((a, c) => (BANDS.indexOf(c.rarity) > BANDS.indexOf(a) ? c.rarity : a), 'common'),
+)
 
 const RARITY_FX: Record<string, { colors: string[]; count: number; sound: 'success_silver' | 'success_gold' | 'success_diamond' | 'win' }> = {
   common: { colors: COIN_COLORS, count: 40, sound: 'success_silver' },
@@ -26,21 +37,37 @@ const TEAR_MS = 450
 function tear() {
   if (stage.value !== 'sealed') return
   stage.value = 'tearing'
-  const fx = RARITY_FX[props.card.rarity]
+  const fx = RARITY_FX[best.value]
   burst(window.innerWidth / 2, window.innerHeight / 2, fx.colors, fx.count)
   play(fx.sound)
-  vibrate(props.card.rarity === 'prismatic' ? [40, 30, 80, 30, 120] : [20, 25, 45])
-  if (props.card.rarity === 'prismatic') confetti()
+  vibrate(best.value === 'prismatic' ? [40, 30, 80, 30, 120] : [20, 25, 45])
+  if (best.value === 'prismatic') confetti()
   setTimeout(() => (stage.value = 'revealed'), TEAR_MS)
+}
+
+// each card gets its own flourish, sized to that card's rarity
+function next() {
+  shown.value++
+  const fx = RARITY_FX[current.value.rarity]
+  burst(window.innerWidth / 2, window.innerHeight / 2, fx.colors, Math.round(fx.count / 2))
+  play('switch')
+  vibrate(20)
 }
 </script>
 
 <template>
   <CardReveal
     v-if="stage === 'revealed'"
-    :card="card"
-    :again-label="canAgain ? `${t('openAnother')} (💰${PACK_PRICE})` : ''"
-    @again="emit('again')"
+    :key="shown"
+    :card="current"
+    :again-label="
+      remaining > 0
+        ? `${t('packNext')} · ${t('packLeft').replace('{n}', String(remaining))}`
+        : canAgain
+          ? `${t('openAnother')} (💰${PACK_PRICE})`
+          : ''
+    "
+    @again="remaining > 0 ? next() : emit('again')"
     @close="emit('close')"
   />
   <div

@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { cardChance } from './cards'
 import { RARITIES, type Rarity, type Tier } from './tiers'
 
 export interface GameState {
@@ -12,7 +13,6 @@ export interface GameState {
   nickname: string
   win: boolean
   coins: number
-  shieldCharges: number
   charmLevel: number
   headstartLevel: number
   prestige: number
@@ -38,11 +38,10 @@ export interface ClickResult {
   chance: number
   quotaLeft: number
   bonusClicks: number
-  shieldUsed: boolean
-  shieldCharges: number
   talismanUsed: boolean
   talismanTier: Tier | ''
   talismanRarity: Rarity | ''
+  refund: boolean
   jackpot: number
   coins: number
 }
@@ -112,11 +111,10 @@ export function streakValue(stars: number, floor: number): number {
   return tri(stars) - tri(Math.min(floor, stars))
 }
 
-export type SkillKey = 'shield' | 'charm' | 'headstart'
+export type SkillKey = 'charm' | 'headstart'
 
 /** Mirrors the price ladders and caps in game.go. */
 export const SKILLS: Record<SkillKey, { prices: number[]; cap: number }> = {
-  shield: { prices: [25], cap: Infinity }, // flat price, uncapped charges
   charm: { prices: [10, 30, 90, 270, 810], cap: 5 },
   headstart: { prices: [20, 100, 400], cap: 3 },
 }
@@ -145,13 +143,10 @@ export async function prestigeStreak(): Promise<number | null> {
   return d.gained
 }
 
-/** Chance bonus per talisman rarity; mirrors talCommonPct/talRarePct in game.go. */
-export const TALISMAN_BONUS: Record<Rarity, number> = { common: 5, rare: 10, holo: 0, prismatic: 0 }
-
-/** The armed talisman's chance bonus, when it would actually fire (tier matches). */
+/** The armed card's chance bonus — it fires on the next click whatever the tier. */
 export function talismanBonus(s: GameState): number {
-  if (!s.talismanTier || s.talismanTier !== s.tier || !s.talismanRarity) return 0
-  return TALISMAN_BONUS[s.talismanRarity]
+  if (!s.talismanTier || !s.talismanRarity) return 0
+  return cardChance(s.talismanTier, s.talismanRarity)
 }
 
 /** Consumes one copy of a card and arms it as the single talisman slot. */
@@ -228,13 +223,13 @@ export const LOTTERY_PRIZES = [2000, 400, 80, 15]
 export const PACK_PRICE = 30
 export const REFILL_PRICE = 60
 
-/** Buys one random-card pack; returns the rolled card (coins patched immediately). */
-export async function buyPack(): Promise<Card | null> {
+/** Buys one card pack; returns its 1-3 cards (coins patched immediately). */
+export async function buyPack(): Promise<Card[] | null> {
   const res = await fetch('/api/pack', { method: 'POST' })
   if (!res.ok) return null
   const d = await res.json()
   if (state.value) state.value.coins = d.coins
-  return { tier: d.tier, rarity: d.rarity }
+  return d.cards
 }
 
 /** Buys back this hour's spent clicks (once per day). */
@@ -283,7 +278,6 @@ export async function buySkill(skill: SkillKey): Promise<boolean> {
   if (state.value) {
     Object.assign(state.value, {
       coins: d.coins,
-      shieldCharges: d.shieldCharges,
       charmLevel: d.charmLevel,
       headstartLevel: d.headstartLevel,
     })
@@ -309,7 +303,6 @@ export async function click(risk: number): Promise<ClickResult | null> {
     state.value.chance = result.chance
     state.value.quotaLeft = result.quotaLeft
     state.value.win = result.win
-    state.value.shieldCharges = result.shieldCharges
     state.value.talismanTier = result.talismanTier
     state.value.talismanRarity = result.talismanRarity
     state.value.coins = result.coins

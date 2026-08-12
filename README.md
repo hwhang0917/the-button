@@ -24,7 +24,7 @@ go build -o thebutton .
 | `DB_PATH` | no | `./thebutton.db` | SQLite file |
 | `QUOTA` | no | `10` | clicks per player per hour (resets on the clock hour) |
 | `EVENTS_DIR` | no | — | anonymous NDJSON gameplay events for analytics; unset = telemetry off |
-| `DEV_MODE` | no | — | any value forces every roll to succeed (clicks at any risk, card drops) — local testing only |
+| `DEV_MODE` | no | — | any value forces every roll to succeed (clicks at any risk) — local testing only |
 
 ## Dev
 
@@ -50,10 +50,16 @@ Telemetry is off unless `EVENTS_DIR` is set, and dropped (never blocking) under 
 
 - Success chance starts at 100% and drops each star (★15 max = win).
 - Fail resets to ★0 (or your head-start floor). Stars persist; quota refreshes every clock hour.
-- RISK IT levels 1–3: odds ÷(level+1), success pays the odds back (★+round(100/chance)), card-drop odds ×(level+1).
+- RISK IT levels 1–3: odds ÷(level+1), success pays the odds back (★+round(100/chance)).
 - Tiers: Unrank → Bronze → Silver → Gold → Platinum → Diamond. First climb past your best tier refunds clicks equal to its rank.
-- Successful clicks can drop collectible cards (common/rare/holo/prismatic) — tap owned cards to view them. Cards are consumable: arm one as a **talisman** (one slot; fires only inside the card's tier — common/rare add +5/+10% to the roll only, shown as a `+N%` tag on the button, without reducing the risk-mode star payout; holo keeps stars on a fail; prismatic doubles the next success) or **fuse** 3 identical cards into 1 of the next rarity (defuse returns only 2). Discovered cards stay in the collection even at ×0.
-- **Skill shop**: sell your streak for coins (triangle value — deep streaks pay disproportionately) and buy skills: 🛡️ protection scroll (keep stars on a fail, consumable), 🍀 lucky charm (+2% success/level, cap 5), 🚀 head start (resets land at ★level, cap 3), 🎟️ 복권 (15💰 scratch ticket, exponential prizes up to a 2000💰 jackpot at ~81% payback; winnings don't count toward rank points), 🎴 card pack (30💰, one random card from any tier — higher tiers rarer — opened Hearthstone-style), ⏰ time recharge (60💰, instantly refills this hour's clicks, once per day).
+- **Cards**: 24 of them, one per tier × rarity, each with its own one-shot effect. Card packs are the only source. Arm one (single slot) and it fires on your very next click, whatever tier you're standing in — then it's spent, win or lose. Rarity is the power band, and the six tier variants inside a band differ in flavour rather than strength:
+  - **커먼 (60% of pulls)** — +5% odds, a free click, +1 star, coins on a win, keep half your stars on a fail, coins per star lost.
+  - **레어 (25%)** — +10% odds, undo a fail entirely (stars kept *and* the click refunded), one reroll, +1 star with +5% odds, +2 stars, a free extra card.
+  - **홀로 (12%)** — +20% odds, keep every star on a fail, jump to the next tier, ×2 stars, two rerolls, settle at the max-risk payout while rolling at your own odds.
+  - **프리즘 (3%)** — guaranteed success, ×3 stars, guaranteed *and* free, a flat 3-star step, snap back to your best-ever streak, and a 5-star step that also hands you a card.
+  - A chance bonus lifts the roll only, shown as a `+N%` tag on the button — it never shrinks the risk-mode payout. Guaranteed-success cards deliberately settle at the safe-mode rate (+1 base): paying them at the risk-scaled rate would mint ~50 stars plus overflow coins on every deep max-risk click.
+  - **Fuse** 3 identical cards into 1 of the next rarity (defuse returns only 2) — at 3% prismatic odds that's the only deterministic route to a specific joker. Discovered cards stay in the collection even at ×0.
+- **Skill shop**: sell your streak for coins (triangle value — deep streaks pay disproportionately) and buy: 🍀 lucky charm (+2% success/level, cap 5), 🚀 head start (resets land at ★level, cap 3), 🎟️ 복권 (15💰 scratch ticket, exponential prizes up to a 2000💰 jackpot at ~81% payback; winnings don't count toward rank points), 🎴 card pack (30💰 for 1–3 random cards — always one, plus bonus rolls at 45% and 20% — opened Hearthstone-style), ⏰ time recharge (60💰, instantly refills this hour's clicks, once per day).
 - **Prestige**: at ★15 the plain sell is disabled — PRESTIGE instead converts the streak to 300/450/600 coins and promotes your star tier common → rare → holo → prismatic, then keeps counting forever (prismatic-2, prismatic-3, …) at 600 per lap. The leaderboard orders prestige tier → stars; coins are purely shop currency.
 - Unique nicknames (2–16 chars, 한글/`a-z 0-9 _`, case-insensitive), asked on first visit.
 - Accounts are anonymous cookie tokens — zero PII, no IPs stored. Link another device via a one-time 8-char code (player menu → link device, valid 10 minutes).

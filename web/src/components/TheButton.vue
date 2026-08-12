@@ -13,11 +13,10 @@ const props = withDefaults(
     risky: boolean
     disabled: boolean
     prestige?: number
-    shield?: boolean
     talisman?: boolean
     bonus?: number
   }>(),
-  { prestige: 0, shield: false, talisman: false, bonus: 0 },
+  { prestige: 0, talisman: false, bonus: 0 },
 )
 const emit = defineEmits<{ press: [center: { x: number; y: number }] }>()
 
@@ -30,7 +29,6 @@ let app: Application | null = null
 let btn: Container
 let fx: Container
 let halo: Graphics
-let auraShield: Graphics
 let auraTalisman: Graphics
 let base: Graphics
 let shadeDark: Graphics
@@ -91,8 +89,7 @@ function heat(): number {
   return Math.max(0, Math.min(1, (60 - props.chance) / 55))
 }
 
-// aura rings signalling attached consumables: 🛡 sky blue, 🃏 amber
-const AURA_SHIELD_TINT = 0x38bdf8
+// amber aura ring signalling an armed 🃏 card
 const AURA_TALISMAN_TINT = 0xfbbf24
 
 // a dashed ring drawn white so .tint can color it; rotated/pulsed in the ticker
@@ -194,10 +191,6 @@ onMounted(async () => {
   fx = new Container()
   btn = new Container()
   halo = new Graphics()
-  auraShield = new Graphics()
-  auraShield.tint = AURA_SHIELD_TINT
-  auraShield.alpha = 0
-  drawAuraRing(auraShield, R + 20)
   auraTalisman = new Graphics()
   auraTalisman.tint = AURA_TALISMAN_TINT
   auraTalisman.alpha = 0
@@ -227,7 +220,7 @@ onMounted(async () => {
   pct.anchor.set(0.5)
   pct.position.set(0, 24)
 
-  btn.addChild(halo, auraShield, auraTalisman, shade, rim, label, pct)
+  btn.addChild(halo, auraTalisman, shade, rim, label, pct)
   btn.position.set(SIZE / 2, SIZE / 2)
   btn.cursor = 'pointer'
   a.stage.addChild(fx, btn)
@@ -307,9 +300,7 @@ onMounted(async () => {
     btn.position.set(SIZE / 2 + ox + tremX, SIZE / 2 + oy + tremY)
     btn.rotation = Math.sin(phase * 0.9) * 0.02 * m
 
-    // consumable auras: counter-rotating pulsing rings while attached
-    auraShield.rotation = phase * 0.6 * m
-    auraShield.alpha = props.shield ? 0.4 + Math.sin(phase * 2.2) * 0.2 * m : 0
+    // armed card: a slowly rotating, pulsing ring
     auraTalisman.rotation = -phase * 0.8 * m
     auraTalisman.alpha = props.talisman ? 0.4 + Math.sin(phase * 2.6 + 1) * 0.2 * m : 0
 

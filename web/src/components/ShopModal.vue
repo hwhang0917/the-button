@@ -34,14 +34,14 @@ function coinBurst(count: number) {
   if (r) burst(r.left + r.width / 2, r.top + r.height / 2, COIN_COLORS, count)
 }
 
-const pack = ref<Card | null>(null)
+const pack = ref<Card[] | null>(null)
 
 async function onPack() {
-  const card = await buyPack()
-  if (card) {
+  const drawn = await buyPack()
+  if (drawn?.length) {
     play('coin-use')
     vibrate([8, 15, 12])
-    pack.value = card
+    pack.value = drawn
   }
 }
 
@@ -80,16 +80,6 @@ const sellValue = computed(() =>
 const rows = computed(() => {
   const s = state.value!
   return [
-    {
-      id: 'tut-shop-shield',
-      key: 'shield' as SkillKey,
-      icon: '🛡️',
-      name: t('shieldName'),
-      desc: t('shieldDesc'),
-      levelText: `×${s.shieldCharges}`,
-      price: SKILLS.shield.prices[0],
-      capped: false,
-    },
     {
       id: 'tut-shop-charm',
       key: 'charm' as SkillKey,
@@ -248,6 +238,6 @@ async function onBuy(key: SkillKey) {
       @again="onLotteryAgain"
       @close="ticket = null"
     />
-    <PackModal v-if="pack" :card="pack" @again="onPackAgain" @close="pack = null; loadCards()" />
+    <PackModal v-if="pack" :cards="pack" @again="onPackAgain" @close="pack = null; loadCards()" />
   </div>
 </template>

@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { nextRarity, prevRarity, state, type Card } from '../useGame'
 import { CARD_EMOJI, TIER_COLORS } from '../tiers'
+import { cardName, effectText } from '../cards'
 import { t } from '../i18n'
 
 const props = withDefaults(
@@ -13,11 +14,8 @@ defineEmits<{ close: []; arm: []; fuse: []; defuse: []; again: [] }>()
 const fuseTarget = computed(() => nextRarity(props.card.rarity))
 const defuseTarget = computed(() => prevRarity(props.card.rarity))
 const talismanBusy = computed(() => state.value?.talismanTier !== '')
-// arming only works while standing in the card's tier (mirrors the server)
-const inTier = computed(() => state.value?.tier === props.card.tier)
-const wrongTierHint = computed(() =>
-  t('talismanWrongTier').replace('{tier}', t('tier')[props.card.tier]),
-)
+const name = computed(() => cardName(props.card.tier, props.card.rarity))
+const effect = computed(() => effectText(props.card.tier, props.card.rarity))
 
 const el = ref<HTMLDivElement | null>(null)
 const vars = ref<Record<string, string>>({})
@@ -122,13 +120,13 @@ function onPointerUp(e: PointerEvent) {
           {{ CARD_EMOJI[card.tier][card.rarity] }}
         </span>
         <p class="rounded-lg bg-black/30 px-2 py-1 text-center text-[11px] leading-snug text-slate-100">
-          🃏 {{ t('talEffect')[card.rarity] }}
+          🃏 {{ effect }}
         </p>
         <div class="text-center">
-          <p class="text-lg font-black uppercase tracking-widest" :style="{ color: TIER_COLORS[card.tier] }">
+          <p class="text-sm font-black leading-tight text-slate-50">{{ name }}</p>
+          <p class="text-[11px] font-bold uppercase tracking-widest" :style="{ color: TIER_COLORS[card.tier] }">
             {{ t('tier')[card.tier] }}
           </p>
-          <p class="text-[10px] uppercase tracking-[0.3em] text-slate-400">the button</p>
         </div>
         <div class="card__shine"></div>
         <div class="card__glare"></div>
@@ -137,7 +135,7 @@ function onPointerUp(e: PointerEvent) {
     <div v-if="!drop" class="flex w-72 flex-col gap-2">
       <button
         class="rounded-lg bg-amber-400 py-2 text-xs font-bold text-slate-900 hover:bg-amber-300 disabled:opacity-40"
-        :disabled="count < 1 || talismanBusy || !inTier"
+        :disabled="count < 1 || talismanBusy"
         @click="$emit('arm')"
       >
         {{ t('talismanUse') }}
@@ -160,8 +158,9 @@ function onPointerUp(e: PointerEvent) {
           {{ t('defuse') }} → {{ t('rarity')[defuseTarget] }} ×2
         </button>
       </div>
-      <p v-if="!inTier" class="text-center text-[10px] text-rose-400/80">{{ wrongTierHint }}</p>
-      <p v-else-if="talismanBusy" class="text-center text-[10px] text-slate-500">{{ t('talismanArmedHint') }}</p>
+      <p class="text-center text-[10px] text-slate-500">
+        {{ talismanBusy ? t('talismanArmedHint') : t('talismanNextClick') }}
+      </p>
     </div>
 
     <div class="flex gap-3">
