@@ -754,9 +754,11 @@ onMounted(async () => {
               🃏 {{ cardName(state.talismanTier, state.talismanRarity as Rarity) }}
               <span class="text-slate-400">✕</span>
             </button>
+<!-- no next click for a talisman to ride at max stars -->
             <button
               v-else
-              class="inline-flex items-center gap-1.5 rounded-full border border-dashed border-amber-400/50 bg-amber-400/5 px-4 py-1 text-sm font-bold text-amber-300/80 hover:border-amber-400 hover:bg-amber-400/15 hover:text-amber-200 light:text-amber-700 light:hover:text-amber-800"
+              class="inline-flex items-center gap-1.5 rounded-full border border-dashed border-amber-400/50 bg-amber-400/5 px-4 py-1 text-sm font-bold text-amber-300/80 hover:border-amber-400 hover:bg-amber-400/15 hover:text-amber-200 disabled:pointer-events-none disabled:opacity-40 light:text-amber-700 light:hover:text-amber-800"
+              :disabled="state.win"
               :title="t('talismanPick')"
               @click="showTalismanPick = true; play('switch')"
             >
