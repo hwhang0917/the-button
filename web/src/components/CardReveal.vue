@@ -13,7 +13,8 @@ defineEmits<{ close: []; arm: []; fuse: []; defuse: []; sell: []; again: [] }>()
 
 const fuseTarget = computed(() => nextRarity(props.card.rarity))
 const defuseTarget = computed(() => prevRarity(props.card.rarity))
-const talismanBusy = computed(() => state.value?.talismanTier !== '')
+// busy slot or max stars: either way there is no next click to arm for
+const talismanBusy = computed(() => state.value?.talismanTier !== '' || !!state.value?.win)
 
 const el = ref<HTMLDivElement | null>(null)
 const vars = ref<Record<string, string>>({})
@@ -106,7 +107,7 @@ function onPointerUp(e: PointerEvent) {
         💰 {{ t('sellCard') }} +{{ sellValue(card.rarity) }}
       </button>
       <p class="text-center text-[10px] text-zinc-500">
-        {{ talismanBusy ? t('talismanArmedHint') : t('talismanNextClick') }}
+        {{ state?.win ? t('sellAtWin') : talismanBusy ? t('talismanArmedHint') : t('talismanNextClick') }}
       </p>
     </div>
 
