@@ -34,7 +34,7 @@ import { t, lang, toggleLang } from './i18n'
 import { theme, toggleTheme } from './theme'
 import { muted, play, preloadAudio, soundCount, toggleMute, vibrate } from './audio'
 import { burst, confetti } from './particles'
-import { COIN_COLORS, useCoinCounter } from './useCoinCounter'
+import { COIN_COLORS, fmtCoins, useCoinCounter } from './useCoinCounter'
 import { TIER_COLORS, type Rarity, type Tier } from './tiers'
 import { cardName, effectFor } from './cards'
 import { cfg, loadConfig } from './config'
@@ -858,8 +858,12 @@ onMounted(async () => {
           <!-- wallet + the three shop entries share one wrapping row with quota and best -->
           <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5">
             <div id="tut-shop" class="flex flex-wrap items-center justify-center gap-2">
-              <span ref="coinEl" class="font-mono text-sm font-bold text-yellow-300 light:text-yellow-700">
-                💰 {{ shownCoins }}
+              <span
+                ref="coinEl"
+                class="font-mono text-sm font-bold text-yellow-300 light:text-yellow-700"
+                :title="String(state.coins)"
+              >
+                💰 {{ fmtCoins(shownCoins) }}
               </span>
               <button
                 id="tut-shop-sell"

@@ -14,7 +14,7 @@ import {
 import { cfg } from '../config'
 import { t } from '../i18n'
 import { play, vibrate } from '../audio'
-import { useCoinCounter } from '../useCoinCounter'
+import { fmtCoins, useCoinCounter } from '../useCoinCounter'
 import LotteryModal from './LotteryModal.vue'
 import PackModal from './PackModal.vue'
 
@@ -135,7 +135,9 @@ async function onBuy(key: SkillKey) {
     <div v-if="state" class="flex w-full max-w-sm flex-col gap-4 rounded-xl border border-slate-700 bg-slate-900 p-6">
       <h2 class="text-center text-lg font-bold text-slate-100">
         {{ kind === 'items' ? `🎁 ${t('itemShop')}` : `📈 ${t('skillShop')}` }}
-        <span class="ml-2 font-mono text-yellow-300 light:text-yellow-600">💰 {{ shownCoins }}</span>
+        <span class="ml-2 font-mono text-yellow-300 light:text-yellow-600" :title="String(state?.coins ?? 0)">
+          💰 {{ fmtCoins(shownCoins) }}
+        </span>
       </h2>
 
       <template v-if="kind === 'items'">

@@ -24,3 +24,20 @@ export function useCoinCounter(source: () => number): Ref<number> {
 
 /** Gold palette for coin particle bursts. */
 export const COIN_COLORS = ['#facc15', '#fbbf24', '#f59e0b', '#fde68a']
+
+/** Compact coin display: up to 4 digits stay raw, then 12.3k / 4.5m / 1.2b —
+ * one decimal while it matters, dropped once the number is 3 digits wide. */
+export function fmtCoins(n: number): string {
+  if (n < 10_000) return String(n)
+  for (const [div, suffix] of [
+    [1e9, 'b'],
+    [1e6, 'm'],
+    [1e3, 'k'],
+  ] as const) {
+    if (n >= div) {
+      const v = n / div
+      return (v >= 100 ? String(Math.round(v)) : v.toFixed(1).replace(/\.0$/, '')) + suffix
+    }
+  }
+  return String(n)
+}
