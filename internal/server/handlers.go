@@ -31,12 +31,14 @@ type stateResponse struct {
 	TalismanTier   string `json:"talismanTier"`
 	TalismanRarity string `json:"talismanRarity"`
 	RefillUsed     bool   `json:"refillUsed"`
+	RefillIn       int    `json:"refillIn"` // seconds until the quota bucket rolls over
 	DevMode        bool   `json:"devMode"`
 }
 
 func (s *Server) stateFor(p *store.Player, quotaLeft int) stateResponse {
 	rules := s.cfg.Rules
 	cap := rules.MaxStarsFor(p.Prestige)
+	now := time.Now()
 	return stateResponse{
 		Stars:          p.Stars,
 		BestStars:      p.BestStars,
@@ -54,7 +56,10 @@ func (s *Server) stateFor(p *store.Player, quotaLeft int) stateResponse {
 		Prestige:       p.Prestige,
 		TalismanTier:   p.TalismanTier,
 		TalismanRarity: p.TalismanRarity,
-		RefillUsed:     p.RefillDay == time.Now().Format("2006-01-02"),
+		RefillUsed:     p.RefillDay == now.Format("2006-01-02"),
+		// the quota bucket is keyed by the SERVER's clock hour (store.bucketKey), so
+		// the client must count down to this instead of its own top-of-hour guess
+		RefillIn:       3600 - now.Minute()*60 - now.Second(),
 		DevMode:        s.cfg.DevMode,
 	}
 }

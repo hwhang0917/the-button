@@ -18,6 +18,7 @@ import {
   prevRarity,
   prestigeReward,
   prestigeStreak,
+  refillAt,
   startHealthCheck,
   state,
   talismanBonus,
@@ -281,11 +282,10 @@ async function confirmDelete() {
 
 const now = ref(Date.now())
 
-// ponytail: quota refills on the server's clock hour; client top-of-hour matches
-// for whole-hour timezones — pass the server's bucket deadline in /api/state if that breaks
+// counts down to the server-published bucket deadline (refillAt), not the
+// client's top-of-hour — the clocks disagree by whatever the skew is
 const refillIn = computed(() => {
-  const d = new Date(now.value)
-  const s = 3599 - d.getMinutes() * 60 - d.getSeconds()
+  const s = Math.min(3599, Math.max(0, Math.ceil((refillAt.value - now.value) / 1000)))
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 })
 
@@ -377,21 +377,23 @@ onMounted(async () => {
     loadLeaderboard().then(step),
     loadCards().then(step),
   ])
-  let lastHour = new Date().getHours()
+  // once the deadline passes with the quota still empty, ask the server until it
+  // confirms the refill: a load that comes back too early (skew/latency) carries
+  // the real remaining seconds, which re-arms refillAt; a failed fetch retries
+  // via the fallback deadline set here
+  const REFILL_RETRY_MS = 5000
   setInterval(() => {
     now.value = Date.now()
-    const h = new Date().getHours()
-    if (h !== lastHour) {
-      lastHour = h
-      if (state.value && state.value.quotaLeft <= 0) loadState()
+    if (state.value && state.value.quotaLeft <= 0 && now.value >= refillAt.value) {
+      refillAt.value = now.value + REFILL_RETRY_MS
+      loadState().catch(() => {})
     }
   }, 1000)
   // background tabs throttle the interval, so the timer freezes and a missed
-  // hour rollover leaves stale quota — resync clock and server state on return
+  // rollover leaves stale quota — resync clock and server state on return
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return
     now.value = Date.now()
-    lastHour = new Date().getHours()
     loadState()
   })
   startHealthCheck()

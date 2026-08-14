@@ -5,9 +5,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/hwhang0917/the-button/internal/config"
 	"github.com/hwhang0917/the-button/internal/game"
+	"github.com/hwhang0917/the-button/internal/store"
 )
 
 // testServer is a Server with no store or logger behind it — enough for the
@@ -109,6 +111,19 @@ func TestConfigEndpoint(t *testing.T) {
 	}
 }
 
+// TestRefillIn pins refillIn to the store's hour bucket (store.bucketKey): the
+// client re-polls its quota when this expires, so it must track the SERVER
+// clock's rollover — the client's own top-of-hour drifts by the clock skew.
+func TestRefillIn(t *testing.T) {
+	got := testServer(t).stateFor(&store.Player{}, 0).RefillIn
+	now := time.Now()
+	want := 3600 - now.Minute()*60 - now.Second()
+	// stateFor took its own time.Now(), so a second may have ticked in between
+	if got < want || got > want+1 {
+		t.Errorf("refillIn = %d, want %d — must count down to the top of the server's clock hour", got, want)
+	}
+}
+
 // TestStateResponseKeys pins the /api/state field names the client reads.
 // A bulk rename during the package split once mangled a struct tag into
 // `json:"s.cfg.DevMode"`, which silently killed the DEV_MODE warning ribbon —
@@ -125,7 +140,7 @@ func TestStateResponseKeys(t *testing.T) {
 	want := []string{
 		"stars", "bestStars", "tier", "chance", "maxStars", "quotaLeft", "quota",
 		"nickname", "win", "coins", "charmLevel", "headstartLevel", "staminaLevel",
-		"prestige", "talismanTier", "talismanRarity", "refillUsed", "devMode",
+		"prestige", "talismanTier", "talismanRarity", "refillUsed", "refillIn", "devMode",
 	}
 	for _, key := range want {
 		if _, ok := got[key]; !ok {

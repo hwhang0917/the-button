@@ -21,6 +21,7 @@ export interface GameState {
   talismanTier: Tier | ''
   talismanRarity: Rarity | ''
   refillUsed: boolean
+  refillIn: number
   devMode: boolean
 }
 
@@ -87,8 +88,14 @@ export function startHealthCheck() {
   })
 }
 
+/** When (client clock) the server's quota bucket rolls over. The server keys the
+ * bucket by ITS clock hour, so counting down to the client's top-of-hour drifts
+ * by the clock skew and can strand an exhausted quota until a manual refresh. */
+export const refillAt = ref(Infinity)
+
 export async function loadState() {
   state.value = await (await fetch('/api/state')).json()
+  refillAt.value = Date.now() + state.value!.refillIn * 1000
 }
 
 export async function loadLeaderboard() {
