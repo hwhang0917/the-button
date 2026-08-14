@@ -60,7 +60,7 @@ const dict = {
     menuTutorial: '튜토리얼',
     // the tutorial's closing keycap sheet — [key, what it does]
     keyGuide: [
-      ['Space', '강화 · 팝업 확인'],
+      ['Space', '강화 · 프리스티지 · 팝업 확인'],
       ['S', '스트릭 판매'],
       ['I', '아이템 상점'],
       ['K', '스킬 상점'],
@@ -272,7 +272,7 @@ const dict = {
     skillShop: 'Skill shop',
     menuTutorial: 'Tutorial',
     keyGuide: [
-      ['Space', 'enchant · confirm popups'],
+      ['Space', 'enchant · prestige · confirm popups'],
       ['S', 'sell streak'],
       ['I', 'item shop'],
       ['K', 'skill shop'],

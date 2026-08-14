@@ -806,8 +806,11 @@ onMounted(async () => {
 
           <p class="h-5 text-center text-sm font-bold sm:h-6 sm:text-base" :class="messageColor">{{ message }}</p>
 
+<!-- data-space: Space prestiges too — overlays sit later in the DOM, so
+               their confirming action still outranks this while one is open -->
           <button
             v-if="state.win"
+            data-space
             class="animate-pulse rounded-full border-2 border-fuchsia-400 bg-fuchsia-500/20 px-8 py-3 text-lg font-black tracking-widest text-fuchsia-200 hover:bg-fuchsia-500/30 light:border-fuchsia-600 light:text-fuchsia-700"
             @click="onPrestige"
           >
