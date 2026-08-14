@@ -76,7 +76,8 @@ const { chance: eqChance, roll: eqRoll, gain: eqGain, next: eqNext, jackpot: eqJ
 <style scoped>
 .odds-math {
   overflow-x: auto;
-  color: #e2e8f0;
+  /* the slate ladder flips with the theme; a raw hex would vanish in light mode */
+  color: var(--color-slate-200);
 }
 .odds-math :deep(.katex-display) {
   margin: 0.25rem 0;

@@ -20,8 +20,10 @@ import {
   prestigeStreak,
   refillAt,
   sellCard,
+  sellStreak,
   startHealthCheck,
   state,
+  streakValue,
   talismanBonus,
   type Card,
 } from './useGame'
@@ -90,6 +92,17 @@ const TUT_PANEL: Record<string, 'rank' | 'collection'> = {
   '#tut-collection': 'collection',
   '#tut-rank': 'rank',
 }
+// which shop modal holds a step's target (streak sell lives on the main screen)
+const TUT_SHOP: Record<string, 'items' | 'skills'> = {
+  '#tut-shop-lottery': 'items',
+  '#tut-shop-pack': 'items',
+  '#tut-shop-refill': 'items',
+  '#tut-shop-charm': 'skills',
+  '#tut-shop-stamina': 'skills',
+  '#tut-shop-headstart': 'skills',
+  '#tut-shop-magnet': 'skills',
+  '#tut-shop-golden': 'skills',
+}
 
 function startTutorial() {
   localStorage.setItem(TUTORIAL_SEEN_KEY, '1')
@@ -100,7 +113,7 @@ function startTutorial() {
   // from the selector, so reordering the tour cannot desync them.
   const goto = (i: number, move: () => void) => async () => {
     const sel = TUT_SELECTORS[i] ?? ''
-    showShop.value = sel.startsWith('#tut-shop-')
+    showShop.value = TUT_SHOP[sel] ?? ''
     panel.value = drawerVisible() ? (TUT_PANEL[sel] ?? '') : ''
     await nextTick()
     move()
@@ -111,7 +124,7 @@ function startTutorial() {
     prevBtnText: t('tutPrev'),
     doneBtnText: t('tutDone'),
     onDestroyed: () => {
-      showShop.value = false
+      showShop.value = ''
       panel.value = ''
     },
     steps: TUT_SELECTORS.map((element, i) => ({
@@ -240,7 +253,8 @@ function closeLink() {
   }
 }
 const showPrivacy = ref(false)
-const showShop = ref(false)
+const showShop = ref<'' | 'items' | 'skills'>('')
+const sellAsk = ref(false)
 const showOdds = ref(false)
 const showTalismanPick = ref(false)
 const tutorialPending = ref(!localStorage.getItem(TUTORIAL_SEEN_KEY))
@@ -273,6 +287,7 @@ const modalOpen = computed(() =>
       showNickname.value ||
       showLink.value ||
       showShop.value ||
+      sellAsk.value ||
       showPrivacy.value ||
       showOdds.value ||
       showTalismanPick.value ||
@@ -285,6 +300,23 @@ watch(modalOpen, (open) => {
 })
 
 const shownCoins = useCoinCounter(() => state.value?.coins ?? 0)
+const coinEl = ref<HTMLElement | null>(null)
+
+const streakSellValue = computed(() =>
+  state.value ? streakValue(state.value.stars, state.value.headstartLevel) : 0,
+)
+
+async function confirmSellStreak() {
+  sellAsk.value = false
+  const gained = await sellStreak()
+  if (gained) {
+    play('streak-sell')
+    vibrate([15, 20, 35]) // coins clattering in
+    const r = coinEl.value?.getBoundingClientRect()
+    // more coins, bigger shower
+    if (r) burst(r.left + r.width / 2, r.top + r.height / 2, COIN_COLORS, Math.min(30 + Math.floor(gained / 2), 90))
+  }
+}
 
 const nextPrestigeReward = computed(() =>
   state.value ? prestigeReward(state.value.prestige) : 0,
@@ -639,7 +671,7 @@ onMounted(async () => {
 
           <button
             v-if="state.win"
-            class="animate-pulse rounded-full border-2 border-fuchsia-400 bg-fuchsia-500/20 px-8 py-3 text-lg font-black tracking-widest text-fuchsia-200 hover:bg-fuchsia-500/30"
+            class="animate-pulse rounded-full border-2 border-fuchsia-400 bg-fuchsia-500/20 px-8 py-3 text-lg font-black tracking-widest text-fuchsia-200 hover:bg-fuchsia-500/30 light:border-fuchsia-600 light:text-fuchsia-700"
             @click="onPrestige"
           >
             ✨ {{ t('prestige') }} +{{ nextPrestigeReward }}💰
@@ -671,15 +703,34 @@ onMounted(async () => {
             </span>
           </div>
 
-          <!-- shop, quota, and best share one wrapping row instead of three -->
-          <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-            <button
-              id="tut-shop"
-              class="rounded-full border border-yellow-500/40 bg-yellow-400/10 px-4 py-1 text-sm font-bold text-yellow-300 hover:bg-yellow-400/20 light:text-yellow-700"
-              @click="showShop = true; play('switch')"
-            >
-              🛒 {{ t('shop') }} · 💰 {{ shownCoins }}
-            </button>
+          <!-- wallet + the three shop entries share one wrapping row with quota and best -->
+          <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5">
+            <div id="tut-shop" class="flex flex-wrap items-center justify-center gap-2">
+              <span ref="coinEl" class="font-mono text-sm font-bold text-yellow-300 light:text-yellow-700">
+                💰 {{ shownCoins }}
+              </span>
+              <button
+                id="tut-shop-sell"
+                class="rounded-full border border-yellow-500/40 bg-yellow-400/10 px-3 py-1 text-sm font-bold text-yellow-300 hover:bg-yellow-400/20 disabled:opacity-40 light:text-yellow-700"
+                :disabled="!streakSellValue || state.win"
+                :title="state.win ? t('sellAtWin') : t('sellDesc')"
+                @click="sellAsk = true; play('switch')"
+              >
+                ⭐ {{ t('sellStreak') }} +{{ streakSellValue }}💰
+              </button>
+              <button
+                class="rounded-full border border-violet-500/40 bg-violet-500/10 px-3 py-1 text-sm font-bold text-violet-300 hover:bg-violet-500/20 light:text-violet-700"
+                @click="showShop = 'items'; play('switch')"
+              >
+                🎁 {{ t('itemShop') }}
+              </button>
+              <button
+                class="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 light:text-emerald-700"
+                @click="showShop = 'skills'; play('switch')"
+              >
+                📈 {{ t('skillShop') }}
+              </button>
+            </div>
 
             <p id="tut-quota" class="text-sm text-slate-400">
               <template v-if="state.quotaLeft > 0">
@@ -776,7 +827,20 @@ onMounted(async () => {
       @link="showNickname = false; linkViaNickname = true; showLink = true"
     />
     <LinkModal v-if="showLink" @close="closeLink" />
-    <ShopModal v-if="showShop" @close="showShop = false" />
+    <ShopModal v-if="showShop" :kind="showShop" @close="showShop = ''" />
+    <ConfirmModal
+      v-if="sellAsk && state"
+      :title="`⭐ ${t('sellStreak')}`"
+      :message="
+        t('sellStreakConfirm')
+          .replace('{n}', String(state.stars))
+          .replace('{c}', String(streakSellValue))
+      "
+      :confirm-label="t('sellStreak')"
+      :cancel-label="t('later')"
+      @confirm="confirmSellStreak"
+      @cancel="sellAsk = false"
+    />
     <OddsModal v-if="showOdds" @close="showOdds = false" />
     <TalismanPicker v-if="showTalismanPick" @close="showTalismanPick = false" />
     <ConfirmModal

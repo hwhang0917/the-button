@@ -2,35 +2,27 @@
 import { computed, ref } from 'vue'
 import {
   state,
-  sellStreak,
   buySkill,
   buyLottery,
   buyPack,
   loadCards,
   refillQuota,
   skill,
-  streakValue,
   type Card,
   type SkillKey,
 } from '../useGame'
 import { cfg } from '../config'
 import { t } from '../i18n'
 import { play, vibrate } from '../audio'
-import { burst } from '../particles'
-import { COIN_COLORS, useCoinCounter } from '../useCoinCounter'
+import { useCoinCounter } from '../useCoinCounter'
 import LotteryModal from './LotteryModal.vue'
 import PackModal from './PackModal.vue'
 
+defineProps<{ kind: 'items' | 'skills' }>()
 defineEmits<{ close: [] }>()
 
 const ticket = ref<{ prize: number; coins: number } | null>(null)
-const coinEl = ref<HTMLElement | null>(null)
 const shownCoins = useCoinCounter(() => state.value?.coins ?? 0)
-
-function coinBurst(count: number) {
-  const r = coinEl.value?.getBoundingClientRect()
-  if (r) burst(r.left + r.width / 2, r.top + r.height / 2, COIN_COLORS, count)
-}
 
 const pack = ref<Card[] | null>(null)
 
@@ -70,10 +62,6 @@ async function onPackAgain() {
   await loadCards()
   await onPack()
 }
-
-const sellValue = computed(() =>
-  state.value ? streakValue(state.value.stars, state.value.headstartLevel) : 0,
-)
 
 const rows = computed(() => {
   const s = state.value!
@@ -131,17 +119,6 @@ const rows = computed(() => {
   ]
 })
 
-async function onSell() {
-  if (!sellValue.value) return
-  const gained = await sellStreak()
-  if (gained) {
-    play('streak-sell')
-    vibrate([15, 20, 35]) // coins clattering in
-    // more coins, bigger shower
-    coinBurst(Math.min(30 + Math.floor(gained / 2), 90))
-  }
-}
-
 async function onBuy(key: SkillKey) {
   if (await buySkill(key)) {
     play('coin-use')
@@ -157,21 +134,11 @@ async function onBuy(key: SkillKey) {
   >
     <div v-if="state" class="flex w-full max-w-sm flex-col gap-4 rounded-xl border border-slate-700 bg-slate-900 p-6">
       <h2 class="text-center text-lg font-bold text-slate-100">
-        🛒 {{ t('shop') }}
-        <span ref="coinEl" class="ml-2 font-mono text-yellow-300 light:text-yellow-600">💰 {{ shownCoins }}</span>
+        {{ kind === 'items' ? `🎁 ${t('itemShop')}` : `📈 ${t('skillShop')}` }}
+        <span class="ml-2 font-mono text-yellow-300 light:text-yellow-600">💰 {{ shownCoins }}</span>
       </h2>
 
-      <button
-        id="tut-shop-sell"
-        class="flex items-center justify-between rounded-lg border border-yellow-500/40 bg-yellow-400/10 px-4 py-2 text-sm font-bold text-yellow-300 hover:bg-yellow-400/20 disabled:opacity-40 light:text-yellow-700"
-        :disabled="!sellValue || state.win"
-        @click="onSell"
-      >
-        <span>⭐ {{ t('sellStreak') }} (★{{ state.stars }})</span>
-        <span class="font-mono">+{{ sellValue }}💰</span>
-      </button>
-      <p class="text-center text-xs text-slate-500">{{ state.win ? t('sellAtWin') : t('sellDesc') }}</p>
-
+      <template v-if="kind === 'items'">
       <div
         id="tut-shop-lottery"
         class="flex items-center gap-3 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2"
@@ -225,8 +192,9 @@ async function onBuy(key: SkillKey) {
           {{ cfg().refillPrice }}💰
         </button>
       </div>
+      </template>
 
-      <div class="flex flex-col gap-2">
+      <div v-else class="flex flex-col gap-2">
         <div
           v-for="row in rows"
           :key="row.key"
