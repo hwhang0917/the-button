@@ -185,6 +185,13 @@ body::before {
   --background-y: 50%;
 }
 
+/* tutorial popovers: break Korean at word boundaries, never mid-word */
+.driver-popover-title,
+.driver-popover-description {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
 /* the tutorial's closing shortcut sheet: a roomier popover where every key
    sits in a keycap. driver.js popovers stay white in both themes, so the
    caps are styled for that ground. */
