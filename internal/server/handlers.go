@@ -27,6 +27,8 @@ type stateResponse struct {
 	CharmLevel     int    `json:"charmLevel"`
 	HeadstartLevel int    `json:"headstartLevel"`
 	StaminaLevel   int    `json:"staminaLevel"`
+	MagnetLevel    int    `json:"magnetLevel"`
+	GoldenLevel    int    `json:"goldenLevel"`
 	Prestige       int    `json:"prestige"`
 	TalismanTier   string `json:"talismanTier"`
 	TalismanRarity string `json:"talismanRarity"`
@@ -53,6 +55,8 @@ func (s *Server) stateFor(p *store.Player, quotaLeft int) stateResponse {
 		CharmLevel:     p.CharmLevel,
 		HeadstartLevel: p.HeadstartLevel,
 		StaminaLevel:   p.StaminaLevel,
+		MagnetLevel:    p.MagnetLevel,
+		GoldenLevel:    p.GoldenLevel,
 		Prestige:       p.Prestige,
 		TalismanTier:   p.TalismanTier,
 		TalismanRarity: p.TalismanRarity,
@@ -112,6 +116,8 @@ func (s *Server) handleClick(w http.ResponseWriter, r *http.Request) {
 		Best:      p.BestStars,
 		Charm:     p.CharmLevel,
 		Headstart: p.HeadstartLevel,
+		Magnet:    p.MagnetLevel,
+		Golden:    p.GoldenLevel,
 		Card:      rules.EffectFor(p.TalismanTier, p.TalismanRarity), // inert when nothing is armed
 	})
 	if res.TalismanUsed {
@@ -496,6 +502,10 @@ func (s *Server) handleBuy(w http.ResponseWriter, r *http.Request) {
 		col, cur = "headstart_level", &p.HeadstartLevel
 	case "stamina":
 		col, cur = "stamina_level", &p.StaminaLevel
+	case "magnet":
+		col, cur = "magnet_level", &p.MagnetLevel
+	case "golden":
+		col, cur = "golden_level", &p.GoldenLevel
 	default:
 		writeError(w, http.StatusBadRequest, "bad_skill")
 		return
@@ -521,6 +531,8 @@ func (s *Server) handleBuy(w http.ResponseWriter, r *http.Request) {
 		"charmLevel":     p.CharmLevel,
 		"headstartLevel": p.HeadstartLevel,
 		"staminaLevel":   p.StaminaLevel,
+		"magnetLevel":    p.MagnetLevel,
+		"goldenLevel":    p.GoldenLevel,
 		"quota":          s.cfg.Rules.QuotaFor(p.StaminaLevel),
 	})
 }

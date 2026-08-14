@@ -83,7 +83,7 @@ func TestConfigEndpoint(t *testing.T) {
 	for _, key := range []string{
 		"chanceTable", "maxRisk", "maxStars", "prestigeStarBonus", "prestigeSkinCap",
 		"prestigeRewards", "overflowCoinPer", "tiers", "rarities", "cards",
-		"charm", "headstart", "lottery", "pack", "refillPrice", "fuseCost",
+		"charm", "headstart", "stamina", "magnet", "golden", "lottery", "pack", "refillPrice", "fuseCost",
 		"defuseYield", "cardSell", "nickname",
 	} {
 		if _, ok := got[key]; !ok {
@@ -181,6 +181,7 @@ func TestStateResponseKeys(t *testing.T) {
 	want := []string{
 		"stars", "bestStars", "tier", "chance", "maxStars", "quotaLeft", "quota",
 		"nickname", "win", "coins", "charmLevel", "headstartLevel", "staminaLevel",
+		"magnetLevel", "goldenLevel",
 		"prestige", "talismanTier", "talismanRarity", "refillUsed", "refillIn", "devMode",
 	}
 	for _, key := range want {

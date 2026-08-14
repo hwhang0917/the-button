@@ -76,6 +76,10 @@ type Rules struct {
 	Charm       Skill   `json:"charm"`
 	Headstart   Skill   `json:"headstart"`
 	Stamina     Skill   `json:"stamina"`
+	// Magnet and Golden proc on successful clicks: BonusPct×level % chance of
+	// a free card draw / a coin win equal to the new star count.
+	Magnet      Skill   `json:"magnet"`
+	Golden      Skill   `json:"golden"`
 	Lottery     Lottery `json:"lottery"`
 	Pack        Pack    `json:"pack"`
 	RefillPrice int     `json:"refillPrice"`
@@ -119,6 +123,12 @@ func Default() Rules {
 		// reaches 31 clicks an hour, about the session length the hourly bucket
 		// is actually fun at. Priced steeply because it compounds income.
 		Stamina: Skill{BonusPct: 25, Prices: []int{20, 60, 180, 540, 1620}},
+		// 4%/level so a proc lands about once an hour when maxed (~7 successes
+		// an hour at the default quota) — 1%/level would fire once per ~14h
+		// and feel dead. Maxed EV ≈ 5 coins/hour each, well under stamina's
+		// value curve, so both stay flavor sinks rather than income engines.
+		Magnet: Skill{BonusPct: 4, Prices: []int{30, 90, 270}},
+		Golden: Skill{BonusPct: 4, Prices: []int{30, 90, 270}},
 		// Exponential ladder (×5 per rung) with a 1-in-1000 jackpot; EV ≈ 12.2
 		// (81% payback), wins ~1 in 3.3 tickets — still a coin sink.
 		Lottery: Lottery{Price: 15, Prizes: []LotteryPrize{
@@ -190,6 +200,10 @@ func (r Rules) PriceFor(skill string, level int) (int, bool) {
 		return r.Headstart.PriceAt(level)
 	case "stamina":
 		return r.Stamina.PriceAt(level)
+	case "magnet":
+		return r.Magnet.PriceAt(level)
+	case "golden":
+		return r.Golden.PriceAt(level)
 	}
 	return 0, false
 }
@@ -250,6 +264,18 @@ func (r Rules) Validate() error {
 	}
 	if r.Stamina.BonusPct < 1 {
 		return fmt.Errorf("economy.stamina.bonus_pct must be at least 1, got %d", r.Stamina.BonusPct)
+	}
+	if err := validateSkill("economy.magnet", r.Magnet); err != nil {
+		return err
+	}
+	if err := validateSkill("economy.golden", r.Golden); err != nil {
+		return err
+	}
+	if r.Magnet.BonusPct < 1 {
+		return fmt.Errorf("economy.magnet.bonus_pct must be at least 1, got %d", r.Magnet.BonusPct)
+	}
+	if r.Golden.BonusPct < 1 {
+		return fmt.Errorf("economy.golden.bonus_pct must be at least 1, got %d", r.Golden.BonusPct)
 	}
 	if err := r.validateDraws(); err != nil {
 		return err

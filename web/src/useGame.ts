@@ -17,6 +17,8 @@ export interface GameState {
   charmLevel: number
   headstartLevel: number
   staminaLevel: number
+  magnetLevel: number
+  goldenLevel: number
   prestige: number
   talismanTier: Tier | ''
   talismanRarity: Rarity | ''
@@ -125,7 +127,7 @@ export function streakValue(stars: number, floor: number): number {
   return tri(stars) - tri(Math.min(floor, stars))
 }
 
-export type SkillKey = 'charm' | 'headstart' | 'stamina'
+export type SkillKey = 'charm' | 'headstart' | 'stamina' | 'magnet' | 'golden'
 
 /** A skill's ladder; the cap is however many prices the server published. */
 export function skill(key: SkillKey): { prices: number[]; cap: number } {
@@ -304,6 +306,8 @@ export async function buySkill(skill: SkillKey): Promise<boolean> {
       charmLevel: d.charmLevel,
       headstartLevel: d.headstartLevel,
       staminaLevel: d.staminaLevel,
+      magnetLevel: d.magnetLevel,
+      goldenLevel: d.goldenLevel,
       quota: d.quota, // stamina raises the hourly allowance
     })
   }

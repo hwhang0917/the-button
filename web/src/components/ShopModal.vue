@@ -108,6 +108,26 @@ const rows = computed(() => {
       price: skill('headstart').prices[s.headstartLevel] ?? 0,
       capped: s.headstartLevel >= skill('headstart').cap,
     },
+    {
+      id: 'tut-shop-magnet',
+      key: 'magnet' as SkillKey,
+      icon: '🧲',
+      name: t('magnetName'),
+      desc: t('magnetDesc').replace('{n}', String(cfg().magnet.bonusPct)),
+      levelText: `Lv ${s.magnetLevel}/${skill('magnet').cap}`,
+      price: skill('magnet').prices[s.magnetLevel] ?? 0,
+      capped: s.magnetLevel >= skill('magnet').cap,
+    },
+    {
+      id: 'tut-shop-golden',
+      key: 'golden' as SkillKey,
+      icon: '🪙',
+      name: t('goldenName'),
+      desc: t('goldenDesc').replace('{n}', String(cfg().golden.bonusPct)),
+      levelText: `Lv ${s.goldenLevel}/${skill('golden').cap}`,
+      price: skill('golden').prices[s.goldenLevel] ?? 0,
+      capped: s.goldenLevel >= skill('golden').cap,
+    },
   ]
 })
 

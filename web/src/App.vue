@@ -80,6 +80,8 @@ const TUT_SELECTORS = [
   '#tut-shop-charm',
   '#tut-shop-stamina',
   '#tut-shop-headstart',
+  '#tut-shop-magnet',
+  '#tut-shop-golden',
   '#tut-collection',
   '#tut-rank',
 ]

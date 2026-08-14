@@ -6,6 +6,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -46,6 +47,13 @@ func (d *duration) UnmarshalYAML(n *yaml.Node) error {
 	}
 	d.Duration = parsed
 	return nil
+}
+
+// MarshalYAML keeps generated files round-trippable: without it the embedded
+// time.Duration would serialize as raw nanoseconds, which UnmarshalYAML above
+// then refuses to parse.
+func (d duration) MarshalYAML() (any, error) {
+	return d.Duration.String(), nil
 }
 
 // The file mirrors config.yml's shape. It is seeded from the defaults before
@@ -94,6 +102,8 @@ type economyFile struct {
 	Charm     game.Skill   `yaml:"charm"`
 	Headstart game.Skill   `yaml:"headstart"`
 	Stamina   game.Skill   `yaml:"stamina"`
+	Magnet    game.Skill   `yaml:"magnet"`
+	Golden    game.Skill   `yaml:"golden"`
 	Lottery   game.Lottery `yaml:"lottery"`
 	Pack      struct {
 		Price          int            `yaml:"price"`
@@ -113,8 +123,7 @@ type economyFile struct {
 // halfway through a player's session.
 func Load() (Config, error) {
 	path := os.Getenv("CONFIG_PATH")
-	explicit := path != ""
-	if !explicit {
+	if path == "" {
 		path = DefaultPath
 	}
 
@@ -124,8 +133,18 @@ func Load() (Config, error) {
 		if err := yaml.Unmarshal(data, &f); err != nil {
 			return Config{}, fmt.Errorf("%s: %w", path, err)
 		}
-	case os.IsNotExist(err) && !explicit:
-		// no config.yml: run on defaults
+	case os.IsNotExist(err):
+		// no config.yml: run on defaults, and drop a full one at the path so
+		// the operator has something to edit. A failed write (read-only fs,
+		// missing dir) is not worth dying over — the defaults still work.
+		log.Printf("WARN: %s not found — running on defaults", path)
+		if data, err := yaml.Marshal(f); err == nil {
+			if err := os.WriteFile(path, data, 0o644); err != nil {
+				log.Printf("WARN: could not write default config to %s: %v", path, err)
+			} else {
+				log.Printf("WARN: wrote default config to %s", path)
+			}
+		}
 	default:
 		return Config{}, fmt.Errorf("%s: %w", path, err)
 	}
@@ -175,6 +194,8 @@ func defaultFile() file {
 	f.Economy.Charm = r.Charm
 	f.Economy.Headstart = r.Headstart
 	f.Economy.Stamina = r.Stamina
+	f.Economy.Magnet = r.Magnet
+	f.Economy.Golden = r.Golden
 	f.Economy.Lottery = r.Lottery
 	f.Economy.Pack.Price = r.Pack.Price
 	f.Economy.Pack.BonusPct = r.Pack.BonusPct
@@ -253,6 +274,8 @@ func (f file) toConfig() Config {
 			Charm:             f.Economy.Charm,
 			Headstart:         f.Economy.Headstart,
 			Stamina:           f.Economy.Stamina,
+			Magnet:            f.Economy.Magnet,
+			Golden:            f.Economy.Golden,
 			Lottery:           f.Economy.Lottery,
 			Pack: game.Pack{
 				Price:    f.Economy.Pack.Price,

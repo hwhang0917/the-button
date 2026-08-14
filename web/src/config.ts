@@ -42,6 +42,8 @@ export interface ServerConfig {
   charm: { bonusPct: number; prices: number[] }
   headstart: { bonusPct: number; prices: number[] }
   stamina: { bonusPct: number; prices: number[] }
+  magnet: { bonusPct: number; prices: number[] }
+  golden: { bonusPct: number; prices: number[] }
   lottery: { price: number; prizes: { prize: number; permille: number }[] }
   pack: { price: number; bonusPct: number[]; tiers: Weight[]; rarities: Weight[] }
   refillPrice: number

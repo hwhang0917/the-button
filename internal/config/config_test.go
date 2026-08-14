@@ -20,10 +20,27 @@ func writeConfig(t *testing.T, yaml string) {
 }
 
 func TestLoadDefaultsWithNoFile(t *testing.T) {
-	// an absent config.yml is normal operation, not an error
-	t.Setenv("CONFIG_PATH", filepath.Join(t.TempDir(), "absent.yml"))
-	if _, err := Load(); err == nil {
-		t.Fatal("an explicitly pointed-at missing file should fail loudly")
+	// an absent config.yml is normal operation: run on defaults and generate a
+	// full config at the path for the operator to edit
+	path := filepath.Join(t.TempDir(), "absent.yml")
+	t.Setenv("CONFIG_PATH", path)
+	first, err := Load()
+	if err != nil {
+		t.Fatalf("a missing file must load defaults: %v", err)
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("expected a generated config at %s: %v", path, err)
+	}
+	// the generated file must load back to the same config — this is what
+	// catches a field that marshals into something Load can't read (the
+	// duration type would, without its MarshalYAML)
+	second, err := Load()
+	if err != nil {
+		t.Fatalf("generated config must round-trip: %v", err)
+	}
+	if second.LinkTTL != first.LinkTTL || second.Rules.Quota != first.Rules.Quota ||
+		len(second.Rules.Cards) != len(first.Rules.Cards) {
+		t.Errorf("generated config drifted: %+v != %+v", second, first)
 	}
 
 	t.Setenv("CONFIG_PATH", "")

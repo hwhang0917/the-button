@@ -104,6 +104,8 @@ type Click struct {
 	Best      int // personal best, for the 🌊 해일 card
 	Charm     int
 	Headstart int
+	Magnet    int // card-drop proc level
+	Golden    int // coin-win proc level
 	Card      CardEffect // the armed card, inert when nothing is armed
 }
 
@@ -183,10 +185,16 @@ func (r Rules) Resolve(c Click) Result {
 	if e.BestJump {
 		newStars = max(newStars, min(c.Best, c.Cap))
 	}
+	// skill procs roll only at level > 0 so a skill-less click consumes the
+	// same RNG sequence as before these skills existed
 	var card *Card
-	if e.Card {
+	if e.Card || (c.Magnet > 0 && r.roll(r.Magnet.BonusPct*c.Magnet)) {
 		drawn := r.RollPack()
 		card = &drawn
+	}
+	golden := 0
+	if c.Golden > 0 && r.roll(r.Golden.BonusPct*c.Golden) {
+		golden = newStars // star-scaled: big wins only deep in a streak
 	}
 	return Result{
 		Success:      true,
@@ -198,6 +206,6 @@ func (r Rules) Resolve(c Click) Result {
 		Card:         card,
 		TalismanUsed: e.Armed(),
 		Refund:       e.Refund,
-		Jackpot:      r.OverflowCoinPer*max(0, c.Stars+gain-c.Cap) + e.CoinWin*newStars,
+		Jackpot:      r.OverflowCoinPer*max(0, c.Stars+gain-c.Cap) + e.CoinWin*newStars + golden,
 	}
 }

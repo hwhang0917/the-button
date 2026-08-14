@@ -208,7 +208,7 @@ func TestCardSell(t *testing.T) {
 
 func TestPriceLadders(t *testing.T) {
 	r := Default()
-	for _, s := range []Skill{r.Charm, r.Headstart} {
+	for _, s := range []Skill{r.Charm, r.Headstart, r.Stamina, r.Magnet, r.Golden} {
 		for i := 1; i < len(s.Prices); i++ {
 			if s.Prices[i] <= s.Prices[i-1] {
 				t.Errorf("prices must ascend: %v", s.Prices)
@@ -223,6 +223,34 @@ func TestPriceLadders(t *testing.T) {
 	}
 	if _, ok := r.PriceFor("nonesuch", 0); ok {
 		t.Error("an unknown skill must not price")
+	}
+}
+
+// TestSkillProcs pins the magnet/golden success riders: the procs fire on
+// their scripted rolls, pay a card / newStars coins, and at level 0 consume no
+// RNG at all — the guarantee that lets pre-skill scripted tests keep passing.
+func TestSkillProcs(t *testing.T) {
+	click := Click{Stars: 3, Cap: 15, Magnet: 3, Golden: 3}
+
+	seq := &seqRNG{outcomes: []bool{true, true, true}} // click, magnet, golden
+	res := withRNG(seq).Resolve(click)
+	if !res.Success || res.Card == nil || res.Jackpot != res.Stars {
+		t.Errorf("both procs should fire: card=%v jackpot=%d (want %d)", res.Card, res.Jackpot, res.Stars)
+	}
+
+	seq = &seqRNG{outcomes: []bool{true}} // procs bought but both rolls miss
+	res = withRNG(seq).Resolve(click)
+	if res.Card != nil || res.Jackpot != 0 {
+		t.Errorf("missed procs must pay nothing: card=%v jackpot=%d", res.Card, res.Jackpot)
+	}
+
+	seq = &seqRNG{outcomes: []bool{true, true, true}}
+	res = withRNG(seq).Resolve(Click{Stars: 3, Cap: 15}) // skills at level 0
+	if res.Card != nil || res.Jackpot != 0 {
+		t.Errorf("level 0 must not proc: card=%v jackpot=%d", res.Card, res.Jackpot)
+	}
+	if seq.i != 1 {
+		t.Errorf("level 0 consumed %d rolls, want 1 — extra rolls would shift every scripted sequence", seq.i)
 	}
 }
 
