@@ -241,15 +241,27 @@ func (s *Store) SellStreak(token string, gain, toStars, fromStars int) (bool, er
 // prestigeStreak cashes a maxed streak: big payout, unbounded prestige level
 // bump (prismatic laps keep counting), reset to the floor.
 func (s *Store) PrestigeStreak(token string, reward, toStars, fromStars int) (bool, error) {
-	res, err := s.db.Exec(`UPDATE players SET coins = coins + ?, prestige = prestige + 1,
+	tx, err := s.db.Begin()
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(`UPDATE players SET coins = coins + ?, prestige = prestige + 1,
 		stars = ?, updated_at = ?
 		WHERE token = ? AND stars = ?`,
 		reward, toStars, time.Now(), token, fromStars)
 	if err != nil {
 		return false, err
 	}
-	n, err := res.RowsAffected()
-	return n == 1, err
+	if n, _ := res.RowsAffected(); n != 1 {
+		return false, nil
+	}
+	// the promotion comes with a fresh hour of clicks: zero the current bucket
+	if _, err := tx.Exec(`UPDATE player_quota SET count = 0
+		WHERE player_token = ? AND day = ?`, token, bucketKey(time.Now())); err != nil {
+		return false, err
+	}
+	return true, tx.Commit()
 }
 
 // deletePlayer wipes the player row, cards, and quota. A recreated account

@@ -258,6 +258,8 @@ func (s *Server) handlePrestige(w http.ResponseWriter, r *http.Request) {
 		"tier":     rules.TierFor(floor),
 		// the cap the player will roll against after this prestige
 		"chance": rules.ChanceFor(floor, 0, rules.MaxStarsFor(p.Prestige+1)),
+		// the promotion refilled the hour's clicks
+		"quotaLeft": rules.QuotaFor(p.StaminaLevel),
 	})
 }
 

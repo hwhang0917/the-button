@@ -194,9 +194,16 @@ func TestPrestigeStore(t *testing.T) {
 	if err := s.SavePlayerStars("a", maxStars, 0); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := s.ConsumeQuota("a", 10); err != nil {
+		t.Fatal(err)
+	}
 
 	if ok, _ := s.PrestigeStreak("a", 300, 0, maxStars); !ok {
 		t.Fatal("prestige at max stars failed")
+	}
+	// the promotion refills the hour's clicks
+	if used, _ := s.QuotaUsed("a"); used != 0 {
+		t.Fatalf("quota not refilled by prestige: used %d", used)
 	}
 	if ok, _ := s.PrestigeStreak("a", 300, 0, maxStars); ok {
 		t.Fatal("stale stars pin must reject a repeat prestige")

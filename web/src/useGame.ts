@@ -153,6 +153,7 @@ export async function prestigeStreak(): Promise<number | null> {
       tier: d.tier,
       chance: d.chance,
       prestige: d.prestige,
+      quotaLeft: d.quotaLeft,
       win: false,
     })
   }
