@@ -21,13 +21,21 @@ const groups = computed(() =>
     Math.max(0, Math.min(GROUP, props.stars - i * GROUP)),
   ),
 )
+
+// exactly one group renders as singles — the one the NEXT star lands in, even
+// when it is freshly empty. Crossing a multiple of 5 then keeps the row the
+// same width, so the wrapping status row never reflows mid-click-streak. Only
+// the win state (all groups big) narrows, and that screen changes anyway.
+const active = computed(() =>
+  props.stars >= props.max ? -1 : Math.floor(props.stars / GROUP),
+)
 </script>
 
 <template>
   <div class="flex max-w-xs items-center justify-center gap-1.5">
     <template v-for="(filled, gi) in groups" :key="`${gi}-${filled}`">
       <!-- complete or untouched group: one large star worth 5 -->
-      <span v-if="filled === GROUP || filled === 0" class="relative">
+      <span v-if="gi !== active" class="relative">
         <img
           src="/star.png"
           alt="★5"

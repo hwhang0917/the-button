@@ -200,3 +200,18 @@ func (s *Server) player(w http.ResponseWriter, r *http.Request) (*store.Player, 
 	}
 	return p, true
 }
+
+// namedPlayer is player() plus the signup gate: gameplay mutations are
+// rejected until the player picks a nickname (or links a device), so the
+// client's welcome screen cannot be bypassed by calling the API directly.
+func (s *Server) namedPlayer(w http.ResponseWriter, r *http.Request) (*store.Player, bool) {
+	p, ok := s.player(w, r)
+	if !ok {
+		return nil, false
+	}
+	if p.Nickname == "" {
+		writeError(w, http.StatusForbidden, "nickname_required")
+		return nil, false
+	}
+	return p, true
+}

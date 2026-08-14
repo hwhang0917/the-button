@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"github.com/hwhang0917/the-button/internal/config"
@@ -108,6 +110,45 @@ func TestConfigEndpoint(t *testing.T) {
 	}
 	if got["maxStars"] != float64(r.MaxStars) {
 		t.Errorf("maxStars = %v, want %d", got["maxStars"], r.MaxStars)
+	}
+}
+
+// TestSignupGate pins the no-anonymous-play rule at the API level: gameplay
+// mutations 403 until a nickname is set, and signup itself stays open.
+func TestSignupGate(t *testing.T) {
+	st, err := store.Open(t.TempDir()+"/test.db", 25)
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := testServer(t)
+	srv.store = st
+	ts := httptest.NewServer(srv.Handler(fstest.MapFS{}))
+	defer ts.Close()
+
+	res, err := http.Post(ts.URL+"/api/click", "application/json", strings.NewReader("{}"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusForbidden {
+		t.Fatalf("anonymous click = %d, want 403", res.StatusCode)
+	}
+	cookies := res.Cookies()
+	withCookies := func(method, path, body string) *http.Response {
+		req, _ := http.NewRequest(method, ts.URL+path, strings.NewReader(body))
+		for _, c := range cookies {
+			req.AddCookie(c)
+		}
+		r, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return r
+	}
+	if r := withCookies("POST", "/api/nickname", `{"name":"tester"}`); r.StatusCode != http.StatusOK {
+		t.Fatalf("signup = %d, want 200", r.StatusCode)
+	}
+	if r := withCookies("POST", "/api/click", "{}"); r.StatusCode != http.StatusOK {
+		t.Fatalf("click after signup = %d, want 200", r.StatusCode)
 	}
 }
 

@@ -524,7 +524,7 @@ onMounted(async () => {
           class="rounded-full border border-slate-600 px-3 py-1 text-xs font-bold text-slate-300 hover:bg-slate-800"
           @click="toggleLang(); play('switch')"
         >
-          {{ lang === 'ko' ? 'EN' : '한국어' }}
+          {{ lang.toUpperCase() }}
         </button>
         <button
           class="flex h-7 w-7 items-center justify-center rounded-full border border-slate-600 text-xs hover:bg-slate-800"

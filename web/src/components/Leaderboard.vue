@@ -23,7 +23,7 @@ const skin = (prestige: number) => `star-r${Math.min(prestige, cfg().prestigeSki
         v-for="(e, i) in leaderboard"
         :key="e.nickname + i"
         class="flex items-center gap-2 rounded-md px-2 py-1.5"
-        :class="i === 0 ? 'bg-yellow-400/10' : 'odd:bg-slate-800/40'"
+        :class="['rank-prism', 'rank-holo', 'rank-rare'][i] ?? 'odd:bg-slate-800/40'"
       >
         <span class="w-5 shrink-0 text-right font-mono text-xs text-slate-500">{{ i + 1 }}</span>
         <div class="min-w-0 flex-1">
@@ -52,3 +52,28 @@ const skin = (prestige: number) => `star-r${Math.min(prestige, cfg().prestigeSki
     <p class="mt-3 text-center text-[10px] leading-snug text-slate-600">{{ t('rankOrder') }}</p>
   </section>
 </template>
+
+<style scoped>
+/* top 3 wear the card rarity bands: prism / holo / rare. Translucent tints so
+   the same classes read on both themes; the sheen drifts like the card foils. */
+@keyframes rank-sheen {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.rank-prism {
+  background-image: linear-gradient(110deg, #ff008426, #fcff0026 25%, #00fff026 50%, #7c00ff26 75%, #ff008426);
+  background-size: 200% 100%;
+  animation: rank-sheen 6s linear infinite;
+  box-shadow: inset 0 0 0 1px #d946ef55;
+}
+.rank-holo {
+  background-image: linear-gradient(110deg, #f0abfc26, #22d3ee26 50%, #f0abfc26);
+  background-size: 200% 100%;
+  animation: rank-sheen 8s linear infinite;
+  box-shadow: inset 0 0 0 1px #22d3ee55;
+}
+.rank-rare {
+  background-image: linear-gradient(110deg, #38bdf822, #7dd3fc22);
+  box-shadow: inset 0 0 0 1px #38bdf855;
+}
+</style>

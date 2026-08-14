@@ -18,6 +18,8 @@ const dict = {
     collection: '컬렉션',
     cardDrop: '카드 획득!',
     nicknameTitle: '랭킹에 이름을 올리세요',
+    signupTitle: '닉네임을 만들고 시작하세요',
+    signupSubmit: '가입하고 시작',
     nicknamePlaceholder: '닉네임 (한글·영문·숫자·_ {min}~{max}자)',
     setName: '이름 설정',
     nameTaken: '이미 사용 중인 이름이에요',
@@ -35,7 +37,7 @@ const dict = {
     linkSubmit: '연결',
     linkBadCode: '코드가 올바르지 않거나 만료되었어요',
     linkReplaceWarn: '연결하면 이 기기의 현재 진행 상황을 대체해요',
-    linkHave: '연결 코드가 있나요?',
+    linkHave: '이미 계정이 있나요? 코드로 로그인',
     prestige: '프리스티지',
     prestigeDone: '✨ 프리스티지! 별 티어가 승급했습니다',
     sellAtWin: '최대 별은 프리스티지로 전환하세요',
@@ -195,6 +197,8 @@ const dict = {
     collection: 'Collection',
     cardDrop: 'Card drop!',
     nicknameTitle: 'Put your name on the board',
+    signupTitle: 'Create a nickname to start',
+    signupSubmit: 'Sign up & play',
     nicknamePlaceholder: 'Nickname (한글, a-z, 0-9, _ · {min}-{max} chars)',
     setName: 'Set name',
     nameTaken: 'That name is already taken',
@@ -212,7 +216,7 @@ const dict = {
     linkSubmit: 'Link',
     linkBadCode: 'Code is wrong or expired',
     linkReplaceWarn: 'Linking replaces this device’s current progress',
-    linkHave: 'Have a link code?',
+    linkHave: 'Already playing? Log in with a link code',
     prestige: 'PRESTIGE',
     prestigeDone: '✨ Prestige! Your stars ranked up',
     sellAtWin: 'A maxed streak converts via PRESTIGE',
@@ -357,13 +361,17 @@ const dict = {
 
 export type Lang = keyof typeof dict
 
-export const lang = ref<Lang>(
-  (localStorage.getItem('lang') as Lang | null) ??
-    (navigator.language.startsWith('en') ? 'en' : 'ko'),
-)
+// adding a locale = adding its dict entry (typed against ko's keys); the
+// detector, the cycle button, and the stored-choice guard all follow from here
+export const LANGS = Object.keys(dict) as Lang[]
+
+const detect = (): Lang => LANGS.find((l) => navigator.language.startsWith(l)) ?? 'ko'
+
+const stored = localStorage.getItem('lang') as Lang | null
+export const lang = ref<Lang>(stored && LANGS.includes(stored) ? stored : detect())
 
 export function toggleLang() {
-  lang.value = lang.value === 'ko' ? 'en' : 'ko'
+  lang.value = LANGS[(LANGS.indexOf(lang.value) + 1) % LANGS.length]
   localStorage.setItem('lang', lang.value)
 }
 

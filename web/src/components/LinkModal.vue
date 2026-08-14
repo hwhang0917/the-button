@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { newLinkCode, claimLinkCode } from '../useGame'
+import { computed, onMounted, ref } from 'vue'
+import { newLinkCode, claimLinkCode, state } from '../useGame'
 import { t } from '../i18n'
 
 defineEmits<{ close: [] }>()
+
+// before signup there is no account worth linking out of (the server rejects
+// link/new anyway) — the modal is purely the login door then
+const canMint = computed(() => !!state.value?.nickname)
 
 const myCode = ref('')
 const code = ref('')
@@ -22,7 +26,7 @@ async function copyCode() {
 }
 
 onMounted(async () => {
-  myCode.value = (await newLinkCode()) ?? '—'
+  if (canMint.value) myCode.value = (await newLinkCode()) ?? '—'
 })
 
 async function claim() {
@@ -47,20 +51,22 @@ async function claim() {
     >
       <h2 class="text-center text-lg font-bold text-slate-100">🔗 {{ t('linkTitle') }}</h2>
 
-      <div class="flex items-center justify-center gap-2">
-        <p class="font-mono text-2xl font-bold tracking-widest text-yellow-300 light:text-yellow-600">{{ myCode }}</p>
-        <button
-          type="button"
-          class="rounded-md border border-slate-600 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800"
-          :title="t('copy')"
-          @click="copyCode"
-        >
-          {{ copied ? '✅' : '📋' }}
-        </button>
-      </div>
-      <p class="text-center text-xs text-slate-500">{{ t('linkCodeHint') }}</p>
+      <template v-if="canMint">
+        <div class="flex items-center justify-center gap-2">
+          <p class="font-mono text-2xl font-bold tracking-widest text-yellow-300 light:text-yellow-600">{{ myCode }}</p>
+          <button
+            type="button"
+            class="rounded-md border border-slate-600 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800"
+            :title="t('copy')"
+            @click="copyCode"
+          >
+            {{ copied ? '✅' : '📋' }}
+          </button>
+        </div>
+        <p class="text-center text-xs text-slate-500">{{ t('linkCodeHint') }}</p>
 
-      <hr class="border-slate-700" />
+        <hr class="border-slate-700" />
+      </template>
 
       <input
         v-model="code"

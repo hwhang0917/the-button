@@ -79,7 +79,7 @@ func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleClick(w http.ResponseWriter, r *http.Request) {
 	rules := s.cfg.Rules
-	p, ok := s.player(w, r)
+	p, ok := s.namedPlayer(w, r)
 	if !ok {
 		return
 	}
@@ -177,7 +177,7 @@ func (s *Server) handleClick(w http.ResponseWriter, r *http.Request) {
 // head-start floor. Consumes no quota; also the replay path after a win.
 func (s *Server) handleSell(w http.ResponseWriter, r *http.Request) {
 	rules := s.cfg.Rules
-	p, ok := s.player(w, r)
+	p, ok := s.namedPlayer(w, r)
 	if !ok {
 		return
 	}
@@ -215,7 +215,7 @@ func (s *Server) handleSell(w http.ResponseWriter, r *http.Request) {
 // promotion (common → rare → holo → prismatic; repeats at the cap still pay).
 func (s *Server) handlePrestige(w http.ResponseWriter, r *http.Request) {
 	rules := s.cfg.Rules
-	p, ok := s.player(w, r)
+	p, ok := s.namedPlayer(w, r)
 	if !ok {
 		return
 	}
@@ -250,7 +250,7 @@ func (s *Server) handlePrestige(w http.ResponseWriter, r *http.Request) {
 // let the client scratch the pre-decided result off at its leisure.
 func (s *Server) handleLottery(w http.ResponseWriter, r *http.Request) {
 	rules := s.cfg.Rules
-	p, ok := s.player(w, r)
+	p, ok := s.namedPlayer(w, r)
 	if !ok {
 		return
 	}
@@ -276,7 +276,7 @@ func (s *Server) handleLottery(w http.ResponseWriter, r *http.Request) {
 // streak is standing in.
 func (s *Server) handleTalisman(w http.ResponseWriter, r *http.Request) {
 	rules := s.cfg.Rules
-	p, ok := s.player(w, r)
+	p, ok := s.namedPlayer(w, r)
 	if !ok {
 		return
 	}
@@ -307,7 +307,7 @@ func (s *Server) handleTalisman(w http.ResponseWriter, r *http.Request) {
 
 // handleTalismanCancel disarms the talisman slot and refunds the card copy.
 func (s *Server) handleTalismanCancel(w http.ResponseWriter, r *http.Request) {
-	p, ok := s.player(w, r)
+	p, ok := s.namedPlayer(w, r)
 	if !ok {
 		return
 	}
@@ -328,7 +328,7 @@ func (s *Server) handleTalismanCancel(w http.ResponseWriter, r *http.Request) {
 // lossy on purpose: fusing costs more than defusing returns.
 func (s *Server) handleDefuse(w http.ResponseWriter, r *http.Request) {
 	rules := s.cfg.Rules
-	p, ok := s.player(w, r)
+	p, ok := s.namedPlayer(w, r)
 	if !ok {
 		return
 	}
@@ -361,7 +361,7 @@ func (s *Server) handleDefuse(w http.ResponseWriter, r *http.Request) {
 // handleFuse burns FuseCost copies of a card into 1 of the next rarity, same tier.
 func (s *Server) handleFuse(w http.ResponseWriter, r *http.Request) {
 	rules := s.cfg.Rules
-	p, ok := s.player(w, r)
+	p, ok := s.namedPlayer(w, r)
 	if !ok {
 		return
 	}
@@ -394,7 +394,7 @@ func (s *Server) handleFuse(w http.ResponseWriter, r *http.Request) {
 // handleSellCard trades one copy of a collected card for its rarity's coin price.
 func (s *Server) handleSellCard(w http.ResponseWriter, r *http.Request) {
 	rules := s.cfg.Rules
-	p, ok := s.player(w, r)
+	p, ok := s.namedPlayer(w, r)
 	if !ok {
 		return
 	}
@@ -428,7 +428,7 @@ func (s *Server) handleSellCard(w http.ResponseWriter, r *http.Request) {
 // Packs are the only source of cards.
 func (s *Server) handlePack(w http.ResponseWriter, r *http.Request) {
 	rules := s.cfg.Rules
-	p, ok := s.player(w, r)
+	p, ok := s.namedPlayer(w, r)
 	if !ok {
 		return
 	}
@@ -452,7 +452,7 @@ func (s *Server) handlePack(w http.ResponseWriter, r *http.Request) {
 // handleRefill sells back the current hour's spent clicks.
 func (s *Server) handleRefill(w http.ResponseWriter, r *http.Request) {
 	rules := s.cfg.Rules
-	p, ok := s.player(w, r)
+	p, ok := s.namedPlayer(w, r)
 	if !ok {
 		return
 	}
@@ -475,7 +475,7 @@ func (s *Server) handleRefill(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleBuy(w http.ResponseWriter, r *http.Request) {
 	rules := s.cfg.Rules
-	p, ok := s.player(w, r)
+	p, ok := s.namedPlayer(w, r)
 	if !ok {
 		return
 	}
@@ -569,7 +569,7 @@ func (s *Server) handleDeletePlayer(w http.ResponseWriter, r *http.Request) {
 // handleLinkNew mints a one-time code another device can claim to log into
 // this account. One live code per player; expired entries are swept here.
 func (s *Server) handleLinkNew(w http.ResponseWriter, r *http.Request) {
-	p, ok := s.player(w, r)
+	p, ok := s.namedPlayer(w, r)
 	if !ok {
 		return
 	}
