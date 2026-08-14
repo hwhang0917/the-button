@@ -83,6 +83,9 @@ type Rules struct {
 	Lottery     Lottery `json:"lottery"`
 	Pack        Pack    `json:"pack"`
 	RefillPrice int     `json:"refillPrice"`
+	// RefillsPerDay is the base daily allowance of time recharges; each
+	// prestige level adds one more (see RefillsFor).
+	RefillsPerDay int `json:"refillsPerDay"`
 
 	// Fusion is deliberately lossy: FuseCost in, one out; defusing one returns
 	// only DefuseYield.
@@ -151,6 +154,7 @@ func Default() Rules {
 		// 10 clicks yield ~14 coins on average, so 60 is a deeply negative-EV
 		// convenience — fun, not income.
 		RefillPrice:         60,
+		RefillsPerDay:       1,
 		FuseCost:            3,
 		DefuseYield:         2,
 		// ×3 per step matches FuseCost, so selling is fusion-neutral (3 commons
@@ -168,6 +172,12 @@ func Default() Rules {
 // so the star row stays renderable however far prestige runs.
 func (r Rules) MaxStarsFor(prestige int) int {
 	return r.MaxStars + r.PrestigeStarBonus*min(prestige, r.PrestigeSkinCap)
+}
+
+// RefillsFor is the daily time-recharge allowance: the configured base plus
+// one per prestige level, so veterans get more convenience as they climb.
+func (r Rules) RefillsFor(prestige int) int {
+	return r.RefillsPerDay + max(prestige, 0)
 }
 
 // QuotaFor is the hourly click allowance at a stamina level. Each level
@@ -288,6 +298,9 @@ func (r Rules) Validate() error {
 		if price < 0 {
 			return fmt.Errorf("%s must not be negative, got %d", name, price)
 		}
+	}
+	if r.RefillsPerDay < 1 {
+		return fmt.Errorf("economy.refills_per_day must be at least 1, got %d", r.RefillsPerDay)
 	}
 	if r.FuseCost < 2 {
 		return fmt.Errorf("economy.fuse_cost must be at least 2, got %d", r.FuseCost)

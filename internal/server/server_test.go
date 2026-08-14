@@ -182,7 +182,7 @@ func TestStateResponseKeys(t *testing.T) {
 		"stars", "bestStars", "tier", "chance", "maxStars", "quotaLeft", "quota",
 		"nickname", "win", "coins", "charmLevel", "headstartLevel", "staminaLevel",
 		"magnetLevel", "goldenLevel",
-		"prestige", "talismanTier", "talismanRarity", "refillUsed", "refillIn", "devMode",
+		"prestige", "talismanTier", "talismanRarity", "refillsLeft", "refillIn", "devMode",
 	}
 	for _, key := range want {
 		if _, ok := got[key]; !ok {

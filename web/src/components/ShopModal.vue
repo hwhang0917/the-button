@@ -182,11 +182,13 @@ async function onBuy(key: SkillKey) {
         <span class="text-xl">⏰</span>
         <div class="min-w-0 flex-1">
           <p class="text-sm font-bold text-slate-200">{{ t('refillName') }}</p>
-          <p class="text-xs text-slate-500">{{ state.refillUsed ? t('refillUsed') : t('refillDesc') }}</p>
+          <p class="text-xs text-slate-500">
+            {{ state.refillsLeft > 0 ? t('refillDesc').replace('{n}', String(state.refillsLeft)) : t('refillUsed') }}
+          </p>
         </div>
         <button
           class="rounded-lg bg-emerald-400 px-3 py-1.5 font-mono text-xs font-bold text-black hover:bg-emerald-300 disabled:opacity-40"
-          :disabled="state.coins < cfg().refillPrice || state.quotaLeft >= state.quota || state.refillUsed"
+          :disabled="state.coins < cfg().refillPrice || state.quotaLeft >= state.quota || state.refillsLeft <= 0"
           @click="onRefill"
         >
           {{ cfg().refillPrice }}💰

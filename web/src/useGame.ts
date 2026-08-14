@@ -22,7 +22,7 @@ export interface GameState {
   prestige: number
   talismanTier: Tier | ''
   talismanRarity: Rarity | ''
-  refillUsed: boolean
+  refillsLeft: number
   refillIn: number
   devMode: boolean
 }
@@ -257,7 +257,7 @@ export async function buyPack(): Promise<Card[] | null> {
   return d.cards
 }
 
-/** Buys back this hour's spent clicks (once per day). */
+/** Buys back this hour's spent clicks (limited per day, more with prestige). */
 export async function refillQuota(): Promise<boolean> {
   const res = await fetch('/api/refill', { method: 'POST' })
   if (!res.ok) return false
@@ -265,7 +265,7 @@ export async function refillQuota(): Promise<boolean> {
   if (state.value) {
     state.value.coins = d.coins
     state.value.quotaLeft = d.quotaLeft
-    state.value.refillUsed = true
+    state.value.refillsLeft = Math.max(0, state.value.refillsLeft - 1)
   }
   return true
 }

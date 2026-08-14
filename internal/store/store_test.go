@@ -124,14 +124,14 @@ func TestBuyPackAndRefill(t *testing.T) {
 	if ok, _ := s.BuyPack("a", packPrice, drawn); ok {
 		t.Fatal("broke pack purchase must fail")
 	}
-	if _, err := s.db.Exec(`UPDATE players SET coins = 200 WHERE token = 'a'`); err != nil {
+	if _, err := s.db.Exec(`UPDATE players SET coins = 300 WHERE token = 'a'`); err != nil {
 		t.Fatal(err)
 	}
 	if ok, _ := s.BuyPack("a", packPrice, drawn); !ok {
 		t.Fatal("funded pack purchase failed")
 	}
 	p, _ := s.GetOrCreatePlayer("a")
-	if p.Coins != 200-packPrice {
+	if p.Coins != 300-packPrice {
 		t.Fatalf("coins = %d after pack", p.Coins)
 	}
 	cards, _ := s.GetCards("a")
@@ -144,31 +144,41 @@ func TestBuyPackAndRefill(t *testing.T) {
 		}
 	}
 
-	// refill: rejected with no spent clicks, works after spending, once per day
+	// refill: rejected with no spent clicks, works after spending, capped at
+	// the daily limit, and the tally resets when the day rolls over
 	const day = "2026-08-11"
-	if ok, _ := s.RefillQuota("a", refillPrice, day); ok {
+	if ok, _ := s.RefillQuota("a", refillPrice, day, 1); ok {
 		t.Fatal("refill with nothing spent must fail")
 	}
 	if _, err := s.ConsumeQuota("a", 10); err != nil {
 		t.Fatal(err)
 	}
-	if ok, _ := s.RefillQuota("a", refillPrice, day); !ok {
+	if ok, _ := s.RefillQuota("a", refillPrice, day, 1); !ok {
 		t.Fatal("refill failed")
 	}
 	if used, _ := s.QuotaUsed("a"); used != 0 {
 		t.Fatalf("quota not reset: used %d", used)
 	}
 	p, _ = s.GetOrCreatePlayer("a")
-	if p.Coins != 200-packPrice-refillPrice {
+	if p.Coins != 300-packPrice-refillPrice {
 		t.Fatalf("coins = %d after refill", p.Coins)
+	}
+	if p.RefillDay != day || p.RefillCount != 1 {
+		t.Fatalf("refill tally = %s/%d", p.RefillDay, p.RefillCount)
 	}
 	if _, err := s.ConsumeQuota("a", 10); err != nil {
 		t.Fatal(err)
 	}
-	if ok, _ := s.RefillQuota("a", refillPrice, day); ok {
-		t.Fatal("second refill on the same day must fail")
+	if ok, _ := s.RefillQuota("a", refillPrice, day, 1); ok {
+		t.Fatal("second refill past the limit must fail")
 	}
-	if ok, _ := s.RefillQuota("a", refillPrice, "2026-08-12"); !ok {
+	if ok, _ := s.RefillQuota("a", refillPrice, day, 2); !ok {
+		t.Fatal("second refill within a higher limit should work")
+	}
+	if _, err := s.ConsumeQuota("a", 10); err != nil {
+		t.Fatal(err)
+	}
+	if ok, _ := s.RefillQuota("a", refillPrice, "2026-08-12", 1); !ok {
 		t.Fatal("refill on the next day should work")
 	}
 }

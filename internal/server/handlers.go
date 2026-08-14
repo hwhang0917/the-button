@@ -32,7 +32,7 @@ type stateResponse struct {
 	Prestige       int    `json:"prestige"`
 	TalismanTier   string `json:"talismanTier"`
 	TalismanRarity string `json:"talismanRarity"`
-	RefillUsed     bool   `json:"refillUsed"`
+	RefillsLeft    int    `json:"refillsLeft"`
 	RefillIn       int    `json:"refillIn"` // seconds until the quota bucket rolls over
 	DevMode        bool   `json:"devMode"`
 }
@@ -60,12 +60,21 @@ func (s *Server) stateFor(p *store.Player, quotaLeft int) stateResponse {
 		Prestige:       p.Prestige,
 		TalismanTier:   p.TalismanTier,
 		TalismanRarity: p.TalismanRarity,
-		RefillUsed:     p.RefillDay == now.Format("2006-01-02"),
+		RefillsLeft:    max(0, rules.RefillsFor(p.Prestige)-refillsUsedToday(p, now)),
 		// the quota bucket is keyed by the SERVER's clock hour (store.bucketKey), so
 		// the client must count down to this instead of its own top-of-hour guess
 		RefillIn:       3600 - now.Minute()*60 - now.Second(),
 		DevMode:        s.cfg.DevMode,
 	}
+}
+
+// refillsUsedToday reads the refill tally, which only counts if it was pinned
+// to today — an older refill_day means the allowance has rolled over fresh.
+func refillsUsedToday(p *store.Player, now time.Time) int {
+	if p.RefillDay == now.Format("2006-01-02") {
+		return p.RefillCount
+	}
+	return 0
 }
 
 func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
@@ -462,7 +471,7 @@ func (s *Server) handleRefill(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	refilled, err := s.store.RefillQuota(p.Token, rules.RefillPrice, time.Now().Format("2006-01-02"))
+	refilled, err := s.store.RefillQuota(p.Token, rules.RefillPrice, time.Now().Format("2006-01-02"), rules.RefillsFor(p.Prestige))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "db")
 		return

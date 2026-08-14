@@ -453,7 +453,31 @@ async function onPress(center: { x: number; y: number }) {
   }
 }
 
+// the subtitle spot rotates through t('tips') — a random hop that never lands
+// on the tip already on screen; :key remounts the <p> to replay the fade
+const TIP_MS = 8000
+const tip = ref(Math.floor(Math.random() * t('tips').length))
+setInterval(() => {
+  const n = t('tips').length
+  tip.value = (tip.value + 1 + Math.floor(Math.random() * (n - 1))) % n
+}, TIP_MS)
+
+// spacebar = the button, for keyboard players. Silently ignored whenever any
+// overlay could catch the key instead: modals, main-screen confirms, the
+// tutorial, or a focused form control.
+function onSpace(e: KeyboardEvent) {
+  if (e.code !== 'Space' || e.repeat || disabled.value) return
+  if (modalOpen.value || cancelTalismanAsk.value || menuOpen.value) return
+  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+  if (document.querySelector('.driver-overlay')) return
+  // stops page scroll and keeps a previously-focused button from re-firing
+  e.preventDefault()
+  const r = document.getElementById('tut-button')?.getBoundingClientRect()
+  onPress(r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : { x: innerWidth / 2, y: innerHeight / 2 })
+}
+
 onMounted(async () => {
+  window.addEventListener('keydown', onSpace)
   const step = () => loadProgress.value++
   // config first: prices, odds and card effects all read from it, and the
   // whole <main> renders only once `ready` flips, so nothing reads it early
@@ -613,7 +637,7 @@ onMounted(async () => {
       </aside>
 
       <div class="order-1 flex flex-col items-center gap-2 pt-1 sm:gap-4 sm:pt-4 lg:order-2">
-        <p class="hidden text-sm text-slate-400 sm:block">{{ t('subtitle') }}</p>
+        <p :key="tip" class="tip-fade hidden text-sm text-slate-400 sm:block">{{ t('tips')[tip] }}</p>
 
         <template v-if="state">
           <!-- one compact status row keeps the core info above the fold on phones -->

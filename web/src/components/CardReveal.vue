@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { nextRarity, prevRarity, sellValue, state, type Card } from '../useGame'
 import { t } from '../i18n'
+import { tiltVars } from '../cardTilt'
 import CardFace from './CardFace.vue'
 
 const props = withDefaults(
@@ -22,22 +23,7 @@ const active = ref(false)
 navigator.vibrate?.([20, 30, 80])
 
 function tilt(clientX: number, clientY: number) {
-  const r = el.value!.getBoundingClientRect()
-  const px = (clientX - r.left) / r.width
-  const py = (clientY - r.top) / r.height
-  vars.value = {
-    '--rx': `${(px - 0.5) * 24}deg`,
-    '--ry': `${(0.5 - py) * 24}deg`,
-    // the reference's pointer/background spring vars, same names and ranges
-    '--pointer-x': `${px * 100}%`,
-    '--pointer-y': `${py * 100}%`,
-    '--pointer-from-left': `${px}`,
-    '--pointer-from-top': `${py}`,
-    '--pointer-from-center': `${Math.min(1, Math.hypot(px - 0.5, py - 0.5) * 2)}`,
-    '--background-x': `${37 + px * 26}%`,
-    '--background-y': `${33 + py * 34}%`,
-    '--card-opacity': '1',
-  }
+  vars.value = tiltVars(clientX, clientY, el.value!.getBoundingClientRect())
 }
 
 function onMove(e: MouseEvent) {

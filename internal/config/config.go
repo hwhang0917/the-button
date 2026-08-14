@@ -112,6 +112,7 @@ type economyFile struct {
 		RarityPermille map[string]int `yaml:"rarity_permille"`
 	} `yaml:"pack"`
 	RefillPrice         int   `yaml:"refill_price"`
+	RefillsPerDay       int   `yaml:"refills_per_day"`
 	FuseCost            int   `yaml:"fuse_cost"`
 	DefuseYield         int   `yaml:"defuse_yield"`
 	CardSell            []int `yaml:"card_sell"`
@@ -202,6 +203,7 @@ func defaultFile() file {
 	f.Economy.Pack.TierPermille = weightMap(r.Pack.Tiers)
 	f.Economy.Pack.RarityPermille = weightMap(r.Pack.Rarities)
 	f.Economy.RefillPrice = r.RefillPrice
+	f.Economy.RefillsPerDay = r.RefillsPerDay
 	f.Economy.FuseCost = r.FuseCost
 	f.Economy.DefuseYield = r.DefuseYield
 	f.Economy.CardSell = r.CardSell
@@ -284,6 +286,7 @@ func (f file) toConfig() Config {
 				Rarities: orderedWeights(f.Game.Rarities, f.Economy.Pack.RarityPermille),
 			},
 			RefillPrice:         f.Economy.RefillPrice,
+			RefillsPerDay:       f.Economy.RefillsPerDay,
 			FuseCost:            f.Economy.FuseCost,
 			DefuseYield:         f.Economy.DefuseYield,
 			CardSell:            f.Economy.CardSell,

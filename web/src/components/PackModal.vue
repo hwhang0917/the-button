@@ -6,6 +6,7 @@ import { t } from '../i18n'
 import { play, scratchTick, vibrate, type Sound } from '../audio'
 import { burst, confetti, reducedMotion } from '../particles'
 import { COIN_COLORS } from '../useCoinCounter'
+import { tiltVars } from '../cardTilt'
 import CardFace from './CardFace.vue'
 
 const props = defineProps<{ cards: Card[] }>()
@@ -42,8 +43,16 @@ const RARITY_FX: Record<
 const TEAR_MS = 450
 
 // cards keep native size inside a scaled flip-scene so the foil CSS is
-// untouched; the wrapper takes the scaled footprint so flex lays out right
-const k = computed(() => [1, 0.72, 0.52][props.cards.length - 1] ?? 0.52)
+// untouched; the wrapper takes the scaled footprint so flex lays out right.
+// The scale fits the row to the viewport: full size wherever it fits (PC),
+// shrinking only as far as a narrow phone forces it. 240 = card + gap.
+const k = computed(() => Math.min(1, (window.innerWidth - 48) / (props.cards.length * 240)))
+
+// per-card poke-holo tilt, driven from the untransformed sized wrapper
+const tilt = ref<Record<string, string>[]>(props.cards.map(() => ({})))
+function onCardMove(i: number, x: number, y: number, e: Event) {
+  tilt.value[i] = tiltVars(x, y, (e.currentTarget as HTMLElement).getBoundingClientRect())
+}
 
 function tear() {
   if (stage.value !== 'sealed') return
@@ -116,7 +125,7 @@ function flipAll() {
 <template>
   <div
     v-if="stage === 'open'"
-    class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-black/80 backdrop-blur-sm"
+    class="fixed inset-0 z-50 flex touch-none select-none flex-col items-center justify-center gap-6 bg-black/80 backdrop-blur-sm"
   >
     <div
       class="pack-glow pointer-events-none absolute h-80 w-80 rounded-full blur-3xl"
@@ -128,6 +137,10 @@ function flipAll() {
         :key="i"
         class="card-in [animation-fill-mode:backwards]"
         :style="{ width: 224 * k + 'px', height: 320 * k + 'px', animationDelay: i * 100 + 'ms' }"
+        @mousemove="onCardMove(i, $event.clientX, $event.clientY, $event)"
+        @mouseleave="tilt[i] = {}"
+        @touchmove="onCardMove(i, $event.touches[0].clientX, $event.touches[0].clientY, $event)"
+        @touchend="tilt[i] = {}"
       >
         <div class="flip-scene h-80 w-56 origin-top-left" :style="{ transform: `scale(${k})` }">
           <div class="flip-card h-full w-full cursor-pointer" :class="{ flipped: flipped[i] }" @click="flip(i)">
@@ -138,7 +151,7 @@ function flipAll() {
               <p class="text-lg font-black tracking-widest text-amber-300">THE BUTTON</p>
             </div>
             <div class="flip-front absolute inset-0">
-              <CardFace :card="c" />
+              <CardFace :card="c" class="card-tilt" :style="tilt[i]" />
             </div>
           </div>
         </div>

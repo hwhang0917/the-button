@@ -30,7 +30,7 @@ const faceStyle = computed(() => ({
 
 <template>
   <div
-    class="card relative flex h-80 w-56 flex-col items-center justify-between rounded-2xl border-2 p-5"
+    class="card relative flex h-80 w-56 select-none flex-col items-center justify-between rounded-2xl border-2 p-5"
     :data-rarity="DATA_RARITY[card.rarity]"
     :style="faceStyle"
   >

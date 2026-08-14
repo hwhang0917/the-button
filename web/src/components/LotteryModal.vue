@@ -178,10 +178,11 @@ function onMove(e: PointerEvent) {
         OK
       </button>
     </div>
-    <div v-else class="flex flex-col items-center gap-2">
-      <p class="text-xs text-slate-400">{{ t('lotteryScratch') }}</p>
+    <!-- same row shape and button metrics as the revealed state, so the
+         action under the ticket doesn't jump when the reveal lands -->
+    <div v-else class="flex gap-3">
       <button
-        class="rounded-full border border-slate-600 px-4 py-1 text-xs text-slate-300 hover:bg-slate-800"
+        class="rounded-full border border-slate-600 px-6 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
         @click="finish"
       >
         ⚡ {{ t('scratchAll') }}

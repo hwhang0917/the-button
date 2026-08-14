@@ -111,7 +111,8 @@ economy:
     tier_permille: {unrank: 320, bronze: 260, silver: 180, gold: 120, platinum: 80, diamond: 40}
     rarity_permille: {common: 600, rare: 250, holo: 120, prismatic: 30}
 
-  refill_price: 60 # buy back this hour's spent clicks, once a day
+  refill_price: 60 # buy back this hour's spent clicks
+  refills_per_day: 1 # daily refill allowance; each prestige level adds one more
 
   # fusion is deliberately lossy: fuse_cost in, one out; defusing one returns
   # defuse_yield, which must be less than fuse_cost

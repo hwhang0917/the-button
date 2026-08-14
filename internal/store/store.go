@@ -87,6 +87,7 @@ func Open(path string, shieldRefund int) (*Store, error) {
 		"talisman_tier TEXT NOT NULL DEFAULT ''",
 		"talisman_rarity TEXT NOT NULL DEFAULT ''",
 		"refill_day TEXT NOT NULL DEFAULT ''",
+		"refill_count INTEGER NOT NULL DEFAULT 0",
 	} {
 		_, err := db.Exec("ALTER TABLE players ADD COLUMN " + ddl)
 		if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
@@ -120,6 +121,7 @@ type Player struct {
 	TalismanTier   string
 	TalismanRarity string
 	RefillDay      string
+	RefillCount    int
 }
 
 func (s *Store) GetOrCreatePlayer(token string) (*Player, error) {
@@ -130,10 +132,10 @@ func (s *Store) GetOrCreatePlayer(token string) (*Player, error) {
 	}
 	p := &Player{Token: token}
 	err = s.db.QueryRow(`SELECT nickname, stars, best_stars, coins, charm_level, headstart_level,
-		stamina_level, magnet_level, golden_level, prestige, talisman_tier, talisman_rarity, refill_day
+		stamina_level, magnet_level, golden_level, prestige, talisman_tier, talisman_rarity, refill_day, refill_count
 		FROM players WHERE token = ?`, token).
 		Scan(&p.Nickname, &p.Stars, &p.BestStars, &p.Coins, &p.CharmLevel, &p.HeadstartLevel,
-			&p.StaminaLevel, &p.MagnetLevel, &p.GoldenLevel, &p.Prestige, &p.TalismanTier, &p.TalismanRarity, &p.RefillDay)
+			&p.StaminaLevel, &p.MagnetLevel, &p.GoldenLevel, &p.Prestige, &p.TalismanTier, &p.TalismanRarity, &p.RefillDay, &p.RefillCount)
 	if err != nil {
 		return nil, err
 	}
@@ -192,16 +194,21 @@ func (s *Store) BuyPack(token string, price int, drawn []game.Card) (bool, error
 }
 
 // refillQuota buys back the current hour's spent clicks: coins out, the hour
-// bucket's count zeroed. Once per day — the refill_day pin rejects a second
-// purchase — and rejected when broke or when nothing was spent.
-func (s *Store) RefillQuota(token string, price int, day string) (bool, error) {
+// bucket's count zeroed. Capped at limit purchases per day — refill_day pins
+// the day and refill_count tallies it, resetting when the day rolls over —
+// and rejected when broke or when nothing was spent.
+func (s *Store) RefillQuota(token string, price int, day string, limit int) (bool, error) {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return false, err
 	}
 	defer tx.Rollback()
-	res, err := tx.Exec(`UPDATE players SET coins = coins - ?, refill_day = ?, updated_at = ?
-		WHERE token = ? AND coins >= ? AND refill_day != ?`, price, day, time.Now(), token, price, day)
+	res, err := tx.Exec(`UPDATE players SET coins = coins - ?,
+		refill_count = CASE WHEN refill_day = ? THEN refill_count + 1 ELSE 1 END,
+		refill_day = ?, updated_at = ?
+		WHERE token = ? AND coins >= ?
+		AND (CASE WHEN refill_day = ? THEN refill_count ELSE 0 END) < ?`,
+		price, day, day, time.Now(), token, price, day, limit)
 	if err != nil {
 		return false, err
 	}
