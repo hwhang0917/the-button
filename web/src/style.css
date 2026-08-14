@@ -185,6 +185,24 @@ body::before {
   --background-y: 50%;
 }
 
+/* max-star button: the face itself turns prismatic while PRESTIGE waits.
+   color-blend repaints the pixi face's hues but keeps its luminance, so the
+   shading and the label stay readable under the rainbow */
+@keyframes prism-spin {
+  to { transform: rotate(1turn); }
+}
+.prism-face {
+  background: conic-gradient(#ff0084, #fcff00, #00fff0, #7c00ff, #ff0084);
+  mix-blend-mode: color;
+  opacity: 0.9;
+  filter: blur(10px);
+  animation: prism-spin 3.5s linear infinite;
+  /* fade the rainbow toward the middle: the face's own dark centre stays,
+     so the label keeps its full contrast under the effect */
+  -webkit-mask: radial-gradient(closest-side, rgba(0, 0, 0, 0.25), #000 62%);
+  mask: radial-gradient(closest-side, rgba(0, 0, 0, 0.25), #000 62%);
+}
+
 /* mobile hamburger drawer: slide-in sheet + its entries */
 @keyframes nav-in {
   from { transform: translateX(100%); }

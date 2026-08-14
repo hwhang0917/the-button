@@ -17,11 +17,13 @@ const props = withDefaults(
     /** the highest risk level on offer, so flames scale to the ladder */
     maxRisk?: number
     disabled: boolean
+    /** max stars reached: still unclickable, but celebrating, not dimmed */
+    win?: boolean
     prestige?: number
     talisman?: boolean
     bonus?: number
   }>(),
-  { prestige: 0, talisman: false, bonus: 0, pressure: 0, maxRisk: 3 },
+  { win: false, prestige: 0, talisman: false, bonus: 0, pressure: 0, maxRisk: 3 },
 )
 
 const risky = () => props.risk > 0
@@ -220,7 +222,17 @@ function drawButton() {
 }
 
 function syncTexts() {
+  // at max stars there is nothing left to roll — the button just looks cool
+  if (props.win) {
+    label.text = '😎'
+    label.style.fontSize = 64
+    label.position.set(0, 0)
+    pct.text = ''
+    return
+  }
   label.text = t('press')
+  label.style.fontSize = 26
+  label.position.set(0, -8)
   // the talisman bonus rides the roll only, so it shows as its own +N% tag
   pct.text = props.bonus > 0 ? `${props.chance}% +${props.bonus}%` : `${props.chance}%`
   pct.style.fill = props.bonus > 0 ? '#fcd34d' : risky() ? '#fda4af' : '#e2e8f0'
@@ -228,7 +240,7 @@ function syncTexts() {
 
 function applyDisabled() {
   btn.eventMode = props.disabled ? 'none' : 'static'
-  btn.alpha = props.disabled ? 0.35 : 1
+  btn.alpha = props.disabled && !props.win ? 0.35 : 1
 }
 
 function spawnEmber() {
@@ -499,8 +511,8 @@ onMounted(async () => {
 })
 
 watch(() => [props.tier, props.risk, props.prestige], () => app && drawButton())
-watch(() => [props.chance, props.risk, props.bonus, lang.value], () => app && syncTexts())
-watch(() => props.disabled, () => app && applyDisabled())
+watch(() => [props.chance, props.risk, props.bonus, props.win, lang.value], () => app && syncTexts())
+watch(() => [props.disabled, props.win], () => app && applyDisabled())
 
 onBeforeUnmount(() => app?.destroy(true, { children: true }))
 </script>

@@ -406,6 +406,7 @@ const displayCoins = computed(() => {
 })
 
 function setRisk(lvl: number) {
+  if (state.value?.win) return // the 1-4 keybind routes here too
   risk.value = lvl
   play('switch')
   vibrate(4 + lvl * 6) // buzz escalates with the risk you're signing up for
@@ -763,7 +764,7 @@ onMounted(async () => {
             </button>
           </div>
 
-          <div id="tut-button" class="-my-3 sm:my-0">
+          <div id="tut-button" class="relative -my-3 sm:my-0">
             <TheButton
               :tier="state.tier"
               :chance="displayChance"
@@ -772,13 +773,24 @@ onMounted(async () => {
               :max-risk="cfg().maxRisk"
               :pressure="state.stars / state.maxStars"
               :disabled="disabled"
+              :win="state.win"
               :prestige="state.prestige"
               :talisman="!!state.talismanTier"
               @press="onPress"
             />
+            <!-- max stars reached: the button interior turns prismatic while
+                 PRESTIGE waits. The clip circle matches the pixi face
+                 (R=88 of SIZE=280 → the middle 63% of the host) -->
+            <div
+              v-if="state.win"
+              class="pointer-events-none absolute inset-[18.5%] overflow-hidden rounded-full"
+            >
+              <div class="prism-face absolute -inset-4"></div>
+            </div>
           </div>
 
-          <p class="text-center text-xs text-slate-500">
+<!-- at max stars there is no next click to preview — prestige is the move -->
+          <p v-if="!state.win" class="text-center text-xs text-slate-500">
             {{ t('gainInfo').replace('{n}', String(displayGain))
             }}<template v-if="displayCoins"> · 💰+{{ displayCoins }}</template>
           </p>
@@ -798,7 +810,8 @@ onMounted(async () => {
               <span class="text-sm font-bold" :class="risk ? 'text-rose-400' : 'text-slate-400'">
                 🔥 {{ t('riskIt') }}
               </span>
-              <div class="flex overflow-hidden rounded-full border border-slate-700">
+<!-- nothing to roll at max stars, so the risk picker rests too -->
+              <div class="flex overflow-hidden rounded-full border border-slate-700" :class="{ 'opacity-40': state.win }">
                 <button
                   v-for="lvl in cfg().maxRisk + 1"
                   :key="lvl - 1"
@@ -808,6 +821,7 @@ onMounted(async () => {
                       ? lvl === 1 ? 'bg-slate-600 text-white' : 'bg-rose-600 text-white'
                       : 'text-slate-400 hover:bg-slate-800'
                   "
+                  :disabled="state.win"
                   @click="setRisk(lvl - 1)"
                 >
                   {{ lvl === 1 ? 'OFF' : '🔥'.repeat(lvl - 1) }}
