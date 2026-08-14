@@ -33,7 +33,7 @@ import { play, preloadAudio, soundCount, vibrate } from './audio'
 import { burst, confetti } from './particles'
 import { COIN_COLORS, useCoinCounter } from './useCoinCounter'
 import { TIER_COLORS, type Rarity, type Tier } from './tiers'
-import { cardName } from './cards'
+import { cardName, effectFor } from './cards'
 import { cfg, loadConfig } from './config'
 import TheButton from './components/TheButton.vue'
 import StarRow from './components/StarRow.vue'
@@ -298,7 +298,29 @@ const displayChance = computed(() =>
   state.value ? effChance(state.value.chance, risk.value, state.value.charmLevel) : 0,
 )
 const displayBonus = computed(() => (state.value ? talismanBonus(state.value) : 0))
-const displayGain = computed(() => gainFor(displayChance.value, risk.value))
+const armedEffect = computed(() =>
+  state.value?.talismanTier && state.value.talismanRarity
+    ? effectFor(state.value.talismanTier, state.value.talismanRarity)
+    : {},
+)
+// stars on success, mirroring Resolve's success branch: the armed card's chance
+// bonus feeds only the roll, but maxRisk/guarantee/mult/bonus all shape the payout
+const displayGain = computed(() => {
+  const s = state.value
+  if (!s) return 1
+  const e = armedEffect.value
+  const payRisk = e.maxRisk ? cfg().maxRisk : risk.value
+  const base = e.guarantee ? 1 : gainFor(effChance(s.chance, payRisk, s.charmLevel), payRisk)
+  return base * Math.max(1, e.mult ?? 0) + (e.bonus ?? 0)
+})
+// coins on success — Resolve's jackpot: overflow past the cap plus 황금손's per-star pay
+const displayCoins = computed(() => {
+  const s = state.value
+  if (!s) return 0
+  const overflow = Math.max(0, s.stars + displayGain.value - s.maxStars)
+  const newStars = Math.min(s.stars + displayGain.value, s.maxStars)
+  return cfg().overflowCoinPer * overflow + (armedEffect.value.coinWin ?? 0) * newStars
+})
 
 function setRisk(lvl: number) {
   risk.value = lvl
@@ -570,6 +592,11 @@ onMounted(async () => {
             />
           </div>
 
+          <p class="text-center text-xs text-slate-500">
+            {{ t('gainInfo').replace('{n}', String(displayGain))
+            }}<template v-if="displayCoins"> · 💰+{{ displayCoins }}</template>
+          </p>
+
           <p class="h-5 text-center text-sm font-bold sm:h-6 sm:text-base" :class="messageColor">{{ message }}</p>
 
           <button
@@ -602,7 +629,7 @@ onMounted(async () => {
               </div>
             </div>
             <span class="h-4 text-xs whitespace-nowrap text-slate-500">
-              <template v-if="risk">{{ t('chance') }} 1/{{ risk + 1 }} · ★+{{ displayGain }}</template>
+              <template v-if="risk">{{ t('chance') }} 1/{{ risk + 1 }}</template>
             </span>
           </div>
 
