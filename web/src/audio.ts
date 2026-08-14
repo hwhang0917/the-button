@@ -2,7 +2,7 @@ import { ref } from 'vue'
 
 const files = [
   'click', 'fail', 'hover', 'mouseover', 'switch', 'win', 'prestige',
-  'scratch', 'shield', 'streak-sell', 'coin-use', 'talisman',
+  'scratch', 'shield', 'streak-sell', 'coin-use', 'talisman', 'card-flip',
   'success_unrank', 'success_bronze', 'success_silver',
   'success_gold', 'success_platinum', 'success_diamond',
 ] as const

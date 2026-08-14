@@ -107,6 +107,8 @@ function flip(i: number) {
   flipped.value[i] = true
   const c = props.cards[i]
   const fx = RARITY_FX[c.rarity]
+  // the physical flip first, the rarity fanfare on top of it
+  play('card-flip')
   play(c.rarity === 'prismatic' ? 'win' : (`success_${c.tier}` as Sound))
   burst(window.innerWidth / 2, window.innerHeight / 2, fx.colors, Math.round(fx.count / 2))
   vibrate(c.rarity === 'prismatic' ? [40, 30, 80] : 20)
