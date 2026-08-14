@@ -143,34 +143,38 @@ economy:
 # Rarity is the power band; the six tier variants inside a band are comparable
 # in strength and differ in flavour.
 cards:
-  # 커먼 — small, always useful
-  unrank/common: {chance: 5} # 🐣 병아리 부적
-  bronze/common: {refund: true} # 🥉 동전 한 닢
-  silver/common: {bonus: 1} # 🥈 은빛 덤
-  gold/common: {coin_win: 2} # 🥇 황금손
-  platinum/common: {half: true} # 💍 완충 반지
-  diamond/common: {coin_loss: 3} # 💎 보험금
+  # rarity is the mechanic line, tier the celestial family (별먼지→은하) that
+  # strictly increments it. mult/max_risk/tier_jump/best_jump are unused by the
+  # defaults but still valid here.
 
-  # 레어 — meaningful
-  unrank/rare: {chance: 10} # 🌱 네잎클로버
-  bronze/rare: {keep: true, refund: true} # 🛡️ 되감기
-  silver/rare: {rerolls: 1} # 🗡️ 한 번 더
-  gold/rare: {chance: 5, bonus: 1} # 👑 왕관
-  platinum/rare: {bonus: 2} # 🔱 삼지창
-  diamond/rare: {card: true} # 🦄 유니콘
+  # 커먼 — 행운: the roll gets easier, nothing else
+  unrank/common: {chance: 2} # ✨ 별먼지 행운
+  bronze/common: {chance: 4} # 💫 별조각 행운
+  silver/common: {chance: 6} # ⭐ 별빛 행운
+  gold/common: {chance: 8} # 🌙 달빛 행운
+  platinum/common: {chance: 10} # ☀️ 태양 행운
+  diamond/common: {chance: 12} # 🌌 은하 행운
 
-  # 홀로 — strong
-  unrank/holo: {chance: 20} # 🍀 여신의 미소
-  bronze/holo: {keep: true} # 🏺 불사조 항아리
-  silver/holo: {tier_jump: true} # 🌙 달빛 사다리
-  gold/holo: {mult: 2} # 🏆 곱배기
-  platinum/holo: {rerolls: 2} # 🔮 예언구
-  diamond/holo: {max_risk: true} # 🐉 용의 심장
+  # 레어 — 결실: extra stars, then coins per star held
+  unrank/rare: {bonus: 1} # 🌾 별먼지 결실
+  bronze/rare: {bonus: 1, coin_win: 1} # 🌰 별조각 결실
+  silver/rare: {bonus: 2, coin_win: 1} # 🌻 별빛 결실
+  gold/rare: {bonus: 2, coin_win: 2} # 👑 달빛 결실
+  platinum/rare: {bonus: 3, coin_win: 2} # 🏆 태양 결실
+  diamond/rare: {bonus: 3, coin_win: 3} # 💎 은하 결실
 
-  # 프리즘 — the jokers
-  unrank/prismatic: {guarantee: true} # 🌈 무지개
-  bronze/prismatic: {mult: 3} # 🔥 폭주
-  silver/prismatic: {guarantee: true, refund: true} # ❄️ 절대영도
-  gold/prismatic: {guarantee: true, bonus: 2} # ⚡ 벼락
-  platinum/prismatic: {guarantee: true, best_jump: true} # 🌊 해일
-  diamond/prismatic: {guarantee: true, bonus: 4, card: true} # 🌌 특이점
+  # 홀로 — 수호: half saves grow into full keeps with rerolls on top
+  unrank/holo: {half: true} # 🍃 별먼지 수호
+  bronze/holo: {half: true, coin_loss: 2} # 🛡️ 별조각 수호
+  silver/holo: {keep: true} # 🏰 별빛 수호
+  gold/holo: {keep: true, refund: true} # 🦉 달빛 수호
+  platinum/holo: {keep: true, rerolls: 1} # 🔥 태양 수호
+  diamond/holo: {keep: true, rerolls: 2} # 🐉 은하 수호
+
+  # 프리즘 — 기적: a guaranteed win with an ever-larger dowry
+  unrank/prismatic: {guarantee: true} # 🌠 별먼지 기적
+  bronze/prismatic: {guarantee: true, bonus: 1} # 🎆 별조각 기적
+  silver/prismatic: {guarantee: true, bonus: 2} # 🌟 별빛 기적
+  gold/prismatic: {guarantee: true, bonus: 3} # ⚡ 달빛 기적
+  platinum/prismatic: {guarantee: true, bonus: 3, refund: true} # 🌈 태양 기적
+  diamond/prismatic: {guarantee: true, bonus: 4, card: true} # 🪐 은하 기적

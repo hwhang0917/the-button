@@ -13,12 +13,13 @@ export const TIER_COLORS: Record<Tier, string> = {
 export const RARITIES = ['common', 'rare', 'holo', 'prismatic'] as const
 export type Rarity = (typeof RARITIES)[number]
 
-/** every collectible gets its own face art — escalating with tier and rarity */
+/** every collectible gets its own face art — rows are the celestial families
+ * (별먼지→은하), columns the mechanic lines (행운/결실/수호/기적) */
 export const CARD_EMOJI: Record<Tier, Record<Rarity, string>> = {
-  unrank: { common: '🐣', rare: '🌱', holo: '🍀', prismatic: '🌈' },
-  bronze: { common: '🥉', rare: '🛡️', holo: '🏺', prismatic: '🔥' },
-  silver: { common: '🥈', rare: '🗡️', holo: '🌙', prismatic: '❄️' },
-  gold: { common: '🥇', rare: '👑', holo: '🏆', prismatic: '⚡' },
-  platinum: { common: '💍', rare: '🔱', holo: '🔮', prismatic: '🌊' },
-  diamond: { common: '💎', rare: '🦄', holo: '🐉', prismatic: '🌌' },
+  unrank: { common: '✨', rare: '🌾', holo: '🍃', prismatic: '🌠' },
+  bronze: { common: '💫', rare: '🌰', holo: '🛡️', prismatic: '🎆' },
+  silver: { common: '⭐', rare: '🌻', holo: '🏰', prismatic: '🌟' },
+  gold: { common: '🌙', rare: '👑', holo: '🦉', prismatic: '⚡' },
+  platinum: { common: '☀️', rare: '🏆', holo: '🔥', prismatic: '🌈' },
+  diamond: { common: '🌌', rare: '💎', holo: '🐉', prismatic: '🪐' },
 }

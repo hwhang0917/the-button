@@ -36,47 +36,49 @@ type CardEffect struct {
 func (e CardEffect) Armed() bool { return e != CardEffect{} }
 
 // DefaultCards is the shipped card design, keyed "tier/rarity". Rarity is the
-// power band — the six tier variants inside a band are comparable in strength
-// and differ in flavour, so "any prismatic" is the jackpot and *which*
-// prismatic is the collection chase.
+// mechanic line — 행운 (roll chance), 결실 (bonus stars + coins), 수호 (fail
+// protection), 기적 (guarantee + riders) — and tier is the celestial family
+// (별먼지→은하) that strictly increments the line, so power climbs on both
+// axes: tier is the small step, rarity the big jump.
 //
 // Guarantee must never pair with Mult (Rules.Validate rejects it): a guaranteed
 // win settles at the safe-mode rate, because settling it at the risk-scaled
 // rate would hand out round(100/2)=50 stars plus the overflow jackpot on every
-// ★14 risk-3 click, farmable forever.
+// ★14 risk-3 click, farmable forever. Mult/MaxRisk/TierJump/BestJump no longer
+// appear in the defaults but stay supported for config.yml overrides.
 func DefaultCards() map[string]CardEffect {
 	return map[string]CardEffect{
-		// 커먼 — small, always useful
-		"unrank/common":   {Chance: 5},    // 🐣 병아리 부적
-		"bronze/common":   {Refund: true}, // 🥉 동전 한 닢
-		"silver/common":   {Bonus: 1},     // 🥈 은빛 덤
-		"gold/common":     {CoinWin: 2},   // 🥇 황금손
-		"platinum/common": {Half: true},   // 💍 완충 반지
-		"diamond/common":  {CoinLoss: 3},  // 💎 보험금
+		// 커먼 — 행운: the roll gets easier, nothing else
+		"unrank/common":   {Chance: 2},  // ✨ 별먼지 행운
+		"bronze/common":   {Chance: 4},  // 💫 별조각 행운
+		"silver/common":   {Chance: 6},  // ⭐ 별빛 행운
+		"gold/common":     {Chance: 8},  // 🌙 달빛 행운
+		"platinum/common": {Chance: 10}, // ☀️ 태양 행운
+		"diamond/common":  {Chance: 12}, // 🌌 은하 행운
 
-		// 레어 — meaningful
-		"unrank/rare":   {Chance: 10},               // 🌱 네잎클로버
-		"bronze/rare":   {Keep: true, Refund: true}, // 🛡️ 되감기
-		"silver/rare":   {Rerolls: 1},               // 🗡️ 한 번 더
-		"gold/rare":     {Chance: 5, Bonus: 1},      // 👑 왕관
-		"platinum/rare": {Bonus: 2},                 // 🔱 삼지창
-		"diamond/rare":  {Card: true},               // 🦄 유니콘
+		// 레어 — 결실: extra stars, then coins per star held
+		"unrank/rare":   {Bonus: 1},             // 🌾 별먼지 결실
+		"bronze/rare":   {Bonus: 1, CoinWin: 1}, // 🌰 별조각 결실
+		"silver/rare":   {Bonus: 2, CoinWin: 1}, // 🌻 별빛 결실
+		"gold/rare":     {Bonus: 2, CoinWin: 2}, // 👑 달빛 결실
+		"platinum/rare": {Bonus: 3, CoinWin: 2}, // 🏆 태양 결실
+		"diamond/rare":  {Bonus: 3, CoinWin: 3}, // 💎 은하 결실
 
-		// 홀로 — strong
-		"unrank/holo":   {Chance: 20},     // 🍀 여신의 미소
-		"bronze/holo":   {Keep: true},     // 🏺 불사조 항아리
-		"silver/holo":   {TierJump: true}, // 🌙 달빛 사다리
-		"gold/holo":     {Mult: 2},        // 🏆 곱배기
-		"platinum/holo": {Rerolls: 2},     // 🔮 예언구
-		"diamond/holo":  {MaxRisk: true},  // 🐉 용의 심장
+		// 홀로 — 수호: half saves grow into full keeps with rerolls on top
+		"unrank/holo":   {Half: true},               // 🍃 별먼지 수호
+		"bronze/holo":   {Half: true, CoinLoss: 2},  // 🛡️ 별조각 수호
+		"silver/holo":   {Keep: true},               // 🏰 별빛 수호
+		"gold/holo":     {Keep: true, Refund: true}, // 🦉 달빛 수호
+		"platinum/holo": {Keep: true, Rerolls: 1},   // 🔥 태양 수호
+		"diamond/holo":  {Keep: true, Rerolls: 2},   // 🐉 은하 수호
 
-		// 프리즘 — the jokers
-		"unrank/prismatic":   {Guarantee: true},                       // 🌈 무지개
-		"bronze/prismatic":   {Mult: 3},                               // 🔥 폭주
-		"silver/prismatic":   {Guarantee: true, Refund: true},         // ❄️ 절대영도
-		"gold/prismatic":     {Guarantee: true, Bonus: 2},             // ⚡ 벼락
-		"platinum/prismatic": {Guarantee: true, BestJump: true},       // 🌊 해일
-		"diamond/prismatic":  {Guarantee: true, Bonus: 4, Card: true}, // 🌌 특이점
+		// 프리즘 — 기적: a guaranteed win with an ever-larger dowry
+		"unrank/prismatic":   {Guarantee: true},                         // 🌠 별먼지 기적
+		"bronze/prismatic":   {Guarantee: true, Bonus: 1},               // 🎆 별조각 기적
+		"silver/prismatic":   {Guarantee: true, Bonus: 2},               // 🌟 별빛 기적
+		"gold/prismatic":     {Guarantee: true, Bonus: 3},               // ⚡ 달빛 기적
+		"platinum/prismatic": {Guarantee: true, Bonus: 3, Refund: true}, // 🌈 태양 기적
+		"diamond/prismatic":  {Guarantee: true, Bonus: 4, Card: true},   // 🪐 은하 기적
 	}
 }
 

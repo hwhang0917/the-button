@@ -357,14 +357,14 @@ func TestResolveEffects(t *testing.T) {
 
 	// Chance boosts only the roll — never the risk-mode payout
 	want := GainFor(base.ChanceFor(5, 1, base.MaxStars), 1)
-	res := win.Resolve(Click{Stars: 5, Risk: 1, Cap: win.MaxStars, Card: base.Cards["unrank/rare"]})
+	res := win.Resolve(Click{Stars: 5, Risk: 1, Cap: win.MaxStars, Card: base.Cards["unrank/common"]})
 	if !res.TalismanUsed {
 		t.Fatal("an armed card must burn on any outcome")
 	}
 	if res.Gained != want {
 		t.Fatalf("a chance card must not change the payout: gained %d, want %d", res.Gained, want)
 	}
-	if res = lose.Resolve(Click{Stars: 5, Risk: 1, Cap: lose.MaxStars, Card: base.Cards["unrank/rare"]}); !res.TalismanUsed {
+	if res = lose.Resolve(Click{Stars: 5, Risk: 1, Cap: lose.MaxStars, Card: base.Cards["unrank/common"]}); !res.TalismanUsed {
 		t.Fatal("an armed card must burn on a fail too")
 	}
 
@@ -376,79 +376,78 @@ func TestResolveEffects(t *testing.T) {
 		t.Fatalf("a guaranteed win must gain exactly 1 with no jackpot: %+v", res)
 	}
 
-	// Guarantee + Bonus: ⚡ 벼락 is a flat 3-star step, 🌌 특이점 a 5-star one
-	for key, want := range map[string]int{"gold/prismatic": 3, "diamond/prismatic": 5} {
+	// 기적 line: guarantee + a bonus that climbs with the tier
+	for key, want := range map[string]int{
+		"bronze/prismatic": 2, "silver/prismatic": 3, "gold/prismatic": 4, "diamond/prismatic": 5,
+	} {
 		res := lose.Resolve(Click{Risk: lose.MaxRisk, Cap: lose.MaxStars, Card: base.Cards[key]})
 		if !res.Success || res.Gained != want {
 			t.Fatalf("%s gained %d, want %d", key, res.Gained, want)
 		}
 	}
 	if res = lose.Resolve(Click{Cap: lose.MaxStars, Card: base.Cards["diamond/prismatic"]}); res.Card == nil {
-		t.Fatal("특이점 must drop a card on success")
-	}
-
-	// Mult scales the payout
-	if res = win.Resolve(Click{Cap: win.MaxStars, Card: base.Cards["gold/holo"]}); res.Gained != 2 {
-		t.Fatalf("×2 card: %+v", res)
+		t.Fatal("은하 기적 must drop a card on success")
 	}
 
 	// Keep holds every star on a fail — and only keep earns the shield message
-	if res = lose.Resolve(Click{Stars: 14, Cap: lose.MaxStars, Card: base.Cards["bronze/holo"]}); res.Success || res.Stars != 14 || !res.Saved {
-		t.Fatalf("불사조 must keep the streak and report the save: %+v", res)
+	if res = lose.Resolve(Click{Stars: 14, Cap: lose.MaxStars, Card: base.Cards["silver/holo"]}); res.Success || res.Stars != 14 || !res.Saved {
+		t.Fatalf("별빛 수호 must keep the streak and report the save: %+v", res)
 	}
 	// A chance-only card failing at the head-start floor leaves the stars
 	// untouched anyway; that must not read as a shield save
-	if res = lose.Resolve(Click{Stars: 3, Headstart: 3, Cap: lose.MaxStars, Card: base.Cards["unrank/rare"]}); res.Stars != 3 || res.Saved {
+	if res = lose.Resolve(Click{Stars: 3, Headstart: 3, Cap: lose.MaxStars, Card: base.Cards["unrank/common"]}); res.Stars != 3 || res.Saved {
 		t.Fatalf("a chance card at the floor must not claim a save: %+v", res)
 	}
 	// Half rounds up, and never lands below the head-start floor
-	if res = lose.Resolve(Click{Stars: 7, Cap: lose.MaxStars, Card: base.Cards["platinum/common"]}); res.Stars != 4 {
-		t.Fatalf("완충 반지 on ★7 should land on ★4, got %d", res.Stars)
+	if res = lose.Resolve(Click{Stars: 7, Cap: lose.MaxStars, Card: base.Cards["unrank/holo"]}); res.Stars != 4 {
+		t.Fatalf("별먼지 수호 on ★7 should land on ★4, got %d", res.Stars)
 	}
-	if res = lose.Resolve(Click{Stars: 4, Cap: lose.MaxStars, Headstart: 3, Card: base.Cards["platinum/common"]}); res.Stars != 3 {
-		t.Fatalf("완충 반지 must not land below the floor, got %d", res.Stars)
+	if res = lose.Resolve(Click{Stars: 4, Cap: lose.MaxStars, Headstart: 3, Card: base.Cards["unrank/holo"]}); res.Stars != 3 {
+		t.Fatalf("별먼지 수호 must not land below the floor, got %d", res.Stars)
 	}
-	// CoinLoss pays per star surrendered
-	if res = lose.Resolve(Click{Stars: 10, Cap: lose.MaxStars, Card: base.Cards["diamond/common"]}); res.Jackpot != 3*10 {
-		t.Fatalf("보험금 should pay 3 per lost star: %+v", res)
+	// CoinLoss pays per star surrendered: half of ★10 keeps 5, pays 2×5
+	if res = lose.Resolve(Click{Stars: 10, Cap: lose.MaxStars, Card: base.Cards["bronze/holo"]}); res.Stars != 5 || res.Jackpot != 2*5 {
+		t.Fatalf("별조각 수호 should pay 2 per lost star: %+v", res)
 	}
-	// CoinWin pays per star held after the win
-	if res = win.Resolve(Click{Cap: win.MaxStars, Card: base.Cards["gold/common"]}); res.Jackpot != 2 {
-		t.Fatalf("황금손 should pay 2 per star held: %+v", res)
-	}
-
-	// TierJump and BestJump are floors, never a downgrade
-	if res = win.Resolve(Click{Stars: 1, Cap: win.MaxStars, Card: base.Cards["silver/holo"]}); res.Stars != 4 {
-		t.Fatalf("사다리 from ★1 should reach silver at ★4, got %d", res.Stars)
-	}
-	if res = lose.Resolve(Click{Cap: lose.MaxStars, Best: 9, Card: base.Cards["platinum/prismatic"]}); res.Stars != 9 {
-		t.Fatalf("해일 should restore the personal best, got %d", res.Stars)
-	}
-	if res = lose.Resolve(Click{Stars: 6, Cap: lose.MaxStars, Best: 2, Card: base.Cards["platinum/prismatic"]}); res.Stars != 7 {
-		t.Fatalf("해일 must never cut a streak short, got %d", res.Stars)
+	// CoinWin pays per star held after the win (bonus stars included)
+	if res = win.Resolve(Click{Cap: win.MaxStars, Card: base.Cards["diamond/rare"]}); res.Gained != 1+3 || res.Jackpot != 3*4 {
+		t.Fatalf("은하 결실 should pay 3 per star held: %+v", res)
 	}
 
-	// Rerolls: 🔮 예언구 gets two extra rolls, so a win on the third lands and
-	// a fourth-roll win is already too late
+	// Rerolls: 은하 수호 gets two extra rolls, so a win on the third lands and
+	// a fourth-roll win is already too late — and keep still covers a full miss
 	r := withRNG(&seqRNG{outcomes: []bool{false, false, true}})
-	if res = r.Resolve(Click{Stars: 14, Risk: r.MaxRisk, Cap: r.MaxStars, Card: base.Cards["platinum/holo"]}); !res.Success {
-		t.Fatal("예언구 should convert a fail on its second reroll")
+	if res = r.Resolve(Click{Stars: 14, Risk: r.MaxRisk, Cap: r.MaxStars, Card: base.Cards["diamond/holo"]}); !res.Success {
+		t.Fatal("은하 수호 should convert a fail on its second reroll")
 	}
 	r = withRNG(&seqRNG{outcomes: []bool{false, false, false, true}})
-	if res = r.Resolve(Click{Stars: 14, Risk: r.MaxRisk, Cap: r.MaxStars, Card: base.Cards["platinum/holo"]}); res.Success {
-		t.Fatal("예언구 must stop after two rerolls")
-	}
-
-	// MaxRisk keeps the safe click's odds but settles at the max-risk payout:
-	// ★0 rolls at a guaranteed 100% while paying GainFor(100/4, 3) = 4
-	want = GainFor(base.ChanceFor(0, base.MaxRisk, base.MaxStars), base.MaxRisk)
-	if res = lose.Resolve(Click{Cap: lose.MaxStars, Card: base.Cards["diamond/holo"]}); !res.Success || res.Gained != want {
-		t.Fatalf("용의 심장 should settle at the max-risk payout %d: %+v", want, res)
+	if res = r.Resolve(Click{Stars: 14, Risk: r.MaxRisk, Cap: r.MaxStars, Card: base.Cards["diamond/holo"]}); res.Success || res.Stars != 14 {
+		t.Fatal("은하 수호 must stop after two rerolls and keep the streak")
 	}
 
 	// Refund is reported so the handler can hand the click back
-	if res = win.Resolve(Click{Cap: win.MaxStars, Card: base.Cards["bronze/common"]}); !res.Refund {
-		t.Fatalf("동전 한 닢 must refund the click: %+v", res)
+	if res = win.Resolve(Click{Cap: win.MaxStars, Card: base.Cards["gold/holo"]}); !res.Refund {
+		t.Fatalf("달빛 수호 must refund the click: %+v", res)
+	}
+
+	// Retired-from-defaults mechanics stay supported for config overrides
+	if res = win.Resolve(Click{Cap: win.MaxStars, Card: CardEffect{Mult: 2}}); res.Gained != 2 {
+		t.Fatalf("×2 mult: %+v", res)
+	}
+	if res = win.Resolve(Click{Stars: 1, Cap: win.MaxStars, Card: CardEffect{TierJump: true}}); res.Stars != 4 {
+		t.Fatalf("tier jump from ★1 should reach silver at ★4, got %d", res.Stars)
+	}
+	if res = lose.Resolve(Click{Cap: lose.MaxStars, Best: 9, Card: CardEffect{Guarantee: true, BestJump: true}}); res.Stars != 9 {
+		t.Fatalf("best jump should restore the personal best, got %d", res.Stars)
+	}
+	if res = lose.Resolve(Click{Stars: 6, Cap: lose.MaxStars, Best: 2, Card: CardEffect{Guarantee: true, BestJump: true}}); res.Stars != 7 {
+		t.Fatalf("best jump must never cut a streak short, got %d", res.Stars)
+	}
+	// MaxRisk keeps the safe click's odds but settles at the max-risk payout:
+	// ★0 rolls at a guaranteed 100% while paying GainFor(100/4, 3) = 4
+	want = GainFor(base.ChanceFor(0, base.MaxRisk, base.MaxStars), base.MaxRisk)
+	if res = lose.Resolve(Click{Cap: lose.MaxStars, Card: CardEffect{MaxRisk: true}}); !res.Success || res.Gained != want {
+		t.Fatalf("max-risk card should settle at the max-risk payout %d: %+v", want, res)
 	}
 }
 

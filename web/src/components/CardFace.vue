@@ -50,7 +50,7 @@ const faceStyle = computed(() => ({
     <div class="text-center">
       <p class="text-sm font-black leading-tight text-zinc-50">{{ name }}</p>
       <p class="text-[11px] font-bold uppercase tracking-widest" :style="{ color: TIER_COLORS[card.tier] }">
-        {{ t('tier')[card.tier] }}
+        {{ t('cardTier')[card.tier] }}
       </p>
     </div>
     <div class="card__shine"></div>

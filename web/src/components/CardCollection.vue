@@ -64,7 +64,7 @@ const owned = computed(() => {
             >
               <span class="text-xl leading-none">{{ CARD_EMOJI[tier][rarity] }}</span>
               <span class="mt-1 text-[9px] font-bold leading-tight" :style="{ color: TIER_COLORS[tier] }">
-                {{ t('tier')[tier] }}
+                {{ t('cardTier')[tier] }}
               </span>
               <span class="text-[8px] uppercase text-slate-400">{{ t('rarity')[rarity] }}</span>
             </div>
