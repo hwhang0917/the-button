@@ -222,6 +222,7 @@ async function onBuy(key: SkillKey) {
       </div>
 
       <button
+        data-space
         class="rounded-lg border border-slate-600 py-2 text-sm text-slate-300 hover:bg-slate-800"
         @click="$emit('close')"
       >

@@ -24,6 +24,7 @@ defineEmits<{ confirm: []; cancel: [] }>()
           {{ cancelLabel }}
         </button>
         <button
+          data-space
           class="flex-1 rounded-lg bg-rose-500 py-2 text-sm font-bold text-white hover:bg-rose-400"
           @click="$emit('confirm')"
         >

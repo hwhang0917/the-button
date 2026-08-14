@@ -159,6 +159,7 @@ function flipAll() {
     </div>
     <button
       v-if="!allFlipped"
+      data-space
       class="rounded-full border border-amber-400/70 px-6 py-1.5 text-sm font-bold text-amber-300 hover:bg-amber-500/20"
       @click="flipAll"
     >
@@ -173,6 +174,7 @@ function flipAll() {
         🎁 {{ t('openAnother') }} (💰{{ cfg().pack.price }})
       </button>
       <button
+        data-space
         class="rounded-full border border-zinc-600 px-6 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800"
         @click="emit('close')"
       >
@@ -185,9 +187,13 @@ function flipAll() {
     class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-black/80 backdrop-blur-sm"
   >
     <p class="text-sm tracking-widest text-zinc-400">{{ t('packTear') }}</p>
+    <!-- tear() self-guards on stage, so the synthetic data-space click can't
+         double-fire after a real pointer tap already tore the pack -->
     <button
+      data-space
       class="pack-seal relative flex h-72 w-52 touch-none select-none flex-col items-center justify-center gap-3 rounded-2xl border-2 border-amber-300/60 bg-gradient-to-b from-indigo-800 via-violet-900 to-zinc-900"
       :class="stage === 'tearing' ? 'pack-tear' : progress ? '' : 'pack-idle cursor-pointer'"
+      @click="tear"
       @pointerdown="onDown"
       @pointermove="onMove"
       @pointerup="onUp"

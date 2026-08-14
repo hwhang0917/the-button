@@ -172,6 +172,7 @@ function onMove(e: PointerEvent) {
         🎫 {{ t('scratchAgain') }} (💰{{ cfg().lottery.price }})
       </button>
       <button
+        data-space
         class="rounded-full border border-zinc-600 px-6 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800"
         @click="$emit('close')"
       >
@@ -182,6 +183,7 @@ function onMove(e: PointerEvent) {
          action under the ticket doesn't jump when the reveal lands -->
     <div v-else class="flex gap-3">
       <button
+        data-space
         class="rounded-full border border-slate-600 px-6 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
         @click="finish"
       >

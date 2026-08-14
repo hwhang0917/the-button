@@ -5,10 +5,9 @@ const dict = {
     subtitle: '강화 클리커 — 어디까지 올라갈 수 있을까?',
     // header ticker — one shows at random and rotates; keep each one-line short
     tips: [
-      '💡 PC에서는 스페이스바로도 버튼을 누를 수 있어요',
+      '💡 단축키: Space 강화·확인 · S 스트릭 판매 · I 아이템 · K 스킬 · 1~4 리스크',
       '💡 리스크 모드는 확률을 나누는 대신 보상이 커져요 — 보상 ≈ 100 ÷ 확률',
       '💡 실패가 무서우면 먼저 스트릭을 판매해 코인으로 바꿔두세요',
-      '💡 같은 카드 3장을 합성하면 상위 등급이 돼요',
       '💡 한 번 발견한 카드는 소모해도 도감에 남아요',
       '💡 부적은 티어 제한 없이 다음 클릭 한 번에 발동해요',
       '💡 프리스티지마다 별 한도 +5, 하루 시간 충전 횟수도 +1!',
@@ -197,6 +196,8 @@ const dict = {
       { title: '황금손', desc: '성공할 때마다 레벨×4% 확률로 현재 별 수만큼 💰를 받아요. 깊은 스트릭일수록 잭팟!' },
       { title: '컬렉션', desc: '카드는 티어×등급 24종, 전부 효과가 달라요! 장착하면 다음 클릭 한 번에 발동합니다 (티어 제한 없음). 3장을 합성해 상위 등급으로 — 발견한 카드는 소모해도 도감에 남아요.' },
       { title: '랭킹', desc: '프리스티지 티어 → 별 순으로 겨뤄요. 최대 별 달성 시 프리스티지로 별 티어를 승급하고 별 한도가 +5 (최대 30) — 한도를 넘긴 별은 💰로!' },
+      // PC-only closing step (startTutorial appends it when no drawer is in play)
+      { title: '⌨️ 단축키', desc: 'Space 강화·팝업 확인 · S 스트릭 판매 · I 아이템 상점 · K 스킬 상점 · 1~4 리스크 · Esc 닫기' },
     ],
     tier: { unrank: '언랭', bronze: '브론즈', silver: '실버', gold: '골드', platinum: '플래티넘', diamond: '다이아몬드' },
     rarity: { common: '커먼', rare: '레어', holo: '홀로', prismatic: '프리즘' },
@@ -204,10 +205,9 @@ const dict = {
   en: {
     subtitle: 'enchant clicker — how far can your streak go?',
     tips: [
-      '💡 On PC you can press the button with the spacebar',
+      '💡 Shortcuts: Space enchant/confirm · S sell streak · I items · K skills · 1-4 risk',
       '💡 Risk mode divides your odds but pays ≈ 100 ÷ chance',
       '💡 Scared of a risky click? Sell your streak for coins first',
-      '💡 Fuse 3 identical cards into the next rarity up',
       '💡 A discovered card stays in your collection even when spent',
       '💡 A talisman fires on your very next click — any tier',
       '💡 Each prestige raises the star cap +5 and adds a daily recharge',
@@ -394,6 +394,7 @@ const dict = {
       { title: 'Golden touch', desc: 'Every success has a level×4% chance to pay 💰 equal to your stars. Deep streaks hit harder!' },
       { title: 'Collection', desc: '24 cards, one per tier × rarity, and every one does something different! Arm one and it fires on your very next click — any tier. Fuse 3 into the next rarity; discovered cards stay in the collection even at ×0.' },
       { title: 'Ranking', desc: 'Ranked by prestige tier → stars. Max your stars and PRESTIGE to promote your star tier and raise the cap by +5 (up to 30) — stars rolled past the cap pay 💰!' },
+      { title: '⌨️ Shortcuts', desc: 'Space enchant / confirm · S sell streak · I item shop · K skill shop · 1-4 risk · Esc close' },
     ],
     tier: { unrank: 'Unrank', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum', diamond: 'Diamond' },
     rarity: { common: 'Common', rare: 'Rare', holo: 'Holo', prismatic: 'Prismatic' },

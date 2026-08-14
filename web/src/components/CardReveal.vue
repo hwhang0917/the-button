@@ -119,6 +119,7 @@ function onPointerUp(e: PointerEvent) {
         🎁 {{ againLabel }}
       </button>
       <button
+        data-space
         class="rounded-full border border-zinc-600 px-6 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800"
         @click="$emit('close')"
       >

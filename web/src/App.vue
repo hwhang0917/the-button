@@ -107,12 +107,15 @@ const TUT_SHOP: Record<string, 'items' | 'skills'> = {
 function startTutorial() {
   localStorage.setItem(TUTORIAL_SEEN_KEY, '1')
   const steps = t('tutorial')
+  // desktops get a closing keyboard-shortcuts step (elementless = centered
+  // popover); phones have no keyboard, so their tour ends one step earlier
+  const sels = drawerVisible() ? TUT_SELECTORS : [...TUT_SELECTORS, '']
   // driver measures a target the moment it highlights it, so each step first
   // puts the UI into the state that target needs — the shop modal for the shop
   // rows, the right drawer on phones — and only then advances. Both are derived
   // from the selector, so reordering the tour cannot desync them.
   const goto = (i: number, move: () => void) => async () => {
-    const sel = TUT_SELECTORS[i] ?? ''
+    const sel = sels[i] ?? ''
     showShop.value = TUT_SHOP[sel] ?? ''
     panel.value = drawerVisible() ? (TUT_PANEL[sel] ?? '') : ''
     await nextTick()
@@ -127,8 +130,8 @@ function startTutorial() {
       showShop.value = ''
       panel.value = ''
     },
-    steps: TUT_SELECTORS.map((element, i) => ({
-      element,
+    steps: sels.map((element, i) => ({
+      element: element || undefined,
       popover: {
         title: steps[i].title,
         description: steps[i].desc,
@@ -462,22 +465,66 @@ setInterval(() => {
   tip.value = (tip.value + 1 + Math.floor(Math.random() * (n - 1))) % n
 }, TIP_MS)
 
-// spacebar = the button, for keyboard players. Silently ignored whenever any
-// overlay could catch the key instead: modals, main-screen confirms, the
-// tutorial, or a focused form control.
-function onSpace(e: KeyboardEvent) {
-  if (e.code !== 'Space' || e.repeat || disabled.value) return
-  if (modalOpen.value || cancelTalismanAsk.value || menuOpen.value) return
+// keyboard shortcuts for the base screen: Space enchants, S opens the streak
+// sale, I/K the item and skill shops, 1-4 pick the risk level, Esc backs out
+// of what a shortcut opened. Ignored whenever another overlay could own the
+// key instead: modals, main-screen confirms, the tutorial, or a form control.
+function onKey(e: KeyboardEvent) {
+  if (e.repeat || e.altKey || e.ctrlKey || e.metaKey) return
   if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+  if (e.key === 'Escape') {
+    showShop.value = ''
+    sellAsk.value = false
+    return
+  }
   if (document.querySelector('.driver-overlay')) return
-  // stops page scroll and keeps a previously-focused button from re-firing
-  e.preventDefault()
-  const r = document.getElementById('tut-button')?.getBoundingClientRect()
-  onPress(r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : { x: innerWidth / 2, y: innerHeight / 2 })
+  if (e.code === 'Space') {
+    // inside an overlay Space means its confirming action — each overlay marks
+    // that button with data-space, and the deepest-stacked one wins
+    const confirmers = document.querySelectorAll<HTMLElement>('[data-space]')
+    if (confirmers.length) {
+      e.preventDefault()
+      confirmers[confirmers.length - 1].click()
+      return
+    }
+  }
+  if (modalOpen.value || cancelTalismanAsk.value || menuOpen.value) return
+  switch (e.code) {
+    case 'Space':
+      if (disabled.value) return
+      // stops page scroll and keeps a previously-focused button from re-firing
+      e.preventDefault()
+      const r = document.getElementById('tut-button')?.getBoundingClientRect()
+      onPress(r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : { x: innerWidth / 2, y: innerHeight / 2 })
+      break
+    case 'KeyS':
+      // mirrors the sell button's disabled state
+      if (streakSellValue.value && !state.value?.win) {
+        sellAsk.value = true
+        play('switch')
+      }
+      break
+    case 'KeyI':
+      showShop.value = 'items'
+      play('switch')
+      break
+    case 'KeyK':
+      showShop.value = 'skills'
+      play('switch')
+      break
+    case 'Digit1':
+    case 'Digit2':
+    case 'Digit3':
+    case 'Digit4': {
+      const lvl = Number(e.code.slice(5)) - 1
+      if (lvl <= cfg().maxRisk) setRisk(lvl)
+      break
+    }
+  }
 }
 
 onMounted(async () => {
-  window.addEventListener('keydown', onSpace)
+  window.addEventListener('keydown', onKey)
   const step = () => loadProgress.value++
   // config first: prices, odds and card effects all read from it, and the
   // whole <main> renders only once `ready` flips, so nothing reads it early
