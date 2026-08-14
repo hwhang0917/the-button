@@ -15,7 +15,8 @@ defineEmits<{ confirm: []; cancel: [] }>()
   >
     <div class="flex w-80 flex-col gap-4 rounded-xl border border-slate-700 bg-slate-900 p-6">
       <h2 class="text-center text-lg font-bold text-slate-100">{{ title }}</h2>
-      <p class="text-center text-sm leading-relaxed text-slate-300">{{ message }}</p>
+<!-- pre-line: callers can shape multi-line messages with \n -->
+      <p class="whitespace-pre-line text-center text-sm leading-relaxed text-slate-300">{{ message }}</p>
       <div class="flex gap-2">
         <button
           class="flex-1 rounded-lg border border-slate-600 py-2 text-sm text-slate-400 hover:bg-slate-800"
