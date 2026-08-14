@@ -1,3 +1,5 @@
+import { ref } from 'vue'
+
 const files = [
   'click', 'fail', 'hover', 'mouseover', 'switch', 'win', 'prestige',
   'scratch', 'shield', 'streak-sell', 'coin-use', 'talisman',
@@ -15,6 +17,13 @@ for (const f of files) {
 }
 
 export const soundCount = files.length
+
+// sound-only mute: haptics keep working — they are the quiet channel
+export const muted = ref(localStorage.getItem('muted') === '1')
+export function toggleMute() {
+  muted.value = !muted.value
+  localStorage.setItem('muted', muted.value ? '1' : '0')
+}
 
 /** Buffers every sound; each resolves on ready, error, or timeout — a stalled
  * download must not hold the loading screen hostage. */
@@ -78,6 +87,7 @@ let playingResult: HTMLAudioElement | null = null
 export function play(name: Sound) {
   const pattern = buzz[name] ?? (name.startsWith('success_') ? 30 : undefined)
   if (pattern) navigator.vibrate?.(pattern)
+  if (muted.value) return
   const base = cache.get(name)
   if (!base) return
   // clone so rapid replays overlap instead of cutting off

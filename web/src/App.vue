@@ -32,7 +32,7 @@ import { driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
 import { t, lang, toggleLang } from './i18n'
 import { theme, toggleTheme } from './theme'
-import { play, preloadAudio, soundCount, vibrate } from './audio'
+import { muted, play, preloadAudio, soundCount, toggleMute, vibrate } from './audio'
 import { burst, confetti } from './particles'
 import { COIN_COLORS, useCoinCounter } from './useCoinCounter'
 import { TIER_COLORS, type Rarity, type Tier } from './tiers'
@@ -670,6 +670,13 @@ onMounted(async () => {
           {{ theme === 'dark' ? '☀️' : '🌙' }}
         </button>
         <button
+          class="hidden h-7 w-7 items-center justify-center rounded-full border border-slate-600 text-xs hover:bg-slate-800 lg:flex"
+          :aria-label="muted ? 'unmute' : 'mute'"
+          @click="toggleMute(); play('switch')"
+        >
+          {{ muted ? '🔇' : '🔊' }}
+        </button>
+        <button
           class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-600 text-lg text-slate-300 hover:bg-slate-800 lg:hidden"
           aria-label="menu"
           @click="navOpen = true; play('switch')"
@@ -701,6 +708,9 @@ onMounted(async () => {
         <button class="nav-item" @click="navTo(toggleLang)">🌐 {{ lang.toUpperCase() }}</button>
         <button class="nav-item" @click="navTo(toggleTheme)">
           {{ theme === 'dark' ? `☀️ ${t('menuLight')}` : `🌙 ${t('menuDark')}` }}
+        </button>
+        <button class="nav-item" @click="toggleMute(); play('switch')">
+          {{ muted ? `🔊 ${t('menuUnmute')}` : `🔇 ${t('menuMute')}` }}
         </button>
       </nav>
     </div>
