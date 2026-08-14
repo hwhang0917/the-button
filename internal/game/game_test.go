@@ -378,9 +378,14 @@ func TestResolveEffects(t *testing.T) {
 		t.Fatalf("×2 card: %+v", res)
 	}
 
-	// Keep holds every star on a fail
-	if res = lose.Resolve(Click{Stars: 14, Cap: lose.MaxStars, Card: base.Cards["bronze/holo"]}); res.Success || res.Stars != 14 {
-		t.Fatalf("불사조 must keep the streak: %+v", res)
+	// Keep holds every star on a fail — and only keep earns the shield message
+	if res = lose.Resolve(Click{Stars: 14, Cap: lose.MaxStars, Card: base.Cards["bronze/holo"]}); res.Success || res.Stars != 14 || !res.Saved {
+		t.Fatalf("불사조 must keep the streak and report the save: %+v", res)
+	}
+	// A chance-only card failing at the head-start floor leaves the stars
+	// untouched anyway; that must not read as a shield save
+	if res = lose.Resolve(Click{Stars: 3, Headstart: 3, Cap: lose.MaxStars, Card: base.Cards["unrank/rare"]}); res.Stars != 3 || res.Saved {
+		t.Fatalf("a chance card at the floor must not claim a save: %+v", res)
 	}
 	// Half rounds up, and never lands below the head-start floor
 	if res = lose.Resolve(Click{Stars: 7, Cap: lose.MaxStars, Card: base.Cards["platinum/common"]}); res.Stars != 4 {

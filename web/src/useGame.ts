@@ -42,6 +42,7 @@ export interface ClickResult {
   quotaLeft: number
   bonusClicks: number
   talismanUsed: boolean
+  saved: boolean
   talismanTier: Tier | ''
   talismanRarity: Rarity | ''
   refund: boolean

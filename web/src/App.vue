@@ -314,7 +314,6 @@ const CLICK_COOLDOWN_MS = 150
 async function onPress(center: { x: number; y: number }) {
   if (busy.value) return
   busy.value = true
-  const starsBefore = state.value?.stars ?? 0
   const result = await click(risk.value)
   setTimeout(() => (busy.value = false), CLICK_COOLDOWN_MS)
   if (!result) return
@@ -337,7 +336,7 @@ async function onPress(center: { x: number; y: number }) {
     play(result.win ? 'win' : `success_${result.tier}`)
     if (result.tierUp && !result.win) vibrate([30, 30, 70]) // richer than the plain success buzz
     if (result.win) confetti()
-  } else if (result.talismanUsed && result.stars > 0 && result.stars === starsBefore) {
+  } else if (result.saved) {
     message.value = t('talismanSaved')
     messageColor.value = 'text-amber-300 light:text-amber-700'
     play('shield')

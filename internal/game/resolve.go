@@ -118,6 +118,7 @@ type Result struct {
 	Win          bool   `json:"win"`
 	Card         *Card  `json:"card"`
 	TalismanUsed bool   `json:"talismanUsed"`
+	Saved        bool   `json:"saved"`   // a keep card held the streak on this fail
 	Refund       bool   `json:"refund"`  // the click is handed back to the quota
 	Jackpot      int    `json:"jackpot"` // coins from overflow and card effects
 }
@@ -158,6 +159,10 @@ func (r Rules) Resolve(c Click) Result {
 			Stars:        newStars,
 			Tier:         r.TierFor(newStars),
 			TalismanUsed: e.Armed(),
+			// only the keep effect earns the shield message — a chance-only card
+			// burning while the streak sits at the head-start floor must not,
+			// even though the stars happen to survive either way
+			Saved:        e.Keep && c.Stars > 0,
 			Refund:       e.Refund,
 			Jackpot:      e.CoinLoss * (c.Stars - newStars),
 		}
