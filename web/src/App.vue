@@ -494,6 +494,7 @@ function onKey(e: KeyboardEvent) {
     showShop.value = ''
     sellAsk.value = false
     navOpen.value = false
+    showTalismanPick.value = false
     return
   }
   if (document.querySelector('.driver-overlay')) return
@@ -530,6 +531,13 @@ function onKey(e: KeyboardEvent) {
     case 'KeyK':
       showShop.value = 'skills'
       play('switch')
+      break
+    case 'KeyT':
+      // mirrors the slot button: only when nothing is armed and not at max stars
+      if (!state.value?.talismanTier && !state.value?.win) {
+        showTalismanPick.value = true
+        play('switch')
+      }
       break
     case 'Digit1':
     case 'Digit2':
