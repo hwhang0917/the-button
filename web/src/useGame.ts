@@ -68,26 +68,37 @@ export const state = ref<GameState | null>(null)
 export const leaderboard = ref<RankEntry[]>([])
 export const cards = ref<OwnedCard[]>([])
 
-/* liveness probe: HEAD on an existing endpoint, no dedicated health route */
-const HEALTH_INTERVAL_MS = 5000
+/* Offline detection is lazy: this is request/response HTTP, not a live
+ * socket, so nothing polls while things work. The banner raises only after a
+ * real action failed to reach the server; a quiet retry loop then clears it
+ * and resyncs. Backgrounded mobile browsers cancel fetches at will — those
+ * must never count as an outage. */
+const RECONNECT_MS = 3000
 export const offline = ref(false)
+let reconnecting = false
 
-async function checkHealth() {
-  if (document.hidden) return // backgrounded browsers cancel fetches; that's not an outage
-  const wasOffline = offline.value
-  try {
-    offline.value = !(await fetch('/api/state', { method: 'HEAD' })).ok
-  } catch {
-    // a probe in flight when the tab hides gets killed mid-request — same false alarm
-    if (!document.hidden) offline.value = true
+function noteOffline() {
+  offline.value = true
+  if (reconnecting) return
+  reconnecting = true
+  const probe = async () => {
+    try {
+      if ((await fetch('/api/state', { method: 'HEAD' })).ok) {
+        offline.value = false
+        reconnecting = false
+        loadState().catch(() => {}) // resync after the outage
+        return
+      }
+    } catch {} // still down (or the tab hid mid-probe) — keep trying
+    setTimeout(probe, RECONNECT_MS)
   }
-  if (wasOffline && !offline.value) loadState() // resync after an outage
+  setTimeout(probe, RECONNECT_MS)
 }
 
+/** No liveness polling anymore — a foregrounded tab just refreshes quietly. */
 export function startHealthCheck() {
-  setInterval(checkHealth, HEALTH_INTERVAL_MS)
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) checkHealth()
+    if (!document.hidden && !offline.value) loadState().catch(() => {})
   })
 }
 
@@ -317,13 +328,19 @@ export async function buySkill(skill: SkillKey): Promise<boolean> {
 
 /** Returns the roll result, or null when out of quota / already won. */
 export async function click(risk: number): Promise<ClickResult | null> {
-  const res = await fetch('/api/click', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ risk }),
-  })
+  let res: Response
+  try {
+    res = await fetch('/api/click', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ risk }),
+    })
+  } catch {
+    noteOffline() // the roll never reached the server — now the banner earns its keep
+    return null
+  }
   if (!res.ok) {
-    await loadState()
+    await loadState().catch(() => {})
     return null
   }
   const result: ClickResult = await res.json()
