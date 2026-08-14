@@ -270,6 +270,13 @@ watch([ready, showNickname], async () => {
   startTutorial()
 })
 const menuOpen = ref(false)
+// mobile hamburger drawer; lg+ shows everything inline and never needs it
+const navOpen = ref(false)
+function navTo(action: () => void) {
+  navOpen.value = false
+  play('switch')
+  action()
+}
 
 // The leaderboard and the collection are reference material, not part of the
 // loop, so on phones they slide in from the right instead of stacking below the
@@ -291,6 +298,7 @@ const modalOpen = computed(() =>
       showLink.value ||
       showShop.value ||
       sellAsk.value ||
+      navOpen.value ||
       showPrivacy.value ||
       showOdds.value ||
       showTalismanPick.value ||
@@ -475,6 +483,7 @@ function onKey(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     showShop.value = ''
     sellAsk.value = false
+    navOpen.value = false
     return
   }
   if (document.querySelector('.driver-overlay')) return
@@ -629,28 +638,62 @@ onMounted(async () => {
         >
           ✏️ {{ t('setName') }}
         </button>
+<!-- utilities stay inline on lg; phones reach them through the hamburger -->
         <button
-          class="flex h-7 w-7 items-center justify-center rounded-full border border-slate-600 text-xs font-bold text-slate-300 hover:bg-slate-800"
+          class="hidden h-7 w-7 items-center justify-center rounded-full border border-slate-600 text-xs font-bold text-slate-300 hover:bg-slate-800 lg:flex"
           aria-label="tutorial"
           @click="startTutorial(); play('switch')"
         >
           ?
         </button>
         <button
-          class="rounded-full border border-slate-600 px-3 py-1 text-xs font-bold text-slate-300 hover:bg-slate-800"
+          class="hidden rounded-full border border-slate-600 px-3 py-1 text-xs font-bold text-slate-300 hover:bg-slate-800 lg:block"
           @click="toggleLang(); play('switch')"
         >
           {{ lang.toUpperCase() }}
         </button>
         <button
-          class="flex h-7 w-7 items-center justify-center rounded-full border border-slate-600 text-xs hover:bg-slate-800"
+          class="hidden h-7 w-7 items-center justify-center rounded-full border border-slate-600 text-xs hover:bg-slate-800 lg:flex"
           :aria-label="theme === 'dark' ? 'light mode' : 'dark mode'"
           @click="toggleTheme(); play('switch')"
         >
           {{ theme === 'dark' ? '☀️' : '🌙' }}
         </button>
+        <button
+          class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-600 text-lg text-slate-300 hover:bg-slate-800 lg:hidden"
+          aria-label="menu"
+          @click="navOpen = true; play('switch')"
+        >
+          ☰
+        </button>
       </div>
     </header>
+
+    <!-- mobile hamburger drawer -->
+    <div v-if="navOpen" class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden" @click="navOpen = false">
+      <nav
+        class="nav-in absolute right-0 top-0 flex h-full w-64 flex-col gap-1.5 border-l border-slate-700 bg-slate-900 p-5"
+        @click.stop
+      >
+        <button
+          class="mb-2 self-end flex h-8 w-8 items-center justify-center rounded-full border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+          :aria-label="t('later')"
+          @click="navOpen = false"
+        >
+          ✕
+        </button>
+        <button class="nav-item" @click="navTo(() => (panel = 'rank'))">🏆 {{ t('leaderboard') }}</button>
+        <button class="nav-item" @click="navTo(() => (panel = 'collection'))">🃏 {{ t('collection') }}</button>
+        <button class="nav-item" @click="navTo(() => (showShop = 'items'))">🎁 {{ t('itemShop') }}</button>
+        <button class="nav-item" @click="navTo(() => (showShop = 'skills'))">📈 {{ t('skillShop') }}</button>
+        <hr class="my-2 border-slate-700/60" />
+        <button class="nav-item" @click="navTo(startTutorial)">❓ {{ t('menuTutorial') }}</button>
+        <button class="nav-item" @click="navTo(toggleLang)">🌐 {{ lang.toUpperCase() }}</button>
+        <button class="nav-item" @click="navTo(toggleTheme)">
+          {{ theme === 'dark' ? `☀️ ${t('menuLight')}` : `🌙 ${t('menuDark')}` }}
+        </button>
+      </nav>
+    </div>
 
     <div v-if="!ready" class="flex flex-col items-center justify-center gap-4 py-32">
       <p class="animate-pulse text-4xl">🔘</p>
@@ -789,14 +832,16 @@ onMounted(async () => {
               >
                 ⭐ {{ t('sellStreak') }} +{{ streakSellValue }}💰
               </button>
+<!-- phones reach the shops through the hamburger; keeping the pills too
+                   was one row of clutter more than the core loop needs -->
               <button
-                class="rounded-full border border-violet-500/40 bg-violet-500/10 px-3 py-1 text-sm font-bold text-violet-300 hover:bg-violet-500/20 light:text-violet-700"
+                class="hidden rounded-full border border-violet-500/40 bg-violet-500/10 px-3 py-1 text-sm font-bold text-violet-300 hover:bg-violet-500/20 light:text-violet-700 lg:block"
                 @click="showShop = 'items'; play('switch')"
               >
                 🎁 {{ t('itemShop') }}
               </button>
               <button
-                class="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 light:text-emerald-700"
+                class="hidden rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 light:text-emerald-700 lg:block"
                 @click="showShop = 'skills'; play('switch')"
               >
                 📈 {{ t('skillShop') }}
@@ -818,23 +863,8 @@ onMounted(async () => {
             <p class="text-xs text-slate-500">{{ t('best') }}: ★{{ state.bestStars }}</p>
           </div>
 
-          <!-- phones: the two reference panels live in drawers, so the core
-               loop above fits without scrolling. lg lays them out as columns
-               and these triggers disappear. -->
-          <div class="flex items-center gap-2 lg:hidden">
-            <button
-              class="rounded-full border border-slate-700 bg-slate-800/60 px-4 py-1 text-xs font-bold text-slate-300 hover:border-slate-500 hover:text-slate-100"
-              @click="panel = 'rank'; play('switch')"
-            >
-              🏆 {{ t('leaderboard') }}
-            </button>
-            <button
-              class="rounded-full border border-slate-700 bg-slate-800/60 px-4 py-1 text-xs font-bold text-slate-300 hover:border-slate-500 hover:text-slate-100"
-              @click="panel = 'collection'; play('switch')"
-            >
-              🃏 {{ t('collection') }}
-            </button>
-          </div>
+          <!-- phones: rankings/collection/shops all live behind the ☰ drawer;
+               lg lays the panels out as grid columns instead -->
         </template>
       </div>
 
