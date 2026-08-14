@@ -276,8 +276,7 @@ watch([ready, showNickname], async () => {
   await nextTick() // the tour targets live inside the v-else main
   startTutorial()
 })
-const menuOpen = ref(false)
-// mobile hamburger drawer; lg+ shows everything inline and never needs it
+// the ☰ drawer: account actions + utilities everywhere, nav entries on phones
 const navOpen = ref(false)
 function navTo(action: () => void) {
   navOpen.value = false
@@ -534,7 +533,7 @@ function onKey(e: KeyboardEvent) {
       return
     }
   }
-  if (modalOpen.value || cancelTalismanAsk.value || menuOpen.value) return
+  if (modalOpen.value || cancelTalismanAsk.value) return
   switch (e.code) {
     case 'Space':
       if (disabled.value) return
@@ -639,83 +638,16 @@ onMounted(async () => {
       {{ t('offline') }}
     </div>
 
+    <!-- one uncluttered header everywhere: identity at a glance, everything
+         actionable behind the ☰ drawer -->
     <header class="flex items-center justify-between px-4 py-3 sm:px-8">
       <h1 class="text-xl font-black tracking-[0.2em] text-slate-100 sm:text-2xl">THE BUTTON</h1>
       <div class="flex items-center gap-3">
-        <div v-if="state?.nickname" class="relative">
-          <button
-            class="max-w-32 truncate text-sm text-slate-400 hover:text-slate-200"
-            @click="menuOpen = !menuOpen"
-          >
-            {{ state.nickname }} ▾
-          </button>
-          <template v-if="menuOpen">
-            <div class="fixed inset-0 z-40" @click="menuOpen = false"></div>
-            <div
-              class="absolute right-0 top-full z-50 mt-1 w-40 overflow-hidden rounded-lg border border-slate-700 bg-slate-900 text-sm shadow-xl"
-            >
-              <button
-                class="block w-full px-3 py-2 text-left text-slate-300 hover:bg-slate-800"
-                @click="menuOpen = false; showNickname = true"
-              >
-                ✏️ {{ t('changeName') }}
-              </button>
-              <button
-                class="block w-full px-3 py-2 text-left text-slate-300 hover:bg-slate-800"
-                @click="menuOpen = false; showLink = true"
-              >
-                🔗 {{ t('linkDevice') }}
-              </button>
-              <button
-                class="block w-full px-3 py-2 text-left text-rose-400 hover:bg-slate-800"
-                @click="menuOpen = false; deleteAsk = true"
-              >
-                🗑️ {{ t('deleteData') }}
-              </button>
-            </div>
-          </template>
-        </div>
+        <span v-if="state?.nickname" class="max-w-32 truncate text-sm text-slate-400">
+          {{ state.nickname }}
+        </span>
         <button
-          v-else-if="state"
-          class="text-sm text-slate-400 hover:text-slate-200"
-          @click="showNickname = true"
-        >
-          ✏️ {{ t('setName') }}
-        </button>
-<!-- utilities stay inline on lg; phones reach them through the hamburger -->
-        <button
-          class="hidden h-7 w-7 items-center justify-center rounded-full border border-slate-600 text-xs font-bold text-slate-300 hover:bg-slate-800 lg:flex"
-          aria-label="tutorial"
-          :title="t('menuTutorial')"
-          @click="startTutorial(); play('switch')"
-        >
-          ?
-        </button>
-        <button
-          class="hidden rounded-full border border-slate-600 px-3 py-1 text-xs font-bold text-slate-300 hover:bg-slate-800 lg:block"
-          :title="t('language')"
-          @click="toggleLang(); play('switch')"
-        >
-          {{ lang.toUpperCase() }}
-        </button>
-        <button
-          class="hidden h-7 w-7 items-center justify-center rounded-full border border-slate-600 text-xs hover:bg-slate-800 lg:flex"
-          :aria-label="theme === 'dark' ? 'light mode' : 'dark mode'"
-          :title="theme === 'dark' ? t('menuLight') : t('menuDark')"
-          @click="toggleTheme(); play('switch')"
-        >
-          {{ theme === 'dark' ? '☀️' : '🌙' }}
-        </button>
-        <button
-          class="hidden h-7 w-7 items-center justify-center rounded-full border border-slate-600 text-xs hover:bg-slate-800 lg:flex"
-          :aria-label="muted ? 'unmute' : 'mute'"
-          :title="muted ? t('menuUnmute') : t('menuMute')"
-          @click="toggleMute(); play('switch')"
-        >
-          {{ muted ? '🔇' : '🔊' }}
-        </button>
-        <button
-          class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-600 text-lg text-slate-300 hover:bg-slate-800 lg:hidden"
+          class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-600 text-lg text-slate-300 hover:bg-slate-800"
           aria-label="menu"
           :title="t('menu')"
           @click="navOpen = true; play('switch')"
@@ -725,25 +657,43 @@ onMounted(async () => {
       </div>
     </header>
 
-    <!-- mobile hamburger drawer -->
-    <div v-if="navOpen" class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden" @click="navOpen = false">
+    <!-- the ☰ drawer: player account actions and utilities on every size,
+         plus the panel/shop entries that only phones lack inline -->
+    <div v-if="navOpen" class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" @click="navOpen = false">
       <nav
-        class="nav-in absolute right-0 top-0 flex h-full w-64 flex-col gap-1.5 border-l border-slate-700 bg-slate-900 p-5"
+        class="nav-in absolute right-0 top-0 flex h-full w-64 flex-col gap-1.5 overflow-y-auto border-l border-slate-700 bg-slate-900 p-5"
         @click.stop
       >
-        <button
-          class="mb-2 self-end flex h-8 w-8 items-center justify-center rounded-full border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-          :aria-label="t('close')"
-          :title="t('close')"
-          @click="navOpen = false"
-        >
-          ✕
-        </button>
-        <button class="nav-item" @click="navTo(() => (panel = 'rank'))">🏆 {{ t('leaderboard') }}</button>
-        <button class="nav-item" @click="navTo(() => (panel = 'collection'))">🃏 {{ t('collection') }}</button>
-        <button class="nav-item" @click="navTo(() => (showShop = 'items'))">🎁 {{ t('itemShop') }}</button>
-        <button class="nav-item" @click="navTo(() => (showShop = 'skills'))">📈 {{ t('skillShop') }}</button>
-        <hr class="my-2 border-slate-700/60" />
+        <div class="mb-2 flex items-center justify-between">
+          <span class="truncate text-sm font-bold text-slate-200">{{ state?.nickname }}</span>
+          <button
+            class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+            :aria-label="t('close')"
+            :title="t('close')"
+            @click="navOpen = false"
+          >
+            ✕
+          </button>
+        </div>
+        <template v-if="state?.nickname">
+          <button class="nav-item" @click="navTo(() => (showNickname = true))">✏️ {{ t('changeName') }}</button>
+          <button class="nav-item" @click="navTo(() => (showLink = true))">🔗 {{ t('linkDevice') }}</button>
+<!-- inline: the .nav-item color rule sits later in the sheet than the
+               tailwind utility, so a class could not win here -->
+          <button class="nav-item" style="color: #fb7185" @click="navTo(() => (deleteAsk = true))">
+            🗑️ {{ t('deleteData') }}
+          </button>
+          <hr class="my-2 border-slate-700/60" />
+        </template>
+<!-- wrapper (not per-button lg:hidden): .nav-item's own display rule
+             sits later in the sheet and would win over the utility -->
+        <div class="contents lg:hidden">
+          <button class="nav-item" @click="navTo(() => (panel = 'rank'))">🏆 {{ t('leaderboard') }}</button>
+          <button class="nav-item" @click="navTo(() => (panel = 'collection'))">🃏 {{ t('collection') }}</button>
+          <button class="nav-item" @click="navTo(() => (showShop = 'items'))">🎁 {{ t('itemShop') }}</button>
+          <button class="nav-item" @click="navTo(() => (showShop = 'skills'))">📈 {{ t('skillShop') }}</button>
+          <hr class="my-2 border-slate-700/60" />
+        </div>
         <button class="nav-item" @click="navTo(startTutorial)">❓ {{ t('menuTutorial') }}</button>
         <button class="nav-item" @click="navTo(toggleLang)">🌐 {{ lang.toUpperCase() }}</button>
         <button class="nav-item" @click="navTo(toggleTheme)">
