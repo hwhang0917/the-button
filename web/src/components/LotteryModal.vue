@@ -133,10 +133,10 @@ function onMove(e: PointerEvent) {
         <p class="text-[10px] uppercase tracking-[0.3em] text-rose-200">THE BUTTON {{ t('lotteryName') }}</p>
       </div>
 
-      <div class="relative mx-4 my-3 h-28 overflow-hidden rounded-lg bg-slate-100">
+      <div class="relative mx-4 my-3 h-28 overflow-hidden rounded-lg bg-zinc-100">
         <div class="flex h-full flex-col items-center justify-center">
           <p v-if="prize > 0" class="text-xs font-bold text-rose-600">{{ tierLabel }}</p>
-          <p class="text-3xl font-black" :class="prize > 0 ? 'text-amber-500' : 'text-slate-500'">
+          <p class="text-3xl font-black" :class="prize > 0 ? 'text-amber-500' : 'text-zinc-500'">
             {{ prize > 0 ? `💰${prize}` : `${t('lotteryLose')} 😢` }}
           </p>
         </div>
@@ -172,7 +172,7 @@ function onMove(e: PointerEvent) {
         🎫 {{ t('scratchAgain') }} (💰{{ cfg().lottery.price }})
       </button>
       <button
-        class="rounded-full border border-slate-600 px-6 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
+        class="rounded-full border border-zinc-600 px-6 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800"
         @click="$emit('close')"
       >
         OK

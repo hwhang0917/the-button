@@ -36,7 +36,7 @@ const groups = computed(() =>
         />
         <span
           class="absolute inset-0 flex items-center justify-center pb-0.5 text-[11px] font-black"
-          :class="filled === GROUP ? 'text-slate-900/80' : 'text-slate-500'"
+          :class="filled === GROUP ? 'text-black/80' : 'text-slate-500'"
         >
           5
         </span>

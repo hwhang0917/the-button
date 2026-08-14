@@ -109,7 +109,7 @@ function onPointerUp(e: PointerEvent) {
         :data-rarity="DATA_RARITY[card.rarity]"
         :style="{ ...vars, ...faceStyle }"
       >
-        <span class="self-end rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-200">
+        <span class="self-end rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-zinc-200">
           {{ t('rarity')[card.rarity] }}
         </span>
         <!-- dark disc keeps the emoji legible: the color-dodge foil stays
@@ -119,11 +119,11 @@ function onPointerUp(e: PointerEvent) {
         >
           {{ CARD_EMOJI[card.tier][card.rarity] }}
         </span>
-        <p class="rounded-lg bg-black/30 px-2 py-1 text-center text-[11px] leading-snug text-slate-100">
+        <p class="rounded-lg bg-black/30 px-2 py-1 text-center text-[11px] leading-snug text-zinc-100">
           🃏 {{ effect }}
         </p>
         <div class="text-center">
-          <p class="text-sm font-black leading-tight text-slate-50">{{ name }}</p>
+          <p class="text-sm font-black leading-tight text-zinc-50">{{ name }}</p>
           <p class="text-[11px] font-bold uppercase tracking-widest" :style="{ color: TIER_COLORS[card.tier] }">
             {{ t('tier')[card.tier] }}
           </p>
@@ -134,7 +134,7 @@ function onPointerUp(e: PointerEvent) {
     </div>
     <div v-if="!drop" class="flex w-72 flex-col gap-2">
       <button
-        class="rounded-lg bg-amber-400 py-2 text-xs font-bold text-slate-900 hover:bg-amber-300 disabled:opacity-40"
+        class="rounded-lg bg-amber-400 py-2 text-xs font-bold text-black hover:bg-amber-300 disabled:opacity-40"
         :disabled="count < 1 || talismanBusy"
         @click="$emit('arm')"
       >
@@ -151,14 +151,14 @@ function onPointerUp(e: PointerEvent) {
         </button>
         <button
           v-if="defuseTarget"
-          class="flex-1 whitespace-nowrap rounded-lg border border-slate-500/60 py-2 text-xs font-bold text-slate-400 hover:bg-slate-700/40 disabled:opacity-40"
+          class="flex-1 whitespace-nowrap rounded-lg border border-zinc-500/60 py-2 text-xs font-bold text-zinc-400 hover:bg-zinc-700/40 disabled:opacity-40"
           :disabled="count < 1"
           @click="$emit('defuse')"
         >
           {{ t('defuse') }} → {{ t('rarity')[defuseTarget] }} ×2
         </button>
       </div>
-      <p class="text-center text-[10px] text-slate-500">
+      <p class="text-center text-[10px] text-zinc-500">
         {{ talismanBusy ? t('talismanArmedHint') : t('talismanNextClick') }}
       </p>
     </div>
@@ -172,7 +172,7 @@ function onPointerUp(e: PointerEvent) {
         🎁 {{ againLabel }}
       </button>
       <button
-        class="rounded-full border border-slate-600 px-6 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
+        class="rounded-full border border-zinc-600 px-6 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800"
         @click="$emit('close')"
       >
         OK

@@ -48,7 +48,7 @@ async function claim() {
       <h2 class="text-center text-lg font-bold text-slate-100">🔗 {{ t('linkTitle') }}</h2>
 
       <div class="flex items-center justify-center gap-2">
-        <p class="font-mono text-2xl font-bold tracking-widest text-yellow-300">{{ myCode }}</p>
+        <p class="font-mono text-2xl font-bold tracking-widest text-yellow-300 light:text-yellow-600">{{ myCode }}</p>
         <button
           type="button"
           class="rounded-md border border-slate-600 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800"
@@ -82,7 +82,7 @@ async function claim() {
         <button
           type="submit"
           :disabled="!code.trim() || claiming"
-          class="flex-1 rounded-lg bg-yellow-400 py-2 text-sm font-bold text-slate-900 hover:bg-yellow-300 disabled:opacity-40"
+          class="flex-1 rounded-lg bg-yellow-400 py-2 text-sm font-bold text-black hover:bg-yellow-300 disabled:opacity-40"
         >
           {{ t('linkSubmit') }}
         </button>

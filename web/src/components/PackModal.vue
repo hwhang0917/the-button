@@ -75,9 +75,9 @@ function next() {
     v-else
     class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-black/80 backdrop-blur-sm"
   >
-    <p class="text-sm tracking-widest text-slate-400">{{ t('packTear') }}</p>
+    <p class="text-sm tracking-widest text-zinc-400">{{ t('packTear') }}</p>
     <button
-      class="pack-seal relative flex h-72 w-52 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-amber-300/60 bg-gradient-to-b from-indigo-800 via-violet-900 to-slate-900"
+      class="pack-seal relative flex h-72 w-52 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-amber-300/60 bg-gradient-to-b from-indigo-800 via-violet-900 to-zinc-900"
       :class="stage === 'tearing' ? 'pack-tear' : 'pack-idle cursor-pointer'"
       @click="tear"
     >

@@ -33,7 +33,7 @@ const { chance: eqChance, roll: eqRoll, gain: eqGain, next: eqNext, jackpot: eqJ
           </tr>
           <tr>
             <td class="pr-2 text-slate-500">base</td>
-            <td v-for="(v, i) in CHANCE_TABLE" :key="i" class="px-1 text-yellow-300">{{ v }}</td>
+            <td v-for="(v, i) in CHANCE_TABLE" :key="i" class="px-1 text-yellow-300 light:text-yellow-700">{{ v }}</td>
           </tr>
         </table>
       </div>

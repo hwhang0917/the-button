@@ -49,7 +49,7 @@ const owned = computed(() => {
             owned.has(`${tier}/${rarity}`)
               ? {
                   borderColor: TIER_COLORS[tier],
-                  background: `linear-gradient(160deg, ${TIER_COLORS[tier]}33, #0f172a)`,
+                  background: `linear-gradient(160deg, ${TIER_COLORS[tier]}33, var(--color-slate-900))`,
                 }
               : {}
           "

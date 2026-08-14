@@ -138,12 +138,12 @@ async function onBuy(key: SkillKey) {
     <div v-if="state" class="flex w-full max-w-sm flex-col gap-4 rounded-xl border border-slate-700 bg-slate-900 p-6">
       <h2 class="text-center text-lg font-bold text-slate-100">
         🛒 {{ t('shop') }}
-        <span ref="coinEl" class="ml-2 font-mono text-yellow-300">💰 {{ shownCoins }}</span>
+        <span ref="coinEl" class="ml-2 font-mono text-yellow-300 light:text-yellow-600">💰 {{ shownCoins }}</span>
       </h2>
 
       <button
         id="tut-shop-sell"
-        class="flex items-center justify-between rounded-lg border border-yellow-500/40 bg-yellow-400/10 px-4 py-2 text-sm font-bold text-yellow-300 hover:bg-yellow-400/20 disabled:opacity-40"
+        class="flex items-center justify-between rounded-lg border border-yellow-500/40 bg-yellow-400/10 px-4 py-2 text-sm font-bold text-yellow-300 hover:bg-yellow-400/20 disabled:opacity-40 light:text-yellow-700"
         :disabled="!sellValue || state.win"
         @click="onSell"
       >
@@ -162,7 +162,7 @@ async function onBuy(key: SkillKey) {
           <p class="text-xs text-slate-500">{{ t('lotteryDesc') }}</p>
         </div>
         <button
-          class="rounded-lg bg-rose-400 px-3 py-1.5 font-mono text-xs font-bold text-slate-900 hover:bg-rose-300 disabled:opacity-40"
+          class="rounded-lg bg-rose-400 px-3 py-1.5 font-mono text-xs font-bold text-black hover:bg-rose-300 disabled:opacity-40"
           :disabled="state.coins < cfg().lottery.price"
           @click="onLottery"
         >
@@ -180,7 +180,7 @@ async function onBuy(key: SkillKey) {
           <p class="text-xs text-slate-500">{{ t('packDesc') }}</p>
         </div>
         <button
-          class="rounded-lg bg-violet-400 px-3 py-1.5 font-mono text-xs font-bold text-slate-900 hover:bg-violet-300 disabled:opacity-40"
+          class="rounded-lg bg-violet-400 px-3 py-1.5 font-mono text-xs font-bold text-black hover:bg-violet-300 disabled:opacity-40"
           :disabled="state.coins < cfg().pack.price"
           @click="onPack"
         >
@@ -198,7 +198,7 @@ async function onBuy(key: SkillKey) {
           <p class="text-xs text-slate-500">{{ state.refillUsed ? t('refillUsed') : t('refillDesc') }}</p>
         </div>
         <button
-          class="rounded-lg bg-emerald-400 px-3 py-1.5 font-mono text-xs font-bold text-slate-900 hover:bg-emerald-300 disabled:opacity-40"
+          class="rounded-lg bg-emerald-400 px-3 py-1.5 font-mono text-xs font-bold text-black hover:bg-emerald-300 disabled:opacity-40"
           :disabled="state.coins < cfg().refillPrice || state.quotaLeft >= state.quota || state.refillUsed"
           @click="onRefill"
         >
@@ -222,7 +222,7 @@ async function onBuy(key: SkillKey) {
             <p class="text-xs text-slate-500">{{ row.desc }}</p>
           </div>
           <button
-            class="rounded-lg bg-yellow-400 px-3 py-1.5 font-mono text-xs font-bold text-slate-900 hover:bg-yellow-300 disabled:opacity-40"
+            class="rounded-lg bg-yellow-400 px-3 py-1.5 font-mono text-xs font-bold text-black hover:bg-yellow-300 disabled:opacity-40"
             :disabled="row.capped || state.coins < row.price"
             @click="onBuy(row.key)"
           >

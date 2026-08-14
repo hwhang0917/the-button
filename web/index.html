@@ -1,6 +1,13 @@
 <!doctype html>
 <html lang="ko">
   <head>
+    <!-- before first paint so the wrong theme never flashes:
+         explicit toggle choice (localStorage) beats the OS preference -->
+    <script>
+      document.documentElement.dataset.theme =
+        localStorage.getItem('theme') ||
+        (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+    </script>
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />

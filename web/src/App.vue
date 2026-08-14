@@ -27,6 +27,7 @@ import { defineAsyncComponent, nextTick, watch } from 'vue'
 import { driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
 import { t, lang, toggleLang } from './i18n'
+import { theme, toggleTheme } from './theme'
 import { play, preloadAudio, soundCount, vibrate } from './audio'
 import { burst, confetti } from './particles'
 import { COIN_COLORS, useCoinCounter } from './useCoinCounter'
@@ -265,7 +266,7 @@ async function onPrestige() {
   const gained = await prestigeStreak()
   if (gained === null) return
   message.value = `${t('prestigeDone')} +${gained}💰`
-  messageColor.value = 'text-fuchsia-300'
+  messageColor.value = 'text-fuchsia-300 light:text-fuchsia-700'
   play('win')
   confetti()
   burst(window.innerWidth / 2, window.innerHeight / 2, COIN_COLORS, 80)
@@ -329,21 +330,23 @@ async function onPress(center: { x: number; y: number }) {
       message.value += ` 💰+${result.jackpot}`
       burst(center.x, center.y - 60, COIN_COLORS, 80)
     }
-    messageColor.value = result.win ? 'text-yellow-300' : 'text-emerald-400'
+    messageColor.value = result.win
+      ? 'text-yellow-300 light:text-yellow-600'
+      : 'text-emerald-400 light:text-emerald-600'
     burst(center.x, center.y, [TIER_COLORS[result.tier], '#ffffff', '#facc15'], result.tierUp ? 120 : 60)
     play(result.win ? 'win' : `success_${result.tier}`)
     if (result.tierUp && !result.win) vibrate([30, 30, 70]) // richer than the plain success buzz
     if (result.win) confetti()
   } else if (result.talismanUsed && result.stars > 0 && result.stars === starsBefore) {
     message.value = t('talismanSaved')
-    messageColor.value = 'text-amber-300'
+    messageColor.value = 'text-amber-300 light:text-amber-700'
     play('shield')
     vibrate([30, 40, 60]) // "phew" double-pulse for a save
     saveFlash.value = true
     setTimeout(() => (saveFlash.value = false), 900)
   } else {
     message.value = t('fail')
-    messageColor.value = 'text-rose-400'
+    messageColor.value = 'text-rose-400 light:text-rose-600'
     play('fail')
     shaking.value = true
     flashing.value = true
@@ -403,7 +406,7 @@ onMounted(async () => {
 
     <div
       v-if="state?.devMode"
-      class="fixed inset-x-0 top-0 z-50 bg-amber-400 py-0.5 text-center text-[11px] font-black tracking-widest text-slate-900"
+      class="fixed inset-x-0 top-0 z-50 bg-amber-400 py-0.5 text-center text-[11px] font-black tracking-widest text-black"
     >
       ⚠ DEV MODE — 100% SUCCESS
     </div>
@@ -417,7 +420,7 @@ onMounted(async () => {
     </div>
 
     <header class="flex items-center justify-between px-4 py-3 sm:px-8">
-      <h1 class="text-xl font-black tracking-[0.2em] text-white sm:text-2xl">THE BUTTON</h1>
+      <h1 class="text-xl font-black tracking-[0.2em] text-slate-100 sm:text-2xl">THE BUTTON</h1>
       <div class="flex items-center gap-3">
         <div v-if="state?.nickname" class="relative">
           <button
@@ -471,6 +474,13 @@ onMounted(async () => {
           @click="toggleLang(); play('switch')"
         >
           {{ lang === 'ko' ? 'EN' : '한국어' }}
+        </button>
+        <button
+          class="flex h-7 w-7 items-center justify-center rounded-full border border-slate-600 text-xs hover:bg-slate-800"
+          :aria-label="theme === 'dark' ? 'light mode' : 'dark mode'"
+          @click="toggleTheme(); play('switch')"
+        >
+          {{ theme === 'dark' ? '☀️' : '🌙' }}
         </button>
       </div>
     </header>
@@ -533,7 +543,7 @@ onMounted(async () => {
             </button>
             <button
               v-else
-              class="inline-flex items-center gap-1.5 rounded-full border border-dashed border-amber-400/50 bg-amber-400/5 px-4 py-1 text-sm font-bold text-amber-300/80 hover:border-amber-400 hover:bg-amber-400/15 hover:text-amber-200"
+              class="inline-flex items-center gap-1.5 rounded-full border border-dashed border-amber-400/50 bg-amber-400/5 px-4 py-1 text-sm font-bold text-amber-300/80 hover:border-amber-400 hover:bg-amber-400/15 hover:text-amber-200 light:text-amber-700 light:hover:text-amber-800"
               :title="t('talismanPick')"
               @click="showTalismanPick = true; play('switch')"
             >
@@ -596,7 +606,7 @@ onMounted(async () => {
           <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
             <button
               id="tut-shop"
-              class="rounded-full border border-yellow-500/40 bg-yellow-400/10 px-4 py-1 text-sm font-bold text-yellow-300 hover:bg-yellow-400/20"
+              class="rounded-full border border-yellow-500/40 bg-yellow-400/10 px-4 py-1 text-sm font-bold text-yellow-300 hover:bg-yellow-400/20 light:text-yellow-700"
               @click="showShop = true; play('switch')"
             >
               🛒 {{ t('shop') }} · 💰 {{ shownCoins }}

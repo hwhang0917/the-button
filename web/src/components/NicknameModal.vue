@@ -61,7 +61,7 @@ async function submit() {
         <button
           type="submit"
           :disabled="!valid || saving"
-          class="flex-1 rounded-lg bg-yellow-400 py-2 text-sm font-bold text-slate-900 hover:bg-yellow-300 disabled:opacity-40"
+          class="flex-1 rounded-lg bg-yellow-400 py-2 text-sm font-bold text-black hover:bg-yellow-300 disabled:opacity-40"
         >
           {{ t('save') }}
         </button>

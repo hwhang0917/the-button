@@ -1,9 +1,40 @@
 @import 'tailwindcss';
 
-/* solid dark on the root so mobile overscroll never flashes white */
+/* opt-in variant for the few accent spots the slate mirror below can't cover */
+@custom-variant light ([data-theme='light'] &);
+
+:root {
+  /* page ground + wallpaper tint travel as a pair when the theme flips */
+  --page-bg: #060814;
+  --wall-tint: 6, 8, 20;
+}
+
+/* Light mode: the UI is written in dark-theme slate utilities, and Tailwind v4
+   compiles those to var(--color-slate-*) — so light mode is the same ladder
+   mirrored (950↔50, 900↔100, …) instead of a second set of classes on every
+   element. index.html sets data-theme before first paint (localStorage choice
+   beats prefers-color-scheme). Spots that must NOT flip (dark text on accent
+   buttons, the holo card face) use black/zinc or a light: variant instead. */
+[data-theme='light'] {
+  --page-bg: #eef2f7;
+  --wall-tint: 238, 242, 247;
+  --color-slate-50: #020617;
+  --color-slate-100: #0f172a;
+  --color-slate-200: #1e293b;
+  --color-slate-300: #334155;
+  --color-slate-400: #475569;
+  --color-slate-500: #64748b;
+  --color-slate-600: #94a3b8;
+  --color-slate-700: #cbd5e1;
+  --color-slate-800: #e2e8f0;
+  --color-slate-900: #f1f5f9;
+  --color-slate-950: #f8fafc;
+}
+
+/* solid ground on the root so mobile overscroll never flashes the wrong color */
 html,
 body {
-  background: #060814;
+  background: var(--page-bg);
   /* the fail shake translates the whole page; clip the horizontal spill so
      it never spawns a scrollbar (clip ≠ hidden: no scroll container) */
   overflow-x: clip;
@@ -22,8 +53,8 @@ body {
   max-width: 20rem;
   overflow-y: auto;
   overscroll-behavior: contain;
-  border-left: 1px solid #334155;
-  background: #020617;
+  border-left: 1px solid var(--color-slate-700);
+  background: var(--color-slate-950);
   padding: 3.5rem 1rem 1rem;
   transform: translateX(100%);
   transition: transform 0.2s ease;
@@ -59,7 +90,7 @@ body::before {
   inset: 0;
   z-index: -1;
   background:
-    linear-gradient(rgba(6, 8, 20, 0.82), rgba(6, 8, 20, 0.92)),
+    linear-gradient(rgba(var(--wall-tint), 0.82), rgba(var(--wall-tint), 0.92)),
     url('/wallpaper.jpg') center / cover no-repeat;
 }
 

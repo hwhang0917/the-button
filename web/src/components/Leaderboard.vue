@@ -37,14 +37,14 @@ const skin = (prestige: number) => `star-r${Math.min(prestige, cfg().prestigeSki
               <!-- ×N, not -N: a leading minus read as a negative number -->
               <span
                 v-if="lap(e.prestige) > 1"
-                class="font-mono text-[10px] font-bold text-fuchsia-300"
+                class="font-mono text-[10px] font-bold text-fuchsia-300 light:text-fuchsia-700"
               >
                 ×{{ lap(e.prestige) }}
               </span>
             </span>
           </div>
         </div>
-        <span class="shrink-0 self-center font-mono text-sm font-bold text-yellow-400">
+        <span class="shrink-0 self-center font-mono text-sm font-bold text-yellow-400 light:text-yellow-600">
           ★{{ e.stars }}
         </span>
       </li>
