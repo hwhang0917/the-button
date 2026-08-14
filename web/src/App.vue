@@ -110,6 +110,12 @@ function startTutorial() {
   // desktops get a closing keyboard-shortcuts step (elementless = centered
   // popover); phones have no keyboard, so their tour ends one step earlier
   const sels = drawerVisible() ? TUT_SELECTORS : [...TUT_SELECTORS, '']
+  // that closing step renders as keycap rows instead of a prose description
+  const KEY_STEP = TUT_SELECTORS.length
+  const keyGuideHtml = () =>
+    t('keyGuide')
+      .map(([k, d]) => `<div class="key-row"><kbd>${k}</kbd><span>${d}</span></div>`)
+      .join('')
   // driver measures a target the moment it highlights it, so each step first
   // puts the UI into the state that target needs — the shop modal for the shop
   // rows, the right drawer on phones — and only then advances. Both are derived
@@ -134,7 +140,8 @@ function startTutorial() {
       element: element || undefined,
       popover: {
         title: steps[i].title,
-        description: steps[i].desc,
+        description: i === KEY_STEP ? keyGuideHtml() : steps[i].desc,
+        popoverClass: i === KEY_STEP ? 'tut-keys' : undefined,
         onNextClick: goto(i + 1, () => d.moveNext()),
         onPrevClick: goto(i - 1, () => d.movePrevious()),
       },
