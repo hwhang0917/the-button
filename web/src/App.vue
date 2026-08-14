@@ -498,6 +498,32 @@ function onKey(e: KeyboardEvent) {
     return
   }
   if (document.querySelector('.driver-overlay')) return
+  // S/I/K/T are toggles: the same key closes the window it opened. The sell
+  // confirm is itself the top layer; the others stand down while a deeper
+  // z-50 overlay (pack, lottery, a confirm) rides on top of them.
+  if (e.code === 'KeyS' && sellAsk.value) {
+    sellAsk.value = false
+    play('switch')
+    return
+  }
+  // inset-0 keeps banners (dev ribbon) from counting as overlays
+  if (!document.querySelector('.fixed.inset-0.z-50')) {
+    if (e.code === 'KeyI' && showShop.value === 'items') {
+      showShop.value = ''
+      play('switch')
+      return
+    }
+    if (e.code === 'KeyK' && showShop.value === 'skills') {
+      showShop.value = ''
+      play('switch')
+      return
+    }
+    if (e.code === 'KeyT' && showTalismanPick.value) {
+      showTalismanPick.value = false
+      play('switch')
+      return
+    }
+  }
   if (e.code === 'Space') {
     // inside an overlay Space means its confirming action — each overlay marks
     // that button with data-space, and the deepest-stacked one wins
