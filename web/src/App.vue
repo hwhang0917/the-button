@@ -52,7 +52,7 @@ const OddsModal = defineAsyncComponent(() => import('./components/OddsModal.vue'
 import TalismanPicker from './components/TalismanPicker.vue'
 import ConfirmModal from './components/ConfirmModal.vue'
 
-const IMAGE_ASSETS = ['/wallpaper.jpg', '/star.png', '/stich.gif']
+const IMAGE_ASSETS = ['/wallpaper.jpg', '/star.png']
 const AUDIO_PRELOAD_TIMEOUT_MS = 4000
 // images + sounds + the three initial API calls
 const loadTotal = IMAGE_ASSETS.length + soundCount + 3
@@ -339,7 +339,9 @@ async function onPrestige() {
   message.value = `${t('prestigeDone')} +${gained}💰`
   messageColor.value = 'text-fuchsia-300 light:text-fuchsia-700'
   play('win')
+  // double wave so the promotion reads as a real celebration
   confetti()
+  setTimeout(confetti, 450)
   burst(window.innerWidth / 2, window.innerHeight / 2, COIN_COLORS, 80)
 }
 
@@ -901,13 +903,6 @@ onMounted(async () => {
         {{ t('privacy') }}
       </button>
     </footer>
-
-    <img
-      v-if="ready && state && state.stars >= 13"
-      src="/stich.gif"
-      alt="pet"
-      class="pet-bounce fixed bottom-4 right-4 z-20 h-24 w-24 object-contain drop-shadow-[0_0_15px_#a78bfa]"
-    />
 
     <CardReveal v-if="droppedCard" :card="droppedCard" @close="droppedCard = null" />
     <CardReveal

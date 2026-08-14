@@ -136,14 +136,6 @@ body::before {
   animation: star-pop 0.35s ease-out;
 }
 
-@keyframes pet-bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-12px); }
-}
-.pet-bounce {
-  animation: pet-bounce 1.6s ease-in-out infinite;
-}
-
 @keyframes card-in {
   0% { transform: rotateY(90deg) scale(0.6); opacity: 0; }
   100% { transform: rotateY(0deg) scale(1); opacity: 1; }
