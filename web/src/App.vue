@@ -652,12 +652,14 @@ onMounted(async () => {
         <button
           class="hidden h-7 w-7 items-center justify-center rounded-full border border-slate-600 text-xs font-bold text-slate-300 hover:bg-slate-800 lg:flex"
           aria-label="tutorial"
+          :title="t('menuTutorial')"
           @click="startTutorial(); play('switch')"
         >
           ?
         </button>
         <button
           class="hidden rounded-full border border-slate-600 px-3 py-1 text-xs font-bold text-slate-300 hover:bg-slate-800 lg:block"
+          :title="t('language')"
           @click="toggleLang(); play('switch')"
         >
           {{ lang.toUpperCase() }}
@@ -665,6 +667,7 @@ onMounted(async () => {
         <button
           class="hidden h-7 w-7 items-center justify-center rounded-full border border-slate-600 text-xs hover:bg-slate-800 lg:flex"
           :aria-label="theme === 'dark' ? 'light mode' : 'dark mode'"
+          :title="theme === 'dark' ? t('menuLight') : t('menuDark')"
           @click="toggleTheme(); play('switch')"
         >
           {{ theme === 'dark' ? '☀️' : '🌙' }}
@@ -672,6 +675,7 @@ onMounted(async () => {
         <button
           class="hidden h-7 w-7 items-center justify-center rounded-full border border-slate-600 text-xs hover:bg-slate-800 lg:flex"
           :aria-label="muted ? 'unmute' : 'mute'"
+          :title="muted ? t('menuUnmute') : t('menuMute')"
           @click="toggleMute(); play('switch')"
         >
           {{ muted ? '🔇' : '🔊' }}
@@ -679,6 +683,7 @@ onMounted(async () => {
         <button
           class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-600 text-lg text-slate-300 hover:bg-slate-800 lg:hidden"
           aria-label="menu"
+          :title="t('menu')"
           @click="navOpen = true; play('switch')"
         >
           ☰
@@ -694,7 +699,8 @@ onMounted(async () => {
       >
         <button
           class="mb-2 self-end flex h-8 w-8 items-center justify-center rounded-full border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-          :aria-label="t('later')"
+          :aria-label="t('close')"
+          :title="t('close')"
           @click="navOpen = false"
         >
           ✕
@@ -737,7 +743,8 @@ onMounted(async () => {
       <aside class="drawer lg:order-1" :class="{ open: panel === 'rank' }">
         <button
           class="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100 lg:hidden"
-          :aria-label="t('later')"
+          :aria-label="t('close')"
+          :title="t('close')"
           @click="panel = ''"
         >
           ✕
@@ -844,6 +851,7 @@ onMounted(async () => {
                       : 'text-slate-400 hover:bg-slate-800'
                   "
                   :disabled="state.win"
+                  :title="lvl === 1 ? 'OFF' : `${t('chance')} 1/${lvl}`"
                   @click="setRisk(lvl - 1)"
                 >
                   {{ lvl === 1 ? 'OFF' : '🔥'.repeat(lvl - 1) }}
@@ -913,7 +921,8 @@ onMounted(async () => {
       <aside class="drawer lg:order-3" :class="{ open: panel === 'collection' }">
         <button
           class="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100 lg:hidden"
-          :aria-label="t('later')"
+          :aria-label="t('close')"
+          :title="t('close')"
           @click="panel = ''"
         >
           ✕
@@ -928,6 +937,7 @@ onMounted(async () => {
         target="_blank"
         rel="noopener"
         aria-label="GitHub"
+        title="GitHub"
         class="hover:text-slate-300"
       >
         <svg viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5" aria-hidden="true">
