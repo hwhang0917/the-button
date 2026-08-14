@@ -792,7 +792,7 @@ onMounted(async () => {
 
         <template v-if="state">
           <!-- one compact status row keeps the core info above the fold on phones -->
-          <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+          <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2.5">
             <TierBadge :tier="state.tier" />
             <StarRow :stars="state.stars" :prestige="state.prestige" :max="state.maxStars" />
             <!-- the talisman slot sits at TierBadge's size so the row reads as
