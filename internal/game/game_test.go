@@ -192,6 +192,20 @@ func TestEffChance(t *testing.T) {
 	}
 }
 
+func TestCardSell(t *testing.T) {
+	r := Default()
+	if v, ok := r.SellValueFor("holo"); !ok || v != 18 {
+		t.Fatalf("holo sell = %d %v, want 18", v, ok)
+	}
+	if _, ok := r.SellValueFor("mythic"); ok {
+		t.Fatal("an unknown rarity must not price")
+	}
+	r.CardSell = []int{1, 2}
+	if err := r.Validate(); err == nil {
+		t.Fatal("a card_sell shorter than the rarity ladder must fail validation")
+	}
+}
+
 func TestPriceLadders(t *testing.T) {
 	r := Default()
 	for _, s := range []Skill{r.Charm, r.Headstart} {

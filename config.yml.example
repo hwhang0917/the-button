@@ -109,6 +109,11 @@ economy:
   fuse_cost: 3
   defuse_yield: 2
 
+  # coins for selling one card, weakest rarity first. ×3 per step keeps selling
+  # fusion-neutral; keep the pack-weighted average well under price-per-card or
+  # buying packs to sell them becomes a coin printer
+  card_sell: [2, 6, 18, 54]
+
   # one-time refund per unspent charge of the retired 🛡️ protection scroll
   retired_shield_refund: 25
 

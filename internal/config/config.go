@@ -101,10 +101,11 @@ type economyFile struct {
 		TierPermille   map[string]int `yaml:"tier_permille"`
 		RarityPermille map[string]int `yaml:"rarity_permille"`
 	} `yaml:"pack"`
-	RefillPrice         int `yaml:"refill_price"`
-	FuseCost            int `yaml:"fuse_cost"`
-	DefuseYield         int `yaml:"defuse_yield"`
-	RetiredShieldRefund int `yaml:"retired_shield_refund"`
+	RefillPrice         int   `yaml:"refill_price"`
+	FuseCost            int   `yaml:"fuse_cost"`
+	DefuseYield         int   `yaml:"defuse_yield"`
+	CardSell            []int `yaml:"card_sell"`
+	RetiredShieldRefund int   `yaml:"retired_shield_refund"`
 }
 
 // Load resolves defaults → config.yml → env. A missing file is fine; a
@@ -182,6 +183,7 @@ func defaultFile() file {
 	f.Economy.RefillPrice = r.RefillPrice
 	f.Economy.FuseCost = r.FuseCost
 	f.Economy.DefuseYield = r.DefuseYield
+	f.Economy.CardSell = r.CardSell
 	f.Economy.RetiredShieldRefund = r.RetiredShieldRefund
 
 	f.Cards = r.Cards
@@ -261,6 +263,7 @@ func (f file) toConfig() Config {
 			RefillPrice:         f.Economy.RefillPrice,
 			FuseCost:            f.Economy.FuseCost,
 			DefuseYield:         f.Economy.DefuseYield,
+			CardSell:            f.Economy.CardSell,
 			RetiredShieldRefund: f.Economy.RetiredShieldRefund,
 			Quota:               f.Game.Quota,
 			RNG:                 rng,

@@ -82,7 +82,7 @@ func TestConfigEndpoint(t *testing.T) {
 		"chanceTable", "maxRisk", "maxStars", "prestigeStarBonus", "prestigeSkinCap",
 		"prestigeRewards", "overflowCoinPer", "tiers", "rarities", "cards",
 		"charm", "headstart", "lottery", "pack", "refillPrice", "fuseCost",
-		"defuseYield", "nickname",
+		"defuseYield", "cardSell", "nickname",
 	} {
 		if _, ok := got[key]; !ok {
 			t.Errorf("missing %q — the client reads it", key)

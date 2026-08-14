@@ -19,6 +19,7 @@ import {
   prestigeReward,
   prestigeStreak,
   refillAt,
+  sellCard,
   startHealthCheck,
   state,
   talismanBonus,
@@ -184,6 +185,30 @@ async function confirmDefuse() {
     vibrate([25, 20, 15]) // decaying pulse: something broke apart
     viewedCard.value = { tier: d.tier, rarity: d.lower }
   }
+}
+
+// selling the last copy empties the collection slot, so only that asks first
+const sellCardAsk = ref<{ tier: Tier; rarity: Rarity } | null>(null)
+
+function onSellCard() {
+  const v = viewedCard.value
+  if (!v) return
+  if (viewedCount.value === 1) sellCardAsk.value = { tier: v.tier, rarity: v.rarity }
+  else doSellCard(v.tier, v.rarity)
+}
+
+async function confirmSellCard() {
+  const d = sellCardAsk.value
+  sellCardAsk.value = null
+  if (d) await doSellCard(d.tier, d.rarity)
+}
+
+async function doSellCard(tier: Tier, rarity: Rarity) {
+  const gained = await sellCard(tier, rarity)
+  if (gained === null) return
+  play('streak-sell')
+  vibrate([15, 20, 30])
+  burst(window.innerWidth / 2, window.innerHeight / 2 - 40, COIN_COLORS, Math.min(80, 20 + gained))
 }
 
 async function onFuse() {
@@ -730,6 +755,7 @@ onMounted(async () => {
       @arm="onArm"
       @fuse="onFuse"
       @defuse="onDefuse"
+      @sell="onSellCard"
     />
     <NicknameModal
       v-if="ready && showNickname"
@@ -740,6 +766,15 @@ onMounted(async () => {
     <ShopModal v-if="showShop" @close="showShop = false" />
     <OddsModal v-if="showOdds" @close="showOdds = false" />
     <TalismanPicker v-if="showTalismanPick" @close="showTalismanPick = false" />
+    <ConfirmModal
+      v-if="sellCardAsk"
+      :title="`💰 ${t('sellCard')}`"
+      :message="t('sellCardConfirm')"
+      :confirm-label="t('sellCard')"
+      :cancel-label="t('later')"
+      @confirm="confirmSellCard"
+      @cancel="sellCardAsk = null"
+    />
     <ConfirmModal
       v-if="defuseAsk"
       :title="`⚠️ ${t('defuse')}`"

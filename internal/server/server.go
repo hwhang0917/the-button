@@ -87,6 +87,7 @@ func (s *Server) Handler(dist fs.FS) http.Handler {
 	mux.HandleFunc("POST /api/talisman/cancel", s.handleTalismanCancel)
 	mux.HandleFunc("POST /api/fuse", s.handleFuse)
 	mux.HandleFunc("POST /api/defuse", s.handleDefuse)
+	mux.HandleFunc("POST /api/card/sell", s.handleSellCard)
 	mux.HandleFunc("POST /api/buy", s.handleBuy)
 	mux.HandleFunc("POST /api/link/new", s.handleLinkNew)
 	mux.HandleFunc("POST /api/link/claim", s.handleLinkClaim)

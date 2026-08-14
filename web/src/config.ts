@@ -38,6 +38,7 @@ export interface ServerConfig {
   tiers: { name: Tier; minStars: number }[]
   rarities: Rarity[]
   cards: Record<string, CardEffect>
+  cardSell: number[]
   charm: { bonusPct: number; prices: number[] }
   headstart: { bonusPct: number; prices: number[] }
   stamina: { bonusPct: number; prices: number[] }

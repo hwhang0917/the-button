@@ -221,6 +221,25 @@ export async function fuseCards(tier: Tier, rarity: Rarity): Promise<boolean> {
   return res.ok
 }
 
+/** Sells one copy of a card for its rarity's price. Returns coins gained. */
+export async function sellCard(tier: Tier, rarity: Rarity): Promise<number | null> {
+  const res = await fetch('/api/card/sell', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tier, rarity }),
+  })
+  if (!res.ok) return null
+  const d = await res.json()
+  if (state.value) state.value.coins = d.coins
+  await loadCards()
+  return d.gained
+}
+
+/** A card's sell price from the config's rarity ladder. */
+export function sellValue(rarity: Rarity): number {
+  return cfg().cardSell[RARITIES.indexOf(rarity)] ?? 0
+}
+
 /** Fusion target one rarity up; null at the top of the ladder. */
 export function nextRarity(r: Rarity): Rarity | null {
   const i = RARITIES.indexOf(r)

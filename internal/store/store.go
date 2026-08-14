@@ -437,6 +437,29 @@ func (s *Store) FuseCards(token, tier, rarity, next string, cost int) (bool, err
 	return true, tx.Commit()
 }
 
+// sellCard trades one copy of a card for coins. The guarded decrement is the
+// ownership check; the count-0 row survives as the "discovered" marker.
+func (s *Store) SellCard(token, tier, rarity string, gain int) (bool, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(`UPDATE cards SET count = count - 1
+		WHERE player_token = ? AND tier = ? AND rarity = ? AND count >= 1`, token, tier, rarity)
+	if err != nil {
+		return false, err
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return false, nil
+	}
+	if _, err := tx.Exec(`UPDATE players SET coins = coins + ?, updated_at = ? WHERE token = ?`,
+		gain, time.Now(), token); err != nil {
+		return false, err
+	}
+	return true, tx.Commit()
+}
+
 type OwnedCard struct {
 	Tier   string `json:"tier"`
 	Rarity string `json:"rarity"`

@@ -391,6 +391,39 @@ func (s *Server) handleFuse(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
+// handleSellCard trades one copy of a collected card for its rarity's coin price.
+func (s *Server) handleSellCard(w http.ResponseWriter, r *http.Request) {
+	rules := s.cfg.Rules
+	p, ok := s.player(w, r)
+	if !ok {
+		return
+	}
+	var body struct {
+		Tier   string `json:"tier"`
+		Rarity string `json:"rarity"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_json")
+		return
+	}
+	gain, ok2 := rules.SellValueFor(body.Rarity)
+	if !ok2 || !rules.ValidTier(body.Tier) {
+		writeError(w, http.StatusBadRequest, "cannot_sell")
+		return
+	}
+	sold, err := s.store.SellCard(p.Token, body.Tier, body.Rarity, gain)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "db")
+		return
+	}
+	if !sold {
+		writeError(w, http.StatusConflict, "cannot_sell")
+		return
+	}
+	s.events.Log("card_sell", events.PID(p.Token), map[string]any{"tier": body.Tier, "rarity": body.Rarity, "gain": gain})
+	writeJSON(w, http.StatusOK, map[string]int{"coins": p.Coins + gain, "gained": gain})
+}
+
 // handlePack sells one card pack: 1-3 cards, any tier, higher tiers rarer.
 // Packs are the only source of cards.
 func (s *Server) handlePack(w http.ResponseWriter, r *http.Request) {

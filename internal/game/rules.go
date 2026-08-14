@@ -85,6 +85,9 @@ type Rules struct {
 	FuseCost    int `json:"fuseCost"`
 	DefuseYield int `json:"defuseYield"`
 
+	// CardSell[i] is the coin payout for selling one card of Rarities[i].
+	CardSell []int `json:"cardSell"`
+
 	// RetiredShieldRefund is what the removed 🛡️ protection scroll used to
 	// cost; the store bootstrap pays it back per unspent charge exactly once.
 	RetiredShieldRefund int `json:"-"`
@@ -140,6 +143,11 @@ func Default() Rules {
 		RefillPrice:         60,
 		FuseCost:            3,
 		DefuseYield:         2,
+		// ×3 per step matches FuseCost, so selling is fusion-neutral (3 commons
+		// sell for exactly one rare) and defuse-then-sell stays lossy. Keep the
+		// weighted pack EV (~6.5/card at default weights) well under the pack
+		// price per card (~18.2), or buy-pack-then-sell becomes a coin printer.
+		CardSell: []int{2, 6, 18, 54},
 		RetiredShieldRefund: 25,
 		Quota:               10,
 		RNG:                 CryptoRNG{},
@@ -261,7 +269,29 @@ func (r Rules) Validate() error {
 	if r.DefuseYield < 1 || r.DefuseYield >= r.FuseCost {
 		return fmt.Errorf("economy.defuse_yield must be 1..%d so fusing stays lossy, got %d", r.FuseCost-1, r.DefuseYield)
 	}
+	if len(r.CardSell) != len(r.Rarities) {
+		return fmt.Errorf("economy.card_sell has %d prices, want one per rarity (%d)", len(r.CardSell), len(r.Rarities))
+	}
+	for i, price := range r.CardSell {
+		if price < 0 {
+			return fmt.Errorf("economy.card_sell[%d] must not be negative, got %d", i, price)
+		}
+		if i > 0 && price < r.CardSell[i-1] {
+			return fmt.Errorf("economy.card_sell must not descend: %d follows %d", price, r.CardSell[i-1])
+		}
+	}
 	return nil
+}
+
+// SellValueFor is the coin payout for selling one card of the given rarity,
+// or ok=false for an unknown rarity.
+func (r Rules) SellValueFor(rarity string) (int, bool) {
+	for i, name := range r.Rarities {
+		if name == rarity {
+			return r.CardSell[i], true
+		}
+	}
+	return 0, false
 }
 
 func (r Rules) validateCards() error {

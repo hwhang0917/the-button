@@ -343,6 +343,41 @@ func TestTalismanStore(t *testing.T) {
 	}
 }
 
+func TestSellCard(t *testing.T) {
+	s, err := Open(t.TempDir()+"/test.db", shieldRefund)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.GetOrCreatePlayer("a"); err != nil {
+		t.Fatal(err)
+	}
+	if ok, _ := s.SellCard("a", "bronze", "common", 2); ok {
+		t.Fatal("selling a card never owned must fail")
+	}
+	if err := s.AddCard("a", "bronze", "common"); err != nil {
+		t.Fatal(err)
+	}
+	if ok, _ := s.SellCard("a", "bronze", "common", 2); !ok {
+		t.Fatal("sell with a copy in hand failed")
+	}
+	p, _ := s.GetOrCreatePlayer("a")
+	if p.Coins != 2 {
+		t.Fatalf("coins = %d, want 2", p.Coins)
+	}
+	// the count-0 row survives as the discovered marker
+	cards, _ := s.GetCards("a")
+	if len(cards) != 1 || cards[0].Count != 0 {
+		t.Fatalf("discovered marker lost: %+v", cards)
+	}
+	// selling the last copy again must fail and pay nothing
+	if ok, _ := s.SellCard("a", "bronze", "common", 2); ok {
+		t.Fatal("selling at count 0 must fail")
+	}
+	if p, _ = s.GetOrCreatePlayer("a"); p.Coins != 2 {
+		t.Fatalf("failed sell changed coins: %d", p.Coins)
+	}
+}
+
 func TestNicknameUnique(t *testing.T) {
 	s, err := Open(t.TempDir()+"/test.db", shieldRefund)
 	if err != nil {

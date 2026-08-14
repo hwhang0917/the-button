@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { nextRarity, prevRarity, state, type Card } from '../useGame'
+import { nextRarity, prevRarity, sellValue, state, type Card } from '../useGame'
 import { t } from '../i18n'
 import CardFace from './CardFace.vue'
 
@@ -8,7 +8,7 @@ const props = withDefaults(
   defineProps<{ card: Card; drop?: boolean; count?: number; againLabel?: string }>(),
   { drop: true, count: 0, againLabel: '' },
 )
-defineEmits<{ close: []; arm: []; fuse: []; defuse: []; again: [] }>()
+defineEmits<{ close: []; arm: []; fuse: []; defuse: []; sell: []; again: [] }>()
 
 const fuseTarget = computed(() => nextRarity(props.card.rarity))
 const defuseTarget = computed(() => prevRarity(props.card.rarity))
@@ -112,6 +112,13 @@ function onPointerUp(e: PointerEvent) {
           {{ t('defuse') }} → {{ t('rarity')[defuseTarget] }} ×2
         </button>
       </div>
+      <button
+        class="rounded-lg border border-yellow-500/40 py-2 text-xs font-bold text-yellow-300 hover:bg-yellow-400/10 disabled:opacity-40"
+        :disabled="count < 1"
+        @click="$emit('sell')"
+      >
+        💰 {{ t('sellCard') }} +{{ sellValue(card.rarity) }}
+      </button>
       <p class="text-center text-[10px] text-zinc-500">
         {{ talismanBusy ? t('talismanArmedHint') : t('talismanNextClick') }}
       </p>
