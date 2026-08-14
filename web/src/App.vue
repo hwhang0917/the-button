@@ -32,7 +32,16 @@ import { driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
 import { t, lang, toggleLang } from './i18n'
 import { theme, toggleTheme } from './theme'
-import { muted, play, preloadAudio, soundCount, toggleMute, vibrate } from './audio'
+import {
+  fanfareMuted,
+  muted,
+  play,
+  preloadAudio,
+  soundCount,
+  toggleFanfareMute,
+  toggleMute,
+  vibrate,
+} from './audio'
 import { burst, confetti } from './particles'
 import { COIN_COLORS, fmtCoins, useCoinCounter } from './useCoinCounter'
 import { TIER_COLORS, type Rarity, type Tier } from './tiers'
@@ -701,6 +710,9 @@ onMounted(async () => {
         </button>
         <button class="nav-item" @click="toggleMute(); play('switch')">
           {{ muted ? `🔊 ${t('menuUnmute')}` : `🔇 ${t('menuMute')}` }}
+        </button>
+        <button class="nav-item" @click="toggleFanfareMute(); play('switch')">
+          {{ fanfareMuted ? `🎺 ${t('menuFanfareUnmute')}` : `🎺 ${t('menuFanfareMute')}` }}
         </button>
       </nav>
     </div>

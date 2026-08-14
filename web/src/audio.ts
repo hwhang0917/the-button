@@ -25,6 +25,14 @@ export function toggleMute() {
   localStorage.setItem('muted', muted.value ? '1' : '0')
 }
 
+// separate switch for just the long roll jingles (win/fail/success/prestige),
+// for players who want the tactile cues without the fanfares
+export const fanfareMuted = ref(localStorage.getItem('muted_fanfare') === '1')
+export function toggleFanfareMute() {
+  fanfareMuted.value = !fanfareMuted.value
+  localStorage.setItem('muted_fanfare', fanfareMuted.value ? '1' : '0')
+}
+
 /** Buffers every sound; each resolves on ready, error, or timeout — a stalled
  * download must not hold the loading screen hostage. */
 export function preloadAudio(onEach: () => void, timeoutMs: number): Promise<void> {
@@ -87,7 +95,7 @@ let playingResult: HTMLAudioElement | null = null
 export function play(name: Sound) {
   const pattern = buzz[name] ?? (name.startsWith('success_') ? 30 : undefined)
   if (pattern) navigator.vibrate?.(pattern)
-  if (muted.value) return
+  if (muted.value || (fanfareMuted.value && resultSounds.has(name))) return
   const base = cache.get(name)
   if (!base) return
   // clone so rapid replays overlap instead of cutting off
