@@ -1,5 +1,5 @@
 const files = [
-  'click', 'fail', 'hover', 'mouseover', 'switch', 'win',
+  'click', 'fail', 'hover', 'mouseover', 'switch', 'win', 'prestige',
   'scratch', 'shield', 'streak-sell', 'coin-use', 'talisman',
   'success_unrank', 'success_bronze', 'success_silver',
   'success_gold', 'success_platinum', 'success_diamond',
@@ -65,11 +65,14 @@ const buzz: Partial<Record<Sound, number | number[]>> = {
   switch: 10,
   fail: [60, 40, 120],
   win: [50, 50, 50, 50, 150],
+  prestige: [50, 50, 50, 50, 150],
 }
 
 // roll-result jingles are long: a fresh button press (click) or the next
 // result cancels the one still playing, so spam-rolling doesn't stack fanfares
-const resultSounds = new Set<Sound>(files.filter((f) => f === 'fail' || f === 'win' || f.startsWith('success_')))
+const resultSounds = new Set<Sound>(
+  files.filter((f) => f === 'fail' || f === 'win' || f === 'prestige' || f.startsWith('success_')),
+)
 let playingResult: HTMLAudioElement | null = null
 
 export function play(name: Sound) {

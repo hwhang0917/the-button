@@ -338,7 +338,7 @@ async function onPrestige() {
   if (gained === null) return
   message.value = `${t('prestigeDone')} +${gained}💰`
   messageColor.value = 'text-fuchsia-300 light:text-fuchsia-700'
-  play('win')
+  play('prestige')
   // double wave so the promotion reads as a real celebration
   confetti()
   setTimeout(confetti, 450)
