@@ -411,9 +411,12 @@ onMounted(async () => {
       ⚠ DEV MODE — 100% SUCCESS
     </div>
 
+    <!-- swallow every click/tap while offline: sits above modals (z-50),
+         below the banner. checkHealth clears it the moment the server answers -->
+    <div v-if="offline" class="fixed inset-0 z-[70] cursor-not-allowed bg-black/20"></div>
     <div
       v-if="offline"
-      class="fixed inset-x-0 top-0 z-50 flex items-center justify-center gap-2 bg-rose-600 py-1 text-center text-xs font-bold text-white"
+      class="fixed inset-x-0 top-0 z-[80] flex items-center justify-center gap-2 bg-rose-600 py-1 text-center text-xs font-bold text-white"
     >
       <span class="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>
       {{ t('offline') }}

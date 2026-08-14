@@ -9,7 +9,10 @@ defineEmits<{ view: [Card] }>()
 // the parent re-mounts this component when cards change, so the fold state
 // has to live outside the component
 const FOLD_KEY = 'bt_collection_folded'
-const initiallyOpen = !localStorage.getItem(FOLD_KEY)
+// below lg the collection lives in the side drawer, so folding is redundant:
+// always open there, and the summary stops being a toggle (see template)
+const desktop = matchMedia('(min-width: 64rem)').matches
+const initiallyOpen = !desktop || !localStorage.getItem(FOLD_KEY)
 
 function onToggle(e: Event) {
   const d = e.target as HTMLDetailsElement
@@ -31,11 +34,11 @@ const owned = computed(() => {
     @toggle="onToggle"
   >
     <summary
-      class="flex cursor-pointer list-none items-center justify-between text-sm font-bold uppercase tracking-widest text-slate-400 select-none [&::-webkit-details-marker]:hidden"
+      class="pointer-events-none flex list-none items-center justify-between text-sm font-bold uppercase tracking-widest text-slate-400 select-none [&::-webkit-details-marker]:hidden lg:pointer-events-auto lg:cursor-pointer"
     >
       <!-- rows persist at count 0: discovery survives consuming the last copy -->
       <span>🃏 {{ t('collection') }} ({{ cards.length }}/24)</span>
-      <span class="transition-transform group-open:rotate-180">▾</span>
+      <span class="hidden transition-transform group-open:rotate-180 lg:inline">▾</span>
     </summary>
     <div class="mt-3 grid grid-cols-4 gap-2">
       <template v-for="tier in TIERS" :key="tier">

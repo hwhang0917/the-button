@@ -68,16 +68,23 @@ export const cards = ref<OwnedCard[]>([])
 const HEALTH_INTERVAL_MS = 5000
 export const offline = ref(false)
 
+async function checkHealth() {
+  if (document.hidden) return // backgrounded browsers cancel fetches; that's not an outage
+  const wasOffline = offline.value
+  try {
+    offline.value = !(await fetch('/api/state', { method: 'HEAD' })).ok
+  } catch {
+    // a probe in flight when the tab hides gets killed mid-request — same false alarm
+    if (!document.hidden) offline.value = true
+  }
+  if (wasOffline && !offline.value) loadState() // resync after an outage
+}
+
 export function startHealthCheck() {
-  setInterval(async () => {
-    const wasOffline = offline.value
-    try {
-      offline.value = !(await fetch('/api/state', { method: 'HEAD' })).ok
-    } catch {
-      offline.value = true
-    }
-    if (wasOffline && !offline.value) loadState() // resync after an outage
-  }, HEALTH_INTERVAL_MS)
+  setInterval(checkHealth, HEALTH_INTERVAL_MS)
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) checkHealth()
+  })
 }
 
 export async function loadState() {
