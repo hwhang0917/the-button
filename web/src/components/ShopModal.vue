@@ -136,7 +136,7 @@ async function onBuy(key: SkillKey) {
       <h2 class="text-center text-lg font-bold text-slate-100">
         {{ kind === 'items' ? `🎁 ${t('itemShop')}` : `📈 ${t('skillShop')}` }}
         <span class="ml-2 font-mono text-yellow-300 light:text-yellow-600" :title="String(state?.coins ?? 0)">
-          💰 {{ fmtCoins(shownCoins) }}
+          💰 <span class="inline-block min-w-[5ch] text-left">{{ fmtCoins(shownCoins) }}</span>
         </span>
       </h2>
 

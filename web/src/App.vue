@@ -905,7 +905,8 @@ onMounted(async () => {
                 class="font-mono text-sm font-bold text-yellow-300 light:text-yellow-700"
                 :title="String(state.coins)"
               >
-                💰 {{ fmtCoins(shownCoins) }}
+<!-- reserved width: the rolling counter must not reflow its row -->
+                💰 <span class="inline-block min-w-[6ch] text-left">{{ fmtCoins(shownCoins) }}</span>
               </span>
               <button
                 id="tut-shop-sell"
