@@ -92,3 +92,15 @@ jobs:
 
       - name: Inspect
         run: docker buildx imagetools inspect "$IMAGE:${{ steps.meta.outputs.version }}"
+
+  deploy:
+    needs: merge
+    runs-on: ubuntu-latest
+    steps:
+      # Synchronous: 200 = deployed, 500 = deploy failed (body has docker
+      # output), 409 = another deploy in flight — just re-run this job.
+      - name: Trigger deploy
+        run: |
+          curl -fsS --max-time 360 -X POST \
+            -H "Authorization: Bearer ${{ secrets.DEPLOY_WEBHOOK_TOKEN }}" \
+            https://webhook.runfridge.dev/the-button-deployment/deploy
