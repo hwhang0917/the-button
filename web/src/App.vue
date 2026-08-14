@@ -338,6 +338,17 @@ const displayGain = computed(() => {
   const base = e.guarantee ? 1 : gainFor(effChance(s.chance, payRisk, s.charmLevel), payRisk)
   return base * Math.max(1, e.mult ?? 0) + (e.bonus ?? 0)
 })
+// the clicks-left counter drains toward a warning: the last 30% goes orange,
+// the last 10% red — relative to quota so stamina levels keep scale
+const quotaColor = computed(() => {
+  const s = state.value
+  if (!s || s.quota <= 0) return 'text-slate-200'
+  const ratio = s.quotaLeft / s.quota
+  if (ratio <= 0.1) return 'text-rose-400 light:text-rose-600'
+  if (ratio <= 0.3) return 'text-orange-400 light:text-orange-600'
+  return 'text-slate-200'
+})
+
 // coins on success — Resolve's jackpot: overflow past the cap plus 황금손's per-star pay
 const displayCoins = computed(() => {
   const s = state.value
@@ -671,7 +682,7 @@ onMounted(async () => {
             <p id="tut-quota" class="text-sm text-slate-400">
               <template v-if="state.quotaLeft > 0">
                 {{ t('clicksLeft') }}:
-                <span class="font-mono font-bold text-slate-200">{{ state.quotaLeft }}</span>
+                <span class="font-mono font-bold" :class="quotaColor">{{ state.quotaLeft }}</span>
                 / {{ state.quota }}
               </template>
               <template v-else>
