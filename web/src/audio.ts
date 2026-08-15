@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 const files = [
   'click', 'blocked', 'fail', 'hover', 'mouseover', 'switch', 'win', 'prestige',
@@ -25,13 +25,18 @@ export function toggleMute() {
   localStorage.setItem('muted', muted.value ? '1' : '0')
 }
 
-// separate switch for just the long roll jingles (win/fail/success/prestige),
-// for players who want the tactile cues without the fanfares
-export const fanfareMuted = ref(localStorage.getItem('muted_fanfare') === '1')
-export function toggleFanfareMute() {
-  fanfareMuted.value = !fanfareMuted.value
-  localStorage.setItem('muted_fanfare', fanfareMuted.value ? '1' : '0')
+// per-channel volumes, 0..1: fanfares are the long roll jingles
+// (win/fail/success/prestige), UI is every other cue
+function storedVol(key: string, legacyOff: boolean): number {
+  const raw = localStorage.getItem(key)
+  if (raw !== null && Number.isFinite(Number(raw))) return Math.min(1, Math.max(0, Number(raw)))
+  return legacyOff ? 0 : 1
 }
+// migrate the retired fanfare-only mute switch into a zeroed slider
+export const fanfareVol = ref(storedVol('vol_fanfare', localStorage.getItem('muted_fanfare') === '1'))
+export const uiVol = ref(storedVol('vol_ui', false))
+watch(fanfareVol, (v) => localStorage.setItem('vol_fanfare', String(v)))
+watch(uiVol, (v) => localStorage.setItem('vol_ui', String(v)))
 
 /** Buffers every sound; each resolves on ready, error, or timeout — a stalled
  * download must not hold the loading screen hostage. */
@@ -93,15 +98,19 @@ const resultSounds = new Set<Sound>(
 )
 let playingResult: HTMLAudioElement | null = null
 
+// full slider = the pre-slider loudness, so old saves sound unchanged
+const BASE_VOLUME = 0.6
+
 export function play(name: Sound) {
   const pattern = buzz[name] ?? (name.startsWith('success_') ? 30 : undefined)
   if (pattern) navigator.vibrate?.(pattern)
-  if (muted.value || (fanfareMuted.value && resultSounds.has(name))) return
+  const vol = resultSounds.has(name) ? fanfareVol.value : uiVol.value
+  if (muted.value || vol <= 0) return
   const base = cache.get(name)
   if (!base) return
   // clone so rapid replays overlap instead of cutting off
   const a = base.cloneNode() as HTMLAudioElement
-  a.volume = 0.6
+  a.volume = BASE_VOLUME * vol
   if (name === 'click' || resultSounds.has(name)) {
     playingResult?.pause()
     playingResult = resultSounds.has(name) ? a : null

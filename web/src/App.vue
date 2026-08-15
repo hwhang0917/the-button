@@ -33,13 +33,13 @@ import 'driver.js/dist/driver.css'
 import { t, lang, toggleLang } from './i18n'
 import { theme, toggleTheme } from './theme'
 import {
-  fanfareMuted,
+  fanfareVol,
   muted,
   play,
   preloadAudio,
   soundCount,
-  toggleFanfareMute,
   toggleMute,
+  uiVol,
   vibrate,
 } from './audio'
 import { burst, confetti } from './particles'
@@ -721,9 +721,33 @@ onMounted(async () => {
         <button class="nav-item" @click="toggleMute(); play('switch')">
           {{ muted ? `🔊 ${t('menuUnmute')}` : `🔇 ${t('menuMute')}` }}
         </button>
-        <button class="nav-item" @click="toggleFanfareMute(); play('switch')">
-          {{ fanfareMuted ? `🎺 ${t('menuFanfareUnmute')}` : `🎺 ${t('menuFanfareMute')}` }}
-        </button>
+        <!-- per-channel volume; @change (not @input) previews once, on release -->
+        <div class="flex flex-col gap-2 px-3 py-1.5" :class="{ 'pointer-events-none opacity-40': muted }">
+          <label class="flex items-center gap-2 text-sm text-slate-300">
+            <span class="w-16 shrink-0">🎺 {{ t('volFanfare') }}</span>
+            <input
+              v-model.number="fanfareVol"
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              class="w-full accent-amber-400"
+              @change="play('success_unrank')"
+            />
+          </label>
+          <label class="flex items-center gap-2 text-sm text-slate-300">
+            <span class="w-16 shrink-0">🔔 {{ t('volUi') }}</span>
+            <input
+              v-model.number="uiVol"
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              class="w-full accent-sky-400"
+              @change="play('switch')"
+            />
+          </label>
+        </div>
       </nav>
     </div>
 
