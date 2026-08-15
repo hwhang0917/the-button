@@ -517,10 +517,21 @@ setInterval(() => {
 function onKey(e: KeyboardEvent) {
   if (e.repeat || e.altKey || e.ctrlKey || e.metaKey) return
   if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+  // Esc cancels: every confirm dialog, viewer, and panel a key can open —
+  // everything except the modals that hold a form (nickname, device link)
   if (e.key === 'Escape') {
     showShop.value = ''
     sellAsk.value = false
     buyAsk.value = ''
+    cancelTalismanAsk.value = false
+    defuseAsk.value = null
+    sellCardAsk.value = null
+    deleteAsk.value = false
+    showOdds.value = false
+    showPrivacy.value = false
+    viewedCard.value = null
+    droppedCard.value = null
+    panel.value = ''
     navOpen.value = false
     showTalismanPick.value = false
     return
@@ -562,11 +573,13 @@ function onKey(e: KeyboardEvent) {
       return
     }
   }
-  if (e.code === 'Space') {
-    // inside an overlay Space means its confirming action — each overlay marks
-    // that button with data-space, and the deepest-stacked one wins
+  if (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter') {
+    // inside an overlay Space/Enter means its confirming action — each overlay
+    // marks that button with data-space, and the deepest-stacked one wins
     const confirmers = document.querySelectorAll<HTMLElement>('[data-space]')
     if (confirmers.length) {
+      // preventDefault also stops a focused button's native Enter click,
+      // which would otherwise double-fire the confirm
       e.preventDefault()
       confirmers[confirmers.length - 1].click()
       return
