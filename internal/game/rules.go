@@ -168,11 +168,11 @@ func Default() Rules {
 	}
 }
 
-// MaxStarsFor is the star cap at a prestige level — it grows without bound;
-// the star row copes with big caps by bundling (5/10/50-star denominations),
-// and the skin cap bounds only the visuals.
+// MaxStarsFor is the star cap at a prestige level. The skin cap bounds it, so
+// laps past it stay constant-cost — which is also what keeps the flat top
+// prestige reward fair.
 func (r Rules) MaxStarsFor(prestige int) int {
-	return r.MaxStars + r.PrestigeStarBonus*max(prestige, 0)
+	return r.MaxStars + r.PrestigeStarBonus*min(max(prestige, 0), r.PrestigeSkinCap)
 }
 
 // RefillsFor is the daily time-recharge allowance: the configured base plus
@@ -195,19 +195,11 @@ func (r Rules) QuotaFor(level int) int {
 	return q
 }
 
-// PrestigeRewardFor is the payout for prestiging from the given level. Laps
-// past the ladder keep climbing by the ladder's final step, so the reward
-// tracks the ever-growing lap cost instead of flatlining at the top entry.
+// PrestigeRewardFor is the payout for prestiging from the given level; every
+// lap past the ladder pays the top reward — lap cost is constant past the
+// skin cap, so the payout stays flat with it.
 func (r Rules) PrestigeRewardFor(prestige int) int {
-	last := len(r.PrestigeRewards) - 1
-	if prestige <= last {
-		return r.PrestigeRewards[max(prestige, 0)]
-	}
-	step := 0
-	if last > 0 {
-		step = r.PrestigeRewards[last] - r.PrestigeRewards[last-1]
-	}
-	return r.PrestigeRewards[last] + step*(prestige-last)
+	return r.PrestigeRewards[min(prestige, len(r.PrestigeRewards)-1)]
 }
 
 // PriceFor is the next purchase price of a skill, or ok=false when the skill is

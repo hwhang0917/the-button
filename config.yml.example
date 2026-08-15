@@ -54,9 +54,9 @@ game:
   overflow_coin_per: 5
 
   prestige:
-    star_bonus: 5 # the cap gains this per prestige level, without bound
-    skin_cap: 3 # distinct star skins (visual only); prestige keeps counting past this
-    rewards: [300, 450, 600] # laps past the end keep adding the final step (+150)
+    star_bonus: 5 # the cap gains this per prestige level, up to skin_cap
+    skin_cap: 3 # distinct star skins and the cap growth limit; prestige keeps counting
+    rewards: [300, 450, 600] # every lap past the end pays the last entry
 
   # min_stars must start at 0 and ascend. Thresholds are defined at the base
   # max_stars and stretch in ratio as prestige raises the cap (e.g. at cap 30,
