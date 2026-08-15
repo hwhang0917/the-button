@@ -425,6 +425,9 @@ const quotaColor = computed(() => {
   return 'text-slate-200'
 })
 
+// no stake at the head-start floor, no risk bonus — mirrors Resolve's gate
+const staked = computed(() => (state.value?.stars ?? 0) > (state.value?.headstartLevel ?? 0))
+
 // coins on success — Resolve's jackpot: the risk bonus (guarantee settles
 // without it), overflow past the cap, plus 황금손's per-star pay
 const displayCoins = computed(() => {
@@ -432,10 +435,8 @@ const displayCoins = computed(() => {
   if (!s) return 0
   const e = armedEffect.value
   const payRisk = e.maxRisk ? cfg().maxRisk : risk.value
-  // no stake at the head-start floor, no bonus — mirrors Resolve's gate
-  const staked = s.stars > s.headstartLevel
   const riskCoins =
-    e.guarantee || !staked ? 0 : riskCoinsFor(s.chance, payRisk, cfg().charm.bonusPct * s.charmLevel)
+    e.guarantee || !staked.value ? 0 : riskCoinsFor(s.chance, payRisk, cfg().charm.bonusPct * s.charmLevel)
   const overflow = Math.max(0, s.stars + displayGain.value - s.maxStars)
   const newStars = Math.min(s.stars + displayGain.value, s.maxStars)
   return riskCoins + cfg().overflowCoinPer * overflow + (e.coinWin ?? 0) * newStars
@@ -878,7 +879,8 @@ onMounted(async () => {
 <!-- at max stars there is no next click to preview — prestige is the move -->
           <p v-if="!state.win" class="text-center text-xs text-slate-500">
             {{ t('gainInfo').replace('{n}', String(displayGain))
-            }}<template v-if="displayCoins"> · 💰+{{ displayCoins }}</template>
+            }}<template v-if="displayCoins"> · 💰+{{ displayCoins }}</template
+            ><template v-else-if="risk > 0 && !staked"> · {{ t('riskNoStake') }}</template>
           </p>
 
           <p class="h-5 text-center text-sm font-bold sm:h-6 sm:text-base" :class="messageColor">{{ message }}</p>

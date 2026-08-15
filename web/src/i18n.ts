@@ -60,6 +60,7 @@ const dict = {
     menuTutorial: '튜토리얼',
     toPrestige: '프리스티지까지 ★{n}',
     buy: '구매',
+    riskNoStake: '💰 보너스는 스트릭이 걸려야 나와요',
     buyConfirm: '{item}을 💰{price}에 구매할까요?',
     // the tutorial's closing keycap sheet — [key, what it does]
     keyGuide: [
@@ -288,6 +289,7 @@ const dict = {
     menuTutorial: 'Tutorial',
     toPrestige: '★{n} more to prestige',
     buy: 'Buy',
+    riskNoStake: '💰 bonus needs a streak at stake',
     buyConfirm: 'Buy {item} for 💰{price}?',
     keyGuide: [
       ['Space', 'enchant · prestige · confirm popups'],
