@@ -14,7 +14,8 @@ const oddsMath = {
   // the cap stays symbolic: its numbers are config, and the popup's table and
   // bullets read the live values from /api/config
   next: tex(String.raw`\mathrm{gain} = g_0 \cdot M + B, \qquad s' = \min(s + \mathrm{gain},\ \mathrm{cap})`),
-  jackpot: tex(String.raw`\text{jackpot} = \omega\,\max\!\bigl(0,\ s + \mathrm{gain} - \mathrm{cap}\bigr)\ 💰`),
+  // no emoji in TeX: KaTeX has no glyph metrics for 💰 and warns every build
+  jackpot: tex(String.raw`\text{jackpot} = \omega\,\max\!\bigl(0,\ s + \mathrm{gain} - \mathrm{cap}\bigr)`),
   fail: tex(String.raw`s' = \begin{cases} s & \text{a card keeps your stars} \\ \lceil s/2 \rceil & \text{a card keeps half} \\ \min(\mathrm{headstart},\, s) & \text{else} \end{cases}`),
 }
 
