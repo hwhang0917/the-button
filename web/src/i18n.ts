@@ -6,7 +6,7 @@ const dict = {
     // header ticker — one shows at random and rotates; keep each one-line short
     tips: [
       '💡 단축키: Space 강화·확인 · S 스트릭 판매 · I 아이템 · K 스킬 · F 리스크',
-      '💡 리스크 모드는 별 대신 코인 보너스를 줘요 — 💰 ≈ 100 ÷ 확률',
+      '💡 리스크 모드는 별 대신 코인 보너스를 줘요 — 확률이 낮을수록 한 방이 커요',
       '💡 실패가 무서우면 먼저 스트릭을 판매해 코인으로 바꿔두세요',
       '💡 같은 카드 3장을 합성하면 상위 등급이 돼요 — 분해는 2장만 돌려줘요',
       '💡 한 번 발견한 카드는 소모해도 도감에 남아요',
@@ -187,7 +187,7 @@ const dict = {
       '⭐ 별이 많을수록 성공 확률이 낮아져요 — 표의 기본 확률에서 시작합니다.',
       '🔥 리스크 모드는 확률이 확 낮아지는 대신, 성공하면 코인 보너스를 받아요 — 별은 언제나 +1.',
       '🃏 카드는 24종 — 장착하면 다음 클릭 한 번에 발동해요 (티어 제한 없음).',
-      '💰 리스크 보너스 ≈ 100 ÷ 최종 확률 코인 — 낮은 확률일수록 한 방이 큽니다.',
+      '💰 리스크 보너스 = (100 ÷ 최종 확률) × 별당 코인(ω) — 스트릭이 걸려 있을 때만 나와요.',
       '🎲 모든 주사위는 서버에서 굴려요. 클라이언트는 결과만 보여줍니다.',
     ],
     oddsMore: '📐 자세한 수식 보기',
@@ -234,7 +234,7 @@ const dict = {
     subtitle: 'enchant clicker — how far can your streak go?',
     tips: [
       '💡 Shortcuts: Space enchant/confirm · S sell streak · I items · K skills · F risk',
-      '💡 Risk mode pays a coin bonus instead of stars — 💰 ≈ 100 ÷ chance',
+      '💡 Risk mode pays a coin bonus instead of stars — the longer the shot, the bigger the hit',
       '💡 Scared of a risky click? Sell your streak for coins first',
       '💡 Fuse 3 identical cards into the next rarity — defusing returns only 2',
       '💡 A discovered card stays in your collection even when spent',
@@ -412,7 +412,7 @@ const dict = {
       '⭐ More stars = lower odds — every click starts from the base table below.',
       '🔥 Risk mode slashes your odds, but success pays a coin bonus — stars always step +1.',
       '🃏 24 cards to collect — arm one and it fires on your very next click, any tier.',
-      '💰 Risk bonus ≈ 100 ÷ final chance in coins — long shots pay big.',
+      '💰 Risk bonus = (100 ÷ final chance) × coins-per-star (ω) — only while a streak is staked.',
       '🎲 Every roll happens on the server; the client only renders the result.',
     ],
     oddsMore: '📐 Show the math',

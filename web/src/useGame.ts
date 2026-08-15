@@ -120,11 +120,15 @@ export async function loadCards() {
   cards.value = await (await fetch('/api/cards')).json()
 }
 
-/** The risk click's coin bonus, from the TRUE un-clamped odds — mirrors
- * RiskCoinsFor in game/resolve.go. Stars always step one; risk pays coins. */
+/** The risk click's coin bonus: TRUE un-clamped odds paid back at the
+ * star→coin rate — mirrors RiskCoinsFor in game/resolve.go. Stars always
+ * step one; risk pays coins, and only when a streak is staked. */
 export function riskCoinsFor(base: number, risk: number, charmPct: number): number {
   if (risk <= 0 || base <= 0) return 0
-  return Math.max(1, Math.round((100 * (risk + 1)) / (base + charmPct * (risk + 1))))
+  return (
+    cfg().overflowCoinPer *
+    Math.max(1, Math.round((100 * (risk + 1)) / (base + charmPct * (risk + 1))))
+  )
 }
 
 /** Roll chance after risk division and charm bonus. Mirrors EffChanceFor,

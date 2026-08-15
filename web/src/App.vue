@@ -432,7 +432,10 @@ const displayCoins = computed(() => {
   if (!s) return 0
   const e = armedEffect.value
   const payRisk = e.maxRisk ? cfg().maxRisk : risk.value
-  const riskCoins = e.guarantee ? 0 : riskCoinsFor(s.chance, payRisk, cfg().charm.bonusPct * s.charmLevel)
+  // no stake at the head-start floor, no bonus — mirrors Resolve's gate
+  const staked = s.stars > s.headstartLevel
+  const riskCoins =
+    e.guarantee || !staked ? 0 : riskCoinsFor(s.chance, payRisk, cfg().charm.bonusPct * s.charmLevel)
   const overflow = Math.max(0, s.stars + displayGain.value - s.maxStars)
   const newStars = Math.min(s.stars + displayGain.value, s.maxStars)
   return riskCoins + cfg().overflowCoinPer * overflow + (e.coinWin ?? 0) * newStars

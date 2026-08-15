@@ -47,15 +47,16 @@ func (r Rules) roll(pct int) bool {
 
 // RiskCoinsFor is the coin bonus a successful risk click pays. Success always
 // steps one star whatever the mode — risk never touches the streak; instead it
-// pays the TRUE odds back in coins: round(100 / (base/(risk+1) + charm)).
-// Computed from the un-clamped ratio in integer math, so odds whose roll
-// clamps at the 1% floor still pay in proportion.
-func RiskCoinsFor(base, risk, charmPct int) int {
+// pays the TRUE odds back — round(100 / (base/(risk+1) + charm)) — as coins at
+// the standard star→coin rate (OverflowCoinPer), so 81% base pays +25 at ÷4
+// and the deep 1% zone pays ~+400. Computed from the un-clamped ratio in
+// integer math, so odds whose roll clamps at the 1% floor still pay apart.
+func (r Rules) RiskCoinsFor(base, risk, charmPct int) int {
 	if risk <= 0 || base <= 0 {
 		return 0
 	}
 	den := base + charmPct*(risk+1)
-	return max(1, (100*(risk+1)+den/2)/den)
+	return r.OverflowCoinPer * max(1, (100*(risk+1)+den/2)/den)
 }
 
 func tri(n int) int { return n * (n + 1) / 2 }
@@ -187,13 +188,15 @@ func (r Rules) Resolve(c Click) Result {
 	}
 
 	// success always steps ONE star — risk mode pays its reward in coins, not
-	// stars, so the climb itself stays legible against the cap. A guaranteed
-	// win settles without the risk bonus (see DefaultCards): arming a
-	// guarantee card with risk on must not print coins off a sure thing.
+	// stars, so the climb itself stays legible against the cap. Two guards on
+	// the bonus: a guaranteed win settles without it (arming a guarantee card
+	// with risk on must not print coins off a sure thing), and a streak
+	// resting at the head-start floor stakes nothing, so it earns nothing —
+	// otherwise camping at the floor farms free coins off riskless clicks.
 	gain := max(1, e.Mult) + e.Bonus
 	riskCoins := 0
-	if !e.Guarantee {
-		riskCoins = RiskCoinsFor(r.baseChance(c.Stars), payRisk, r.Charm.BonusPct*c.Charm)
+	if !e.Guarantee && c.Stars > c.Headstart {
+		riskCoins = r.RiskCoinsFor(r.baseChance(c.Stars), payRisk, r.Charm.BonusPct*c.Charm)
 	}
 	newStars := min(c.Stars+gain, c.Cap)
 	// jumps are floors, so they can lift a streak but never cut one short
