@@ -274,6 +274,24 @@ function closeLink() {
 const showPrivacy = ref(false)
 const showShop = ref<'' | 'items' | 'skills'>('')
 const sellAsk = ref(false)
+
+// the L/C/R keybinds confirm before spending — a hotkey mispress must not
+// buy anything; the shop's own buttons stay direct
+const BUY_INFO = {
+  'tut-shop-lottery': { icon: '🎟️', name: 'lotteryName', price: () => cfg().lottery.price },
+  'tut-shop-pack': { icon: '🎴', name: 'packName', price: () => cfg().pack.price },
+  'tut-shop-refill': { icon: '⏰', name: 'refillName', price: () => cfg().refillPrice },
+} as const
+const buyAsk = ref<'' | keyof typeof BUY_INFO>('')
+
+function confirmBuy() {
+  const row = buyAsk.value
+  buyAsk.value = ''
+  if (!row) return
+  // press the shop row's own buy button so its disabled logic stays in charge
+  showShop.value = 'items'
+  nextTick(() => document.getElementById(row)?.querySelector('button')?.click())
+}
 const showOdds = ref(false)
 const showTalismanPick = ref(false)
 const tutorialPending = ref(!localStorage.getItem(TUTORIAL_SEEN_KEY))
@@ -421,7 +439,7 @@ const displayCoins = computed(() => {
 })
 
 function setRisk(lvl: number) {
-  if (state.value?.win) return // the 1·2 keybind routes here too
+  if (state.value?.win) return // the F keybind routes here too
   risk.value = lvl
   play('switch')
   vibrate(4 + lvl * 6) // buzz escalates with the risk you're signing up for
@@ -502,6 +520,7 @@ function onKey(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     showShop.value = ''
     sellAsk.value = false
+    buyAsk.value = ''
     navOpen.value = false
     showTalismanPick.value = false
     return
@@ -538,8 +557,8 @@ function onKey(e: KeyboardEvent) {
     const buyRow = ({ KeyL: 'tut-shop-lottery', KeyC: 'tut-shop-pack', KeyR: 'tut-shop-refill' } as
       Record<string, string>)[e.code]
     if (buyRow && (showShop.value === 'items' || (!modalOpen.value && !cancelTalismanAsk.value))) {
-      showShop.value = 'items'
-      nextTick(() => document.getElementById(buyRow)?.querySelector('button')?.click())
+      buyAsk.value = buyRow as keyof typeof BUY_INFO
+      play('switch')
       return
     }
   }
@@ -553,7 +572,7 @@ function onKey(e: KeyboardEvent) {
       return
     }
   }
-  if (modalOpen.value || cancelTalismanAsk.value) return
+  if (modalOpen.value || cancelTalismanAsk.value || buyAsk.value) return
   switch (e.code) {
     case 'Space':
       if (disabled.value) return
@@ -584,11 +603,8 @@ function onKey(e: KeyboardEvent) {
         play('switch')
       }
       break
-    case 'Digit1':
-      setRisk(0)
-      break
-    case 'Digit2':
-      setRisk(cfg().maxRisk)
+    case 'KeyF':
+      setRisk(risk.value ? 0 : cfg().maxRisk)
       break
   }
 }
@@ -868,27 +884,21 @@ onMounted(async () => {
                 🔥 {{ t('riskIt') }}
               </span>
 <!-- nothing to roll at max stars, so the risk picker rests too -->
-<!-- one gamble, on or off: the divisor is max_risk+1 from config -->
-              <div class="flex overflow-hidden rounded-full border border-slate-700" :class="{ 'opacity-40': state.win }">
-                <button
-                  class="px-2.5 py-1 text-xs font-bold transition-colors sm:px-3"
-                  :class="risk === 0 ? 'bg-slate-600 text-white' : 'text-slate-400 hover:bg-slate-800'"
-                  :disabled="state.win"
-                  title="OFF"
-                  @click="setRisk(0)"
-                >
-                  OFF
-                </button>
-                <button
-                  class="px-2.5 py-1 text-xs font-bold transition-colors sm:px-3"
-                  :class="risk > 0 ? 'bg-rose-600 text-white' : 'text-slate-400 hover:bg-slate-800'"
-                  :disabled="state.win"
-                  :title="`${t('chance')} 1/${cfg().maxRisk + 1}`"
-                  @click="setRisk(cfg().maxRisk)"
-                >
-                  🔥
-                </button>
-              </div>
+<!-- one gamble toggle: the divisor is max_risk+1 from config -->
+              <button
+                class="rounded-full border px-3 py-1 text-xs font-bold transition-colors"
+                :class="[
+                  risk
+                    ? 'border-rose-500 bg-rose-600 text-white'
+                    : 'border-slate-700 text-slate-400 hover:bg-slate-800',
+                  { 'opacity-40': state.win },
+                ]"
+                :disabled="state.win"
+                :title="`${t('chance')} 1/${cfg().maxRisk + 1}`"
+                @click="setRisk(risk ? 0 : cfg().maxRisk)"
+              >
+                {{ risk ? 'ON' : 'OFF' }}
+              </button>
             </div>
             <span class="h-4 text-xs whitespace-nowrap text-slate-500">
               <template v-if="risk">{{ t('chance') }} 1/{{ risk + 1 }}</template>
@@ -1017,6 +1027,15 @@ onMounted(async () => {
       :cancel-label="t('later')"
       @confirm="confirmSellStreak"
       @cancel="sellAsk = false"
+    />
+    <ConfirmModal
+      v-if="buyAsk"
+      :title="`${BUY_INFO[buyAsk].icon} ${t(BUY_INFO[buyAsk].name)}`"
+      :message="t('buyConfirm').replace('{item}', t(BUY_INFO[buyAsk].name)).replace('{price}', String(BUY_INFO[buyAsk].price()))"
+      :confirm-label="t('buy')"
+      :cancel-label="t('later')"
+      @confirm="confirmBuy"
+      @cancel="buyAsk = ''"
     />
     <OddsModal v-if="showOdds" @close="showOdds = false" />
     <TalismanPicker v-if="showTalismanPick" @close="showTalismanPick = false" />

@@ -5,7 +5,7 @@ const dict = {
     subtitle: '강화 클리커 — 어디까지 올라갈 수 있을까?',
     // header ticker — one shows at random and rotates; keep each one-line short
     tips: [
-      '💡 단축키: Space 강화·확인 · S 스트릭 판매 · I 아이템 · K 스킬 · 2 리스크',
+      '💡 단축키: Space 강화·확인 · S 스트릭 판매 · I 아이템 · K 스킬 · F 리스크',
       '💡 리스크 모드는 확률을 나누는 대신 보상이 커져요 — 보상 ≈ 100 ÷ 확률',
       '💡 실패가 무서우면 먼저 스트릭을 판매해 코인으로 바꿔두세요',
       '💡 같은 카드 3장을 합성하면 상위 등급이 돼요 — 분해는 2장만 돌려줘요',
@@ -59,6 +59,8 @@ const dict = {
     skillShop: '스킬 상점',
     menuTutorial: '튜토리얼',
     toPrestige: '프리스티지까지 ★{n}',
+    buy: '구매',
+    buyConfirm: '{item}을 💰{price}에 구매할까요?',
     // the tutorial's closing keycap sheet — [key, what it does]
     keyGuide: [
       ['Space', '강화 · 프리스티지 · 팝업 확인'],
@@ -69,7 +71,7 @@ const dict = {
       ['L', '복권 긁기'],
       ['C', '카드팩 구매'],
       ['R', '시간 충전'],
-      ['1·2', '안전 · 리스크'],
+      ['F', '리스크 토글'],
       ['Esc', '닫기'],
     ],
     menuLight: '라이트 모드',
@@ -222,7 +224,7 @@ const dict = {
       { title: '컬렉션', desc: '카드는 티어×등급 24종, 전부 효과가 달라요! 장착하면 다음 클릭 한 번에 발동합니다 (티어 제한 없음). 3장을 합성해 상위 등급으로 — 발견한 카드는 소모해도 도감에 남아요.' },
       { title: '랭킹', desc: '프리스티지 티어 → 별 순으로 겨뤄요. 최대 별 달성 시 프리스티지로 별 티어를 승급하고 별 한도가 +5 (최대 30) — 한도를 넘긴 별은 💰로!' },
       // PC-only closing step (startTutorial appends it when no drawer is in play)
-      { title: '⌨️ 단축키', desc: 'Space 강화·팝업 확인 · S 스트릭 판매 · I 아이템 상점 · K 스킬 상점 · 1·2 리스크 · Esc 닫기' },
+      { title: '⌨️ 단축키', desc: 'Space 강화·팝업 확인 · S 스트릭 판매 · I 아이템 상점 · K 스킬 상점 · F 리스크 · Esc 닫기' },
     ],
     tier: { unrank: '언랭', bronze: '브론즈', silver: '실버', gold: '골드', platinum: '플래티넘', diamond: '다이아몬드' },
     rarity: { common: '커먼', rare: '레어', holo: '홀로', prismatic: '프리즘' },
@@ -230,7 +232,7 @@ const dict = {
   en: {
     subtitle: 'enchant clicker — how far can your streak go?',
     tips: [
-      '💡 Shortcuts: Space enchant/confirm · S sell streak · I items · K skills · 2 risk',
+      '💡 Shortcuts: Space enchant/confirm · S sell streak · I items · K skills · F risk',
       '💡 Risk mode divides your odds but pays ≈ 100 ÷ chance',
       '💡 Scared of a risky click? Sell your streak for coins first',
       '💡 Fuse 3 identical cards into the next rarity — defusing returns only 2',
@@ -284,6 +286,8 @@ const dict = {
     skillShop: 'Skill shop',
     menuTutorial: 'Tutorial',
     toPrestige: '★{n} more to prestige',
+    buy: 'Buy',
+    buyConfirm: 'Buy {item} for 💰{price}?',
     keyGuide: [
       ['Space', 'enchant · prestige · confirm popups'],
       ['S', 'sell streak'],
@@ -293,7 +297,7 @@ const dict = {
       ['L', 'scratch a lottery ticket'],
       ['C', 'buy a card pack'],
       ['R', 'recharge clicks'],
-      ['1·2', 'safe · risk'],
+      ['F', 'toggle risk'],
       ['Esc', 'close'],
     ],
     menuLight: 'Light mode',
@@ -443,7 +447,7 @@ const dict = {
       { title: 'Golden touch', desc: 'Every success has a level×4% chance to pay 💰 equal to your stars. Deep streaks hit harder!' },
       { title: 'Collection', desc: '24 cards, one per tier × rarity, and every one does something different! Arm one and it fires on your very next click — any tier. Fuse 3 into the next rarity; discovered cards stay in the collection even at ×0.' },
       { title: 'Ranking', desc: 'Ranked by prestige tier → stars. Max your stars and PRESTIGE to promote your star tier and raise the cap by +5 (up to 30) — stars rolled past the cap pay 💰!' },
-      { title: '⌨️ Shortcuts', desc: 'Space enchant / confirm · S sell streak · I item shop · K skill shop · 1·2 risk · Esc close' },
+      { title: '⌨️ Shortcuts', desc: 'Space enchant / confirm · S sell streak · I item shop · K skill shop · F risk · Esc close' },
     ],
     tier: { unrank: 'Unrank', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum', diamond: 'Diamond' },
     rarity: { common: 'Common', rare: 'Rare', holo: 'Holo', prismatic: 'Prismatic' },
