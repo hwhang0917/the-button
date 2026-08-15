@@ -24,7 +24,7 @@ func TestQuota(t *testing.T) {
 		t.Fatal(err)
 	}
 	const limit = 3
-	for i := 0; i < limit; i++ {
+	for i := range limit {
 		if _, err := s.ConsumeQuota("tok", limit); err != nil {
 			t.Fatalf("click %d rejected: %v", i+1, err)
 		}
@@ -38,7 +38,7 @@ func TestQuota(t *testing.T) {
 	if err := s.GrantQuota("tok", 2); err != nil {
 		t.Fatalf("grant failed: %v", err)
 	}
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		if _, err := s.ConsumeQuota("tok", limit); err != nil {
 			t.Fatalf("granted click %d rejected: %v", i+1, err)
 		}
@@ -214,7 +214,7 @@ func TestPrestigeStore(t *testing.T) {
 	}
 
 	// prestige is unbounded: prismatic laps keep counting past the skin cap
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		if err := s.SavePlayerStars("a", maxStars, 0); err != nil {
 			t.Fatal(err)
 		}
@@ -320,7 +320,7 @@ func TestTalismanStore(t *testing.T) {
 	if ok, _ := s.ArmTalisman("a", "bronze", "common"); ok {
 		t.Fatal("arming without a card must fail")
 	}
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		if err := s.AddCard("a", "bronze", "common"); err != nil {
 			t.Fatal(err)
 		}

@@ -55,7 +55,7 @@ func TestChanceTableMonotonic(t *testing.T) {
 func TestResolveBounds(t *testing.T) {
 	r := Default()
 	for _, cap := range []int{r.MaxStars, 30} {
-		for stars := 0; stars < cap; stars++ {
+		for stars := range cap {
 			for risk := 0; risk <= r.MaxRisk; risk++ {
 				res := r.Resolve(Click{Stars: stars, Risk: risk, Cap: cap})
 				if res.Success {
