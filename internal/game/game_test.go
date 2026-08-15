@@ -79,7 +79,8 @@ func TestResolveBounds(t *testing.T) {
 
 func TestMaxStarsFor(t *testing.T) {
 	r := Default()
-	for prestige, want := range map[int]int{0: 15, 1: 20, 2: 25, 3: 30, 9: 30} {
+	// the cap grows without bound — no skin-cap clamp
+	for prestige, want := range map[int]int{0: 15, 1: 20, 2: 25, 3: 30, 9: 60} {
 		if got := r.MaxStarsFor(prestige); got != want {
 			t.Errorf("MaxStarsFor(%d) = %d, want %d", prestige, got, want)
 		}
@@ -126,8 +127,16 @@ func TestTierBoundaries(t *testing.T) {
 	want := map[int]string{0: "unrank", 1: "bronze", 3: "bronze", 4: "silver",
 		7: "gold", 10: "platinum", 13: "diamond", 15: "diamond"}
 	for stars, tier := range want {
-		if got := r.TierFor(stars); got != tier {
-			t.Errorf("TierFor(%d) = %q, want %q", stars, got, tier)
+		if got := r.TierFor(stars, r.MaxStars); got != tier {
+			t.Errorf("TierFor(%d, base) = %q, want %q", stars, got, tier)
+		}
+	}
+	// a prestige-doubled cap stretches every threshold in ratio
+	scaled := map[int]string{0: "unrank", 1: "unrank", 2: "bronze", 7: "bronze",
+		8: "silver", 14: "gold", 20: "platinum", 25: "platinum", 26: "diamond", 30: "diamond"}
+	for stars, tier := range scaled {
+		if got := r.TierFor(stars, 30); got != tier {
+			t.Errorf("TierFor(%d, 30) = %q, want %q", stars, got, tier)
 		}
 	}
 }
@@ -144,8 +153,14 @@ func TestTierRankLadder(t *testing.T) {
 func TestNextTierMin(t *testing.T) {
 	r := Default()
 	for stars, want := range map[int]int{0: 1, 1: 4, 5: 7, 9: 10, 12: 13, 13: 0, 20: 0} {
-		if got := r.NextTierMin(stars); got != want {
-			t.Errorf("NextTierMin(%d) = %d, want %d", stars, got, want)
+		if got := r.NextTierMin(stars, r.MaxStars); got != want {
+			t.Errorf("NextTierMin(%d, base) = %d, want %d", stars, got, want)
+		}
+	}
+	// thresholds scale with the cap: at 30, silver starts at 8, diamond at 26
+	for stars, want := range map[int]int{1: 2, 2: 8, 20: 26, 26: 0} {
+		if got := r.NextTierMin(stars, 30); got != want {
+			t.Errorf("NextTierMin(%d, 30) = %d, want %d", stars, got, want)
 		}
 	}
 }

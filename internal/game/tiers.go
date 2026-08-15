@@ -24,11 +24,18 @@ func DefaultTiers() []Tier {
 // walks up it and defusion walks down.
 func DefaultRarities() []string { return []string{"common", "rare", "holo", "prismatic"} }
 
-// TierFor is the tier holding the given star count.
-func (r Rules) TierFor(stars int) string {
+// scaledMin spreads a tier threshold in ratio: MinStars is defined against the
+// base MaxStars, so a prestige-raised cap stretches the whole ladder with it.
+// cap >= MaxStars keeps the scaled thresholds strictly ascending.
+func (r Rules) scaledMin(minStars, cap int) int {
+	return minStars * cap / r.MaxStars
+}
+
+// TierFor is the tier holding the given star count at the given cap.
+func (r Rules) TierFor(stars, cap int) string {
 	name := r.Tiers[0].Name
 	for _, t := range r.Tiers {
-		if stars >= t.MinStars {
+		if stars >= r.scaledMin(t.MinStars, cap) {
 			name = t.Name
 		}
 	}
@@ -48,10 +55,10 @@ func (r Rules) TierRank(name string) int {
 
 // NextTierMin is the first star count of the tier above the one holding stars,
 // or 0 at the top of the ladder — the 🌙 달빛 사다리 card jumps to it.
-func (r Rules) NextTierMin(stars int) int {
+func (r Rules) NextTierMin(stars, cap int) int {
 	for _, t := range r.Tiers {
-		if t.MinStars > stars {
-			return t.MinStars
+		if m := r.scaledMin(t.MinStars, cap); m > stars {
+			return m
 		}
 	}
 	return 0

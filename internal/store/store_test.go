@@ -213,12 +213,13 @@ func TestPrestigeStore(t *testing.T) {
 		t.Fatalf("after prestige: %+v", p)
 	}
 
-	// prestige is unbounded: prismatic laps keep counting past the skin cap
+	// prestige is unbounded and each level raises the cap: lap at the real cap
 	for i := range 4 {
-		if err := s.SavePlayerStars("a", maxStars, 0); err != nil {
+		cap := game.Default().MaxStarsFor(p.Prestige)
+		if err := s.SavePlayerStars("a", cap, 0); err != nil {
 			t.Fatal(err)
 		}
-		if ok, _ := s.PrestigeStreak("a", game.Default().PrestigeRewardFor(p.Prestige), 0, maxStars); !ok {
+		if ok, _ := s.PrestigeStreak("a", game.Default().PrestigeRewardFor(p.Prestige), 0, cap); !ok {
 			t.Fatalf("prestige round %d failed", i)
 		}
 		p, _ = s.GetOrCreatePlayer("a")

@@ -44,7 +44,7 @@ func (s *Server) stateFor(p *store.Player, quotaLeft int) stateResponse {
 	return stateResponse{
 		Stars:          p.Stars,
 		BestStars:      p.BestStars,
-		Tier:           rules.TierFor(p.Stars),
+		Tier:           rules.TierFor(p.Stars, cap),
 		Chance:         rules.ChanceFor(p.Stars, 0, cap),
 		MaxStars:       cap,
 		QuotaLeft:      quotaLeft,
@@ -154,7 +154,7 @@ func (s *Server) handleClick(w http.ResponseWriter, r *http.Request) {
 	// first time above the lifetime-best tier: refund clicks equal to the new
 	// tier's rank (gating on best stops farming the free bronze click)
 	bonus := 0
-	if res.TierUp && rules.TierRank(res.Tier) > rules.TierRank(rules.TierFor(p.BestStars)) {
+	if res.TierUp && rules.TierRank(res.Tier) > rules.TierRank(rules.TierFor(p.BestStars, cap)) {
 		bonus = rules.TierRank(res.Tier)
 	}
 	// a refunding card hands this click straight back
@@ -196,7 +196,8 @@ func (s *Server) handleSell(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if p.Stars >= rules.MaxStarsFor(p.Prestige) {
+	cap := rules.MaxStarsFor(p.Prestige)
+	if p.Stars >= cap {
 		// a maxed streak must go through prestige, not the plain sell
 		writeError(w, http.StatusConflict, "prestige_instead")
 		return
@@ -221,8 +222,8 @@ func (s *Server) handleSell(w http.ResponseWriter, r *http.Request) {
 		"coins":  p.Coins + gain,
 		"gained": gain,
 		"stars":  floor,
-		"tier":   rules.TierFor(floor),
-		"chance": rules.ChanceFor(floor, 0, rules.MaxStarsFor(p.Prestige)),
+		"tier":   rules.TierFor(floor, cap),
+		"chance": rules.ChanceFor(floor, 0, cap),
 	})
 }
 
@@ -255,7 +256,7 @@ func (s *Server) handlePrestige(w http.ResponseWriter, r *http.Request) {
 		"gained":   reward,
 		"prestige": p.Prestige + 1,
 		"stars":    floor,
-		"tier":     rules.TierFor(floor),
+		"tier":     rules.TierFor(floor, rules.MaxStarsFor(p.Prestige+1)),
 		// the cap the player will roll against after this prestige
 		"chance": rules.ChanceFor(floor, 0, rules.MaxStarsFor(p.Prestige+1)),
 		// the promotion refilled the hour's clicks
@@ -662,7 +663,8 @@ func (s *Server) handleLeaderboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for i := range entries {
-		entries[i].Tier = rules.TierFor(entries[i].Stars)
+		// each row's ladder stretches with that player's own prestige cap
+		entries[i].Tier = rules.TierFor(entries[i].Stars, rules.MaxStarsFor(entries[i].Prestige))
 	}
 	writeJSON(w, http.StatusOK, entries)
 }

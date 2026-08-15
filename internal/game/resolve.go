@@ -131,7 +131,7 @@ type Result struct {
 // floor — but never above where the streak was, so failing below the floor is
 // never profitable.
 func (r Rules) Resolve(c Click) Result {
-	prevTier := r.TierFor(c.Stars)
+	prevTier := r.TierFor(c.Stars, c.Cap)
 	e := c.Card
 	// charm feeds both roll and payout (higher chance, lower reward), but a
 	// card's chance bonus boosts ONLY the roll — the consumed card is its
@@ -159,7 +159,7 @@ func (r Rules) Resolve(c Click) Result {
 		}
 		return Result{
 			Stars:        newStars,
-			Tier:         r.TierFor(newStars),
+			Tier:         r.TierFor(newStars, c.Cap),
 			TalismanUsed: e.Armed(),
 			// only the keep effect earns the shield message — a chance-only card
 			// burning while the streak sits at the head-start floor must not,
@@ -180,7 +180,7 @@ func (r Rules) Resolve(c Click) Result {
 	newStars := min(c.Stars+gain, c.Cap)
 	// jumps are floors, so they can lift a streak but never cut one short
 	if e.TierJump {
-		newStars = max(newStars, min(r.NextTierMin(c.Stars), c.Cap))
+		newStars = max(newStars, min(r.NextTierMin(c.Stars, c.Cap), c.Cap))
 	}
 	if e.BestJump {
 		newStars = max(newStars, min(c.Best, c.Cap))
@@ -200,8 +200,8 @@ func (r Rules) Resolve(c Click) Result {
 		Success:      true,
 		Stars:        newStars,
 		Gained:       newStars - c.Stars,
-		Tier:         r.TierFor(newStars),
-		TierUp:       r.TierFor(newStars) != prevTier,
+		Tier:         r.TierFor(newStars, c.Cap),
+		TierUp:       r.TierFor(newStars, c.Cap) != prevTier,
 		Win:          newStars >= c.Cap,
 		Card:         card,
 		TalismanUsed: e.Armed(),

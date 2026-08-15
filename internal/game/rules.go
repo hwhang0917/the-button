@@ -168,10 +168,11 @@ func Default() Rules {
 	}
 }
 
-// MaxStarsFor is the star cap at a prestige level. The skin cap bounds it too,
-// so the star row stays renderable however far prestige runs.
+// MaxStarsFor is the star cap at a prestige level — it grows without bound;
+// the star row copes with big caps by bundling (5/10/50-star denominations),
+// and the skin cap bounds only the visuals.
 func (r Rules) MaxStarsFor(prestige int) int {
-	return r.MaxStars + r.PrestigeStarBonus*min(prestige, r.PrestigeSkinCap)
+	return r.MaxStars + r.PrestigeStarBonus*max(prestige, 0)
 }
 
 // RefillsFor is the daily time-recharge allowance: the configured base plus
