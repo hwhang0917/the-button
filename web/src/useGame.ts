@@ -126,9 +126,11 @@ export function gainFor(chance: number, risk: number): number {
   return Math.max(1, Math.round(100 / chance))
 }
 
-/** Roll chance after risk division and charm bonus. Mirrors EffChanceFor. */
+/** Roll chance after risk division and charm bonus. Mirrors EffChanceFor,
+ * including the 1% clamp under the risk division (3% at 🔥🔥🔥 is 1%, not 0). */
 export function effChance(base: number, risk: number, charm: number): number {
-  return Math.min(100, Math.floor(base / (risk + 1)) + cfg().charm.bonusPct * charm)
+  if (base <= 0) return 0
+  return Math.min(100, Math.max(1, Math.floor(base / (risk + 1))) + cfg().charm.bonusPct * charm)
 }
 
 const tri = (n: number) => (n * (n + 1)) / 2
