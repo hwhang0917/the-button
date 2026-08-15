@@ -49,6 +49,9 @@ export default defineConfig(({ mode }) => {
     throw new Error('VITE_SITE_URL and VITE_SECURITY_CONTACT must be set (see web/.env)')
   }
   const origin = env.VITE_SITE_URL.replace(/\/$/, '')
+  // og:image cache-buster: scrapers (Kakao, FB, …) cache previews by exact
+  // URL, so each build stamps a fresh ?v= for index.html's %VITE_BUILD_TS%
+  process.env.VITE_BUILD_TS = String(Date.now())
 
   return {
     plugins: [vue(), tailwindcss(), botFiles(origin, env.VITE_SECURITY_CONTACT)],
