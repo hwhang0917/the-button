@@ -286,6 +286,15 @@ onMounted(async () => {
   // native listener: some Android browsers ignore vibrate() from Pixi's
   // synthesized pointer events, but credit a real touchstart as the gesture
   a.canvas.addEventListener('touchstart', () => vibrate(22), { passive: true })
+  // disabled: pixi's eventMode is 'none', so a native listener catches the
+  // futile tap and answers with the blocked thud (only inside the circle)
+  a.canvas.addEventListener('pointerdown', (e) => {
+    if (!props.disabled) return
+    const r = a.canvas.getBoundingClientRect()
+    const x = (e.clientX - r.left) * (SIZE / r.width) - SIZE / 2
+    const y = (e.clientY - r.top) * (SIZE / r.height) - SIZE / 2
+    if (x * x + y * y <= R * R) play('blocked')
+  })
 
   emberTex = a.renderer.generateTexture(new Graphics().circle(0, 0, 4).fill('#ffffff'))
   // soft blob for steam: stacked translucent circles fake a radial falloff, so

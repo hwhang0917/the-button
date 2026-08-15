@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 
 const files = [
-  'click', 'fail', 'hover', 'mouseover', 'switch', 'win', 'prestige',
+  'click', 'blocked', 'fail', 'hover', 'mouseover', 'switch', 'win', 'prestige',
   'scratch', 'shield', 'streak-sell', 'coin-use', 'talisman', 'card-flip',
   'success_unrank', 'success_bronze', 'success_silver',
   'success_gold', 'success_platinum', 'success_diamond',
@@ -79,6 +79,7 @@ export function vibrate(pattern: number | number[]) {
 // Safari, so the optional call quietly no-ops there
 const buzz: Partial<Record<Sound, number | number[]>> = {
   click: 15,
+  blocked: [10, 30, 10],
   switch: 10,
   fail: [60, 40, 120],
   win: [50, 50, 50, 50, 150],
