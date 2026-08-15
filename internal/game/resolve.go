@@ -1,12 +1,19 @@
 package game
 
-// ChanceFor is the success % for the next click at the given star count. Stars
-// past the table (prestige-raised caps) roll at the table's last entry.
+// ChanceFor is the success % for the next click at the given star count. Past
+// the table (prestige-raised caps) the difficulty keeps tightening: one point
+// per prestige-lap worth of stars, floored at 1% so no star is unwinnable —
+// which is also why the risk division clamps to 1 instead of rounding to 0.
 func (r Rules) ChanceFor(stars, risk, cap int) int {
 	if stars >= cap {
 		return 0
 	}
-	return r.ChanceTable[min(stars, len(r.ChanceTable)-1)] / (risk + 1)
+	last := len(r.ChanceTable) - 1
+	base := r.ChanceTable[min(stars, last)]
+	if stars > last {
+		base = max(1, base-(stars-last)/max(1, r.PrestigeStarBonus))
+	}
+	return max(1, base/(risk+1))
 }
 
 // EffChanceFor is the roll chance after risk division and the charm bonus.

@@ -85,11 +85,16 @@ func TestMaxStarsFor(t *testing.T) {
 			t.Errorf("MaxStarsFor(%d) = %d, want %d", prestige, got, want)
 		}
 	}
-	// the veteran zone rolls at the table's 5% floor, never 0, until the cap
-	for stars := 15; stars < 30; stars++ {
-		if got := r.ChanceFor(stars, 0, 30); got != 5 {
-			t.Errorf("ChanceFor(%d, 0, 30) = %d, want 5", stars, got)
+	// past the table the odds keep tightening — one point per 5-star lap,
+	// floored at 1% so every star below the cap stays winnable
+	for stars, want := range map[int]int{15: 5, 19: 5, 20: 4, 25: 3, 30: 2, 35: 1, 60: 1} {
+		if got := r.ChanceFor(stars, 0, 100); got != want {
+			t.Errorf("ChanceFor(%d, 0, 100) = %d, want %d", stars, got, want)
 		}
+	}
+	// the risk division clamps to 1% too, never 0 below the cap
+	if got := r.ChanceFor(40, 3, 100); got != 1 {
+		t.Errorf("ChanceFor(40, 3, 100) = %d, want 1", got)
 	}
 	if got := r.ChanceFor(30, 0, 30); got != 0 {
 		t.Errorf("chance at the cap must be 0, got %d", got)
