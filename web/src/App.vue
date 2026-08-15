@@ -427,6 +427,11 @@ const quotaColor = computed(() => {
 
 // no stake at the head-start floor, no risk bonus — mirrors Resolve's gate
 const staked = computed(() => (state.value?.stars ?? 0) > (state.value?.headstartLevel ?? 0))
+// a fail (or sell/prestige) that drops the streak to the floor takes the
+// stake with it, so the armed gamble switches itself off
+watch(staked, (s) => {
+  if (!s) risk.value = 0
+})
 
 // coins on success — Resolve's jackpot: the risk bonus (guarantee settles
 // without it), overflow past the cap, plus 황금손's per-star pay
@@ -443,7 +448,7 @@ const displayCoins = computed(() => {
 })
 
 function setRisk(lvl: number) {
-  if (state.value?.win) return // the F keybind routes here too
+  if (state.value?.win || !staked.value) return // the F keybind routes here too
   risk.value = lvl
   play('switch')
   vibrate(4 + lvl * 6) // buzz escalates with the risk you're signing up for
@@ -879,8 +884,7 @@ onMounted(async () => {
 <!-- at max stars there is no next click to preview — prestige is the move -->
           <p v-if="!state.win" class="text-center text-xs text-slate-500">
             {{ t('gainInfo').replace('{n}', String(displayGain))
-            }}<template v-if="displayCoins"> · 💰+{{ displayCoins }}</template
-            ><template v-else-if="risk > 0 && !staked"> · {{ t('riskNoStake') }}</template>
+            }}<template v-if="displayCoins"> · 💰+{{ displayCoins }}</template>
           </p>
 
           <p class="h-5 text-center text-sm font-bold sm:h-6 sm:text-base" :class="messageColor">{{ message }}</p>
@@ -901,18 +905,19 @@ onMounted(async () => {
               <span class="text-sm font-bold" :class="risk ? 'text-rose-400' : 'text-slate-400'">
                 🔥 {{ t('riskIt') }}
               </span>
-<!-- nothing to roll at max stars, so the risk picker rests too -->
-<!-- one gamble toggle: the divisor is max_risk+1 from config -->
+<!-- one gamble toggle: the divisor is max_risk+1 from config. Rests at
+                   max stars (nothing to roll) and at the head-start floor
+                   (nothing staked = no bonus, so the gamble is pointless) -->
               <button
                 class="rounded-full border px-3 py-1 text-xs font-bold transition-colors"
                 :class="[
                   risk
                     ? 'border-rose-500 bg-rose-600 text-white'
                     : 'border-slate-700 text-slate-400 hover:bg-slate-800',
-                  { 'opacity-40': state.win },
+                  { 'opacity-40': state.win || !staked },
                 ]"
-                :disabled="state.win"
-                :title="`${t('chance')} 1/${cfg().maxRisk + 1}`"
+                :disabled="state.win || !staked"
+                :title="!staked && !state.win ? t('riskNoStake') : `${t('chance')} 1/${cfg().maxRisk + 1}`"
                 @click="setRisk(risk ? 0 : cfg().maxRisk)"
               >
                 {{ risk ? 'ON' : 'OFF' }}
