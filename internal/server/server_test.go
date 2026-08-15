@@ -226,3 +226,13 @@ func TestDocs(t *testing.T) {
 		t.Fatalf("spec body starts with %q, want openapi:", body)
 	}
 }
+
+// TestStateClampsStarsToCap: a config change (or an older ruleset) can leave
+// stored stars above the current cap — the client must never see 18/15.
+func TestStateClampsStarsToCap(t *testing.T) {
+	got := testServer(t).stateFor(&store.Player{Stars: 18}, 0)
+	if got.Stars != 15 || got.MaxStars != 15 || !got.Win {
+		t.Fatalf("over-cap stars must clamp to a win at the cap, got %d/%d win=%v",
+			got.Stars, got.MaxStars, got.Win)
+	}
+}

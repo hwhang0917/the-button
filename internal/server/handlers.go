@@ -40,12 +40,16 @@ type stateResponse struct {
 func (s *Server) stateFor(p *store.Player, quotaLeft int) stateResponse {
 	rules := s.cfg.Rules
 	cap := rules.MaxStarsFor(p.Prestige)
+	// stored stars can exceed the cap when a config change (or an older
+	// ruleset) shrinks it; clamp on read so the client never sees 18/15 —
+	// the surplus resolves through the normal prestige at the cap
+	stars := min(p.Stars, cap)
 	now := time.Now()
 	return stateResponse{
-		Stars:          p.Stars,
+		Stars:          stars,
 		BestStars:      p.BestStars,
-		Tier:           rules.TierFor(p.Stars, cap),
-		Chance:         rules.ChanceFor(p.Stars, 0, cap),
+		Tier:           rules.TierFor(stars, cap),
+		Chance:         rules.ChanceFor(stars, 0, cap),
 		MaxStars:       cap,
 		QuotaLeft:      quotaLeft,
 		Quota:          rules.QuotaFor(p.StaminaLevel),
@@ -663,8 +667,11 @@ func (s *Server) handleLeaderboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for i := range entries {
-		// each row's ladder stretches with that player's own prestige cap
-		entries[i].Tier = rules.TierFor(entries[i].Stars, rules.MaxStarsFor(entries[i].Prestige))
+		// each row's ladder stretches with that player's own prestige cap;
+		// clamp like stateFor so shrunk-cap leftovers never rank above it
+		cap := rules.MaxStarsFor(entries[i].Prestige)
+		entries[i].Stars = min(entries[i].Stars, cap)
+		entries[i].Tier = rules.TierFor(entries[i].Stars, cap)
 	}
 	writeJSON(w, http.StatusOK, entries)
 }
