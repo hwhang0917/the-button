@@ -271,8 +271,9 @@ func TestSkillProcs(t *testing.T) {
 
 func TestPrestigeReward(t *testing.T) {
 	r := Default()
-	// past the ladder every prismatic lap pays the top reward
-	for prestige, want := range map[int]int{0: 300, 1: 450, 2: 600, 3: 600, 12: 600} {
+	// past the ladder the reward keeps climbing by the final step (+150),
+	// matching the lap cost that grows with the unbounded cap
+	for prestige, want := range map[int]int{0: 300, 1: 450, 2: 600, 3: 750, 12: 2100} {
 		if got := r.PrestigeRewardFor(prestige); got != want {
 			t.Errorf("PrestigeRewardFor(%d) = %d, want %d", prestige, got, want)
 		}

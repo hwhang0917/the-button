@@ -195,10 +195,19 @@ func (r Rules) QuotaFor(level int) int {
 	return q
 }
 
-// PrestigeRewardFor is the payout for prestiging from the given level; every
-// lap past the ladder pays the top reward.
+// PrestigeRewardFor is the payout for prestiging from the given level. Laps
+// past the ladder keep climbing by the ladder's final step, so the reward
+// tracks the ever-growing lap cost instead of flatlining at the top entry.
 func (r Rules) PrestigeRewardFor(prestige int) int {
-	return r.PrestigeRewards[min(prestige, len(r.PrestigeRewards)-1)]
+	last := len(r.PrestigeRewards) - 1
+	if prestige <= last {
+		return r.PrestigeRewards[max(prestige, 0)]
+	}
+	step := 0
+	if last > 0 {
+		step = r.PrestigeRewards[last] - r.PrestigeRewards[last-1]
+	}
+	return r.PrestigeRewards[last] + step*(prestige-last)
 }
 
 // PriceFor is the next purchase price of a skill, or ok=false when the skill is
