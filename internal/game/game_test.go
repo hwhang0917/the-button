@@ -62,11 +62,11 @@ func TestResolveBounds(t *testing.T) {
 					if res.Stars <= stars || res.Stars > cap {
 						t.Fatalf("cap=%d stars=%d risk=%d: success moved to %d", cap, stars, risk, res.Stars)
 					}
-					gain := GainFor(r.baseChance(stars), risk, 0)
-					if want := min(stars+gain, cap); res.Stars != want {
+					// stars always step one; risk pays its reward in coins
+					if want := min(stars+1, cap); res.Stars != want {
 						t.Fatalf("cap=%d stars=%d risk=%d: gained to %d, want %d", cap, stars, risk, res.Stars, want)
 					}
-					if want := r.OverflowCoinPer * max(0, stars+gain-cap); res.Jackpot != want {
+					if want := RiskCoinsFor(r.baseChance(stars), risk, 0); res.Jackpot != want {
 						t.Fatalf("cap=%d stars=%d risk=%d: jackpot %d, want %d", cap, stars, risk, res.Jackpot, want)
 					}
 				} else if res.Stars != 0 {
@@ -101,25 +101,25 @@ func TestMaxStarsFor(t *testing.T) {
 	}
 }
 
-func TestGainForPaysTheOddsBack(t *testing.T) {
+func TestRiskCoinsPayTheOddsBack(t *testing.T) {
 	cases := []struct{ base, risk, charm, want int }{
-		{100, 0, 0, 1}, // safe mode is always one star
-		{5, 0, 0, 1},
+		{100, 0, 0, 0}, // safe mode pays no coin bonus
+		{5, 0, 0, 0},
 		{100, 1, 0, 2}, // eff 50% → 2
 		{99, 2, 0, 3},  // eff 33% → 3
 		{100, 3, 0, 4}, // eff 25% → 4
 		{20, 1, 0, 10}, // eff 10% → 10
 		{8, 3, 0, 50},  // eff 2% → 50
-		{0, 3, 0, 1},   // a dead chance still cannot divide by zero
-		// the roll clamps both to 1%, but the payout keeps the levels apart
+		{0, 3, 0, 0},   // a dead chance still cannot divide by zero
+		// the roll clamps both to 1%, but the payout keeps the odds apart
 		{3, 2, 0, 100},
 		{3, 3, 0, 133},
 		// charm raises the effective odds, trading payout for survival
 		{5, 1, 6, 12}, // eff 2.5+6 = 8.5% → round(100/8.5) = 12
 	}
 	for _, c := range cases {
-		if got := GainFor(c.base, c.risk, c.charm); got != c.want {
-			t.Errorf("GainFor(%d, %d, %d) = %d, want %d", c.base, c.risk, c.charm, got, c.want)
+		if got := RiskCoinsFor(c.base, c.risk, c.charm); got != c.want {
+			t.Errorf("RiskCoinsFor(%d, %d, %d) = %d, want %d", c.base, c.risk, c.charm, got, c.want)
 		}
 	}
 }
@@ -408,22 +408,22 @@ func TestResolveEffects(t *testing.T) {
 	win := withRNG(AlwaysWin{})
 	lose := withRNG(alwaysLose{})
 
-	// Chance boosts only the roll — never the risk-mode payout
-	want := GainFor(base.baseChance(5), 1, 0)
+	// Chance boosts only the roll — never the risk-mode coin payout
+	want := RiskCoinsFor(base.baseChance(5), 1, 0)
 	res := win.Resolve(Click{Stars: 5, Risk: 1, Cap: win.MaxStars, Card: base.Cards["unrank/common"]})
 	if !res.TalismanUsed {
 		t.Fatal("an armed card must burn on any outcome")
 	}
-	if res.Gained != want {
-		t.Fatalf("a chance card must not change the payout: gained %d, want %d", res.Gained, want)
+	if res.Gained != 1 || res.Jackpot != want {
+		t.Fatalf("a chance card must not change the payout: gained %d jackpot %d, want 1/%d", res.Gained, res.Jackpot, want)
 	}
 	if res = lose.Resolve(Click{Stars: 5, Risk: 1, Cap: lose.MaxStars, Card: base.Cards["unrank/common"]}); !res.TalismanUsed {
 		t.Fatal("an armed card must burn on a fail too")
 	}
 
 	// Guarantee settles at the safe-mode rate even at max risk. This is the
-	// exploit regression: the risk-scaled rate would pay GainFor(2, 3) = 50
-	// stars plus ~245 overflow coins on a click nobody had to win.
+	// exploit regression: paying the risk coin bonus on a click nobody had to
+	// win would print ~50 coins per guarantee card.
 	res = lose.Resolve(Click{Stars: 14, Risk: lose.MaxRisk, Cap: lose.MaxStars, Card: base.Cards["unrank/prismatic"]})
 	if !res.Success || res.Gained != 1 || res.Jackpot != 0 {
 		t.Fatalf("a guaranteed win must gain exactly 1 with no jackpot: %+v", res)
@@ -497,10 +497,10 @@ func TestResolveEffects(t *testing.T) {
 		t.Fatalf("best jump must never cut a streak short, got %d", res.Stars)
 	}
 	// MaxRisk keeps the safe click's odds but settles at the max-risk payout:
-	// ★0 rolls at a guaranteed 100% while paying GainFor(100, 3, 0) = 4
-	want = GainFor(base.baseChance(0), base.MaxRisk, 0)
-	if res = lose.Resolve(Click{Cap: lose.MaxStars, Card: CardEffect{MaxRisk: true}}); !res.Success || res.Gained != want {
-		t.Fatalf("max-risk card should settle at the max-risk payout %d: %+v", want, res)
+	// ★0 rolls at a guaranteed 100% while paying RiskCoinsFor(100, 3, 0) = 4
+	want = RiskCoinsFor(base.baseChance(0), base.MaxRisk, 0)
+	if res = lose.Resolve(Click{Cap: lose.MaxStars, Card: CardEffect{MaxRisk: true}}); !res.Success || res.Gained != 1 || res.Jackpot != want {
+		t.Fatalf("max-risk card should settle at the max-risk coin payout %d: %+v", want, res)
 	}
 }
 

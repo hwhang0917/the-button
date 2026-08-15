@@ -120,10 +120,10 @@ export async function loadCards() {
   cards.value = await (await fetch('/api/cards')).json()
 }
 
-/** Stars won on success, from the TRUE un-clamped odds — mirrors GainFor in
- * game/resolve.go, so risk levels whose roll clamps to 1% still pay apart. */
-export function gainFor(base: number, risk: number, charmPct: number): number {
-  if (risk <= 0 || base <= 0) return 1
+/** The risk click's coin bonus, from the TRUE un-clamped odds — mirrors
+ * RiskCoinsFor in game/resolve.go. Stars always step one; risk pays coins. */
+export function riskCoinsFor(base: number, risk: number, charmPct: number): number {
+  if (risk <= 0 || base <= 0) return 0
   return Math.max(1, Math.round((100 * (risk + 1)) / (base + charmPct * (risk + 1))))
 }
 

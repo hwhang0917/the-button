@@ -9,7 +9,7 @@ import {
   deletePlayer,
   effChance,
   fuseCards,
-  gainFor,
+  riskCoinsFor,
   loadCards,
   loadLeaderboard,
   loadState,
@@ -408,15 +408,11 @@ const armedEffect = computed(() =>
     ? effectFor(state.value.talismanTier, state.value.talismanRarity)
     : {},
 )
-// stars on success, mirroring Resolve's success branch: the armed card's chance
-// bonus feeds only the roll, but maxRisk/guarantee/mult/bonus all shape the payout
+// stars on success, mirroring Resolve's success branch: always one star (risk
+// pays coins, not stars), shaped only by the armed card's mult/bonus
 const displayGain = computed(() => {
-  const s = state.value
-  if (!s) return 1
   const e = armedEffect.value
-  const payRisk = e.maxRisk ? cfg().maxRisk : risk.value
-  const base = e.guarantee ? 1 : gainFor(s.chance, payRisk, cfg().charm.bonusPct * s.charmLevel)
-  return base * Math.max(1, e.mult ?? 0) + (e.bonus ?? 0)
+  return Math.max(1, e.mult ?? 0) + (e.bonus ?? 0)
 })
 // the clicks-left counter drains toward a warning: the last 30% goes orange,
 // the last 10% red — relative to quota so stamina levels keep scale
@@ -429,13 +425,17 @@ const quotaColor = computed(() => {
   return 'text-slate-200'
 })
 
-// coins on success — Resolve's jackpot: overflow past the cap plus 황금손's per-star pay
+// coins on success — Resolve's jackpot: the risk bonus (guarantee settles
+// without it), overflow past the cap, plus 황금손's per-star pay
 const displayCoins = computed(() => {
   const s = state.value
   if (!s) return 0
+  const e = armedEffect.value
+  const payRisk = e.maxRisk ? cfg().maxRisk : risk.value
+  const riskCoins = e.guarantee ? 0 : riskCoinsFor(s.chance, payRisk, cfg().charm.bonusPct * s.charmLevel)
   const overflow = Math.max(0, s.stars + displayGain.value - s.maxStars)
   const newStars = Math.min(s.stars + displayGain.value, s.maxStars)
-  return cfg().overflowCoinPer * overflow + (armedEffect.value.coinWin ?? 0) * newStars
+  return riskCoins + cfg().overflowCoinPer * overflow + (e.coinWin ?? 0) * newStars
 })
 
 function setRisk(lvl: number) {

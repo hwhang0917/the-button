@@ -45,15 +45,14 @@ func (r Rules) roll(pct int) bool {
 	return r.RNG.Pct(pct)
 }
 
-// GainFor is the stars won on a successful click: safe mode always steps one
-// star; risk mode pays the TRUE odds back — round(100 / (base/(risk+1) +
-// charm)) — so the longer the shot, the bigger the payout, and the expected
-// gain per click stays flat. Computed from the un-clamped ratio in integer
-// math, so risk levels whose roll clamps to the same 1% still pay apart
-// (3% base: 🔥🔥 pays 100, 🔥🔥🔥 pays 133).
-func GainFor(base, risk, charmPct int) int {
+// RiskCoinsFor is the coin bonus a successful risk click pays. Success always
+// steps one star whatever the mode — risk never touches the streak; instead it
+// pays the TRUE odds back in coins: round(100 / (base/(risk+1) + charm)).
+// Computed from the un-clamped ratio in integer math, so odds whose roll
+// clamps at the 1% floor still pay in proportion.
+func RiskCoinsFor(base, risk, charmPct int) int {
 	if risk <= 0 || base <= 0 {
-		return 1
+		return 0
 	}
 	den := base + charmPct*(risk+1)
 	return max(1, (100*(risk+1)+den/2)/den)
@@ -187,13 +186,15 @@ func (r Rules) Resolve(c Click) Result {
 		}
 	}
 
-	// a guaranteed win settles at the safe-mode rate — see DefaultCards
-	gain := 1
+	// success always steps ONE star — risk mode pays its reward in coins, not
+	// stars, so the climb itself stays legible against the cap. A guaranteed
+	// win settles without the risk bonus (see DefaultCards): arming a
+	// guarantee card with risk on must not print coins off a sure thing.
+	gain := max(1, e.Mult) + e.Bonus
+	riskCoins := 0
 	if !e.Guarantee {
-		gain = GainFor(r.baseChance(c.Stars), payRisk, r.Charm.BonusPct*c.Charm)
+		riskCoins = RiskCoinsFor(r.baseChance(c.Stars), payRisk, r.Charm.BonusPct*c.Charm)
 	}
-	gain *= max(1, e.Mult)
-	gain += e.Bonus
 	newStars := min(c.Stars+gain, c.Cap)
 	// jumps are floors, so they can lift a streak but never cut one short
 	if e.TierJump {
@@ -223,6 +224,6 @@ func (r Rules) Resolve(c Click) Result {
 		Card:         card,
 		TalismanUsed: e.Armed(),
 		Refund:       e.Refund,
-		Jackpot:      r.OverflowCoinPer*max(0, c.Stars+gain-c.Cap) + e.CoinWin*newStars + golden,
+		Jackpot:      riskCoins + r.OverflowCoinPer*max(0, c.Stars+gain-c.Cap) + e.CoinWin*newStars + golden,
 	}
 }

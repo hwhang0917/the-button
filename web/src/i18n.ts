@@ -6,7 +6,7 @@ const dict = {
     // header ticker — one shows at random and rotates; keep each one-line short
     tips: [
       '💡 단축키: Space 강화·확인 · S 스트릭 판매 · I 아이템 · K 스킬 · F 리스크',
-      '💡 리스크 모드는 확률을 나누는 대신 보상이 커져요 — 보상 ≈ 100 ÷ 확률',
+      '💡 리스크 모드는 별 대신 코인 보너스를 줘요 — 💰 ≈ 100 ÷ 확률',
       '💡 실패가 무서우면 먼저 스트릭을 판매해 코인으로 바꿔두세요',
       '💡 같은 카드 3장을 합성하면 상위 등급이 돼요 — 분해는 2장만 돌려줘요',
       '💡 한 번 발견한 카드는 소모해도 도감에 남아요',
@@ -184,16 +184,16 @@ const dict = {
     oddsTitle: '확률 계산법',
     oddsSimple: [
       '⭐ 별이 많을수록 성공 확률이 낮아져요 — 표의 기본 확률에서 시작합니다.',
-      '🔥 리스크 모드는 확률이 확 낮아지는 대신, 성공 시 보상이 그만큼 커져요.',
+      '🔥 리스크 모드는 확률이 확 낮아지는 대신, 성공하면 코인 보너스를 받아요 — 별은 언제나 +1.',
       '🃏 카드는 24종 — 장착하면 다음 클릭 한 번에 발동해요 (티어 제한 없음).',
-      '💰 성공 보상 ≈ 100 ÷ 최종 확률 — 낮은 확률일수록 한 방이 큽니다.',
+      '💰 리스크 보너스 ≈ 100 ÷ 최종 확률 코인 — 낮은 확률일수록 한 방이 큽니다.',
       '🎲 모든 주사위는 서버에서 굴려요. 클라이언트는 결과만 보여줍니다.',
     ],
     oddsMore: '📐 자세한 수식 보기',
     oddsVars: 's = 현재 별, r = 리스크 레벨, c = 행운 부적 레벨, γ = 부적 레벨당 확률, ω = 한도 초과 별당 코인, cap = 현재 별 한도, T·M·B = 장착한 카드의 확률·배수·추가 별 (없으면 T=B=0, M=1)',
     oddsChanceDesc: '리스크는 기본 확률을 나누고 행운 부적이 더해져요. 카드 보너스(T)는 주사위에만 더해집니다.',
     oddsRollDesc: '서버가 crypto/rand로 0~99 정수를 뽑아 P 미만이면 성공 — 클라이언트는 결과만 그립니다.',
-    oddsGainDesc: '보상은 카드 보너스(T)를 뺀 P로 계산돼요 — 카드는 확률만 올려주는 순수 이득! 단 확정 성공 카드는 안전 모드 보상(+1)으로 정산됩니다.',
+    oddsGainDesc: '리스크 코인 보너스는 카드 보너스(T)를 뺀 P로 계산돼요 — 카드는 확률만 올려주는 순수 이득! 단 확정 성공 카드는 보너스 없이 정산됩니다.',
     oddsFailDesc: '실패 시: 별을 지키는 카드가 있으면 그대로, 없으면 출발 부스트 바닥으로 돌아갑니다.',
     privacy: '개인정보 처리방침',
     privacyBody:
@@ -209,7 +209,7 @@ const dict = {
     tutDone: '완료',
     tutorial: [
       { title: 'THE BUTTON', desc: '버튼을 누르면 확률에 따라 별을 얻어요. 실패하면 별이 모두 사라집니다!' },
-      { title: '리스크 모드', desc: '확률을 나누는 대신 성공하면 훨씬 많은 별을 받아요. 하이 리스크 하이 리턴!' },
+      { title: '리스크 모드', desc: '확률을 나누는 대신 성공하면 코인 보너스를 받아요. 별은 언제나 +1 — 하이 리스크 하이 리턴!' },
       { title: '남은 시도', desc: '클릭은 시간당 제한이 있고 매 정각에 충전돼요. 최고 티어를 처음 넘으면 보너스 클릭도!' },
       { title: '상점', desc: '스트릭 판매 · 아이템 상점 · 스킬 상점이 모여 있어요. 하나씩 살펴볼까요?' },
       { title: '스트릭 판매', desc: '현재 별을 코인으로 바꿔요. 깊은 스트릭일수록 훨씬 비쌉니다.' },
@@ -233,7 +233,7 @@ const dict = {
     subtitle: 'enchant clicker — how far can your streak go?',
     tips: [
       '💡 Shortcuts: Space enchant/confirm · S sell streak · I items · K skills · F risk',
-      '💡 Risk mode divides your odds but pays ≈ 100 ÷ chance',
+      '💡 Risk mode pays a coin bonus instead of stars — 💰 ≈ 100 ÷ chance',
       '💡 Scared of a risky click? Sell your streak for coins first',
       '💡 Fuse 3 identical cards into the next rarity — defusing returns only 2',
       '💡 A discovered card stays in your collection even when spent',
@@ -408,16 +408,16 @@ const dict = {
     oddsTitle: 'How the odds are computed',
     oddsSimple: [
       '⭐ More stars = lower odds — every click starts from the base table below.',
-      '🔥 Risk mode slashes your odds, but success pays that much more.',
+      '🔥 Risk mode slashes your odds, but success pays a coin bonus — stars always step +1.',
       '🃏 24 cards to collect — arm one and it fires on your very next click, any tier.',
-      '💰 Success reward ≈ 100 ÷ final chance — long shots pay big.',
+      '💰 Risk bonus ≈ 100 ÷ final chance in coins — long shots pay big.',
       '🎲 Every roll happens on the server; the client only renders the result.',
     ],
     oddsMore: '📐 Show the math',
     oddsVars: "s = current stars, r = risk level, c = lucky charm level, γ = chance per charm level, ω = coins per star past the cap, cap = your current star cap, T·M·B = the armed card's chance bonus, star multiplier and flat star bonus (T=B=0, M=1 with no card)",
     oddsChanceDesc: 'Risk divides the base chance and charm adds on top. A card bonus (T) only boosts the roll.',
     oddsRollDesc: 'The server draws an integer 0-99 with crypto/rand; below P wins — the client only renders.',
-    oddsGainDesc: 'The payout uses P without the card bonus — a card is pure upside on the odds. Guaranteed-success cards settle at the safe-mode rate (+1) instead.',
+    oddsGainDesc: 'The risk coin bonus uses P without the card bonus — a card is pure upside on the odds. Guaranteed-success cards settle without the bonus.',
     oddsFailDesc: 'On a fail: a card that keeps your stars wins, otherwise you drop to the head-start floor.',
     privacy: 'Privacy policy',
     privacyBody:
@@ -433,7 +433,7 @@ const dict = {
     tutDone: 'Done',
     tutorial: [
       { title: 'THE BUTTON', desc: 'Press to roll for stars — the odds shown decide your fate. Fail and every star is gone!' },
-      { title: 'Risk mode', desc: 'Divide your odds for a much bigger star payout on success. High risk, high return!' },
+      { title: 'Risk mode', desc: 'Divide your odds for a coin bonus on success. Stars always step +1 — high risk, high return!' },
       { title: 'Clicks', desc: 'Clicks are limited per hour and refill on the clock hour. Beating your best tier grants bonus clicks!' },
       { title: 'Shops', desc: 'Sell your streak, buy items, and level up skills here. Let’s look at each!' },
       { title: 'Sell streak', desc: 'Convert your current stars to coins — deep streaks pay far more.' },
