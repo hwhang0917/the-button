@@ -164,6 +164,8 @@ export async function prestigeStreak(): Promise<number | null> {
       tier: d.tier,
       chance: d.chance,
       prestige: d.prestige,
+      maxStars: d.maxStars, // the cap grew with the prestige
+
       quotaLeft: d.quotaLeft,
       win: false,
     })

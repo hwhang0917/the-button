@@ -150,6 +150,7 @@ paths:
                   prestige: { type: integer }
                   stars: { type: integer }
                   tier: { type: string }
+                  maxStars: { type: integer, description: "The raised cap after this prestige" }
                   chance: { type: integer }
                   quotaLeft: { type: integer }
         "403": { $ref: "#/components/responses/NicknameRequired" }
