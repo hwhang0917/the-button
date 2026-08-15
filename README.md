@@ -51,6 +51,7 @@ Env vars win last, so a container stays tunable without mounting a file:
 | `QUOTA` | no | `10` | clicks per player per hour (resets on the clock hour) |
 | `EVENTS_DIR` | no | — | anonymous NDJSON gameplay events for analytics; unset = telemetry off |
 | `DEV_MODE` | no | — | any value forces every roll to succeed (clicks at any risk) — local testing only |
+| `SHOW_DOCS` | no | — | any value serves Swagger UI for the API at `/api/docs` (also `server.show_docs` in config.yml) |
 
 ## Layout
 

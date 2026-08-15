@@ -33,8 +33,9 @@ type Config struct {
 	LinkCodeLen     int
 	ClaimFailLimit  int
 
-	DevMode bool
-	Rules   game.Rules
+	DevMode  bool
+	ShowDocs bool // serve Swagger UI + the OpenAPI spec under /api/docs
+	Rules    game.Rules
 }
 
 // duration lets config.yml write "10m" instead of a bare number of minutes.
@@ -70,6 +71,7 @@ type serverFile struct {
 	Port            string `yaml:"port"`
 	DBPath          string `yaml:"db_path"`
 	EventsDir       string `yaml:"events_dir"`
+	ShowDocs        bool   `yaml:"show_docs"`
 	LeaderboardSize int    `yaml:"leaderboard_size"`
 	Nickname        struct {
 		MinLen int `yaml:"min_len"`
@@ -255,6 +257,7 @@ func (f file) toConfig() Config {
 		Port:            f.Server.Port,
 		DBPath:          f.Server.DBPath,
 		EventsDir:       f.Server.EventsDir,
+		ShowDocs:        f.Server.ShowDocs,
 		LeaderboardSize: f.Server.LeaderboardSize,
 		NicknameMin:     f.Server.Nickname.MinLen,
 		NicknameMax:     f.Server.Nickname.MaxLen,
@@ -313,6 +316,9 @@ func applyEnv(cfg *Config) {
 		if n, err := strconv.Atoi(v); err == nil {
 			cfg.Rules.Quota = n // Validate rejects anything below 1
 		}
+	}
+	if os.Getenv("SHOW_DOCS") != "" {
+		cfg.ShowDocs = true
 	}
 	if os.Getenv("DEV_MODE") != "" {
 		cfg.DevMode = true

@@ -1,0 +1,551 @@
+openapi: "3.0.3"
+info:
+  title: The Button API
+  version: "1.10.0"
+  description: |
+    RNG enchant-clicker backend. Sessions ride on the HttpOnly `bt_token`
+    cookie: any request without one is silently given a fresh anonymous
+    player and the cookie set — no endpoint ever returns 401. Gameplay
+    mutations do require a nickname first (403 `nickname_required` until
+    `POST /api/nickname` succeeds).
+
+    Errors are uniformly `{"error": "<code>"}`.
+servers:
+  - url: /
+security:
+  - cookieAuth: []
+
+paths:
+  /api/config:
+    get:
+      summary: Game tunables snapshot
+      description: >
+        All published rules (chance table, tiers, card effects, shop prices…)
+        marshalled once at boot. The client derives its UI from this.
+      security: []
+      responses:
+        "200":
+          description: Rules plus `nickname{minLen,maxLen}`. Shape mirrors `game.Rules` JSON.
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/state:
+    get:
+      summary: Full player state
+      responses:
+        "200":
+          description: Current player
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/State" }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /api/click:
+    post:
+      summary: Press the button
+      description: >
+        Consumes one quota click and resolves the enchant roll at the given
+        risk level (clamped to `0..maxRisk`; empty body means risk 0).
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                risk: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: Roll result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClickResult" }
+        "403": { $ref: "#/components/responses/NicknameRequired" }
+        "409":
+          description: Streak already at the win cap (`already_won`)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429":
+          description: Hourly quota spent (`quota_exceeded`)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /api/nickname:
+    post:
+      summary: Set nickname
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+      responses:
+        "200":
+          description: Accepted name
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nickname: { type: string }
+        "400":
+          description: "`bad_json` or `bad_nickname` (length/charset)"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: "`name_taken`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /api/player:
+    delete:
+      summary: Delete the player and clear the session cookie
+      responses:
+        "204": { description: Deleted (also when there was nothing to delete) }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /api/sell:
+    post:
+      summary: Sell the streak for coins
+      responses:
+        "200":
+          description: New wallet and reset streak
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  coins: { type: integer }
+                  gained: { type: integer }
+                  stars: { type: integer }
+                  tier: { type: string }
+                  chance: { type: integer }
+        "403": { $ref: "#/components/responses/NicknameRequired" }
+        "409":
+          description: "`prestige_instead` (streak is at the cap), `nothing_to_sell`, or `retry`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /api/prestige:
+    post:
+      summary: Convert a maxed streak into a prestige level
+      description: Also refills the current hour's click quota.
+      responses:
+        "200":
+          description: Prestige result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  coins: { type: integer }
+                  gained: { type: integer }
+                  prestige: { type: integer }
+                  stars: { type: integer }
+                  tier: { type: string }
+                  chance: { type: integer }
+                  quotaLeft: { type: integer }
+        "403": { $ref: "#/components/responses/NicknameRequired" }
+        "409":
+          description: "`not_won` (streak not at the cap) or `retry`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /api/lottery:
+    post:
+      summary: Buy and resolve a scratch ticket
+      responses:
+        "200":
+          description: Prize rolled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  prize: { type: integer }
+                  coins: { type: integer }
+        "403": { $ref: "#/components/responses/NicknameRequired" }
+        "409": { $ref: "#/components/responses/CannotBuy" }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /api/pack:
+    post:
+      summary: Buy a card pack
+      responses:
+        "200":
+          description: Cards drawn
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cards:
+                    type: array
+                    items: { $ref: "#/components/schemas/CardRef" }
+                  coins: { type: integer }
+        "403": { $ref: "#/components/responses/NicknameRequired" }
+        "409": { $ref: "#/components/responses/CannotBuy" }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /api/refill:
+    post:
+      summary: Buy a quota refill
+      description: Daily allowance is `refillsPerDay + prestige`.
+      responses:
+        "200":
+          description: Refilled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  coins: { type: integer }
+                  quotaLeft: { type: integer }
+        "403": { $ref: "#/components/responses/NicknameRequired" }
+        "409":
+          description: "`cannot_refill` (no allowance left, quota untouched, or coins short)"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /api/talisman:
+    post:
+      summary: Arm a card as talisman
+      requestBody: { $ref: "#/components/requestBodies/CardRef" }
+      responses:
+        "200":
+          description: Armed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  talismanTier: { type: string }
+                  talismanRarity: { type: string }
+        "400": { $ref: "#/components/responses/BadCard" }
+        "403": { $ref: "#/components/responses/NicknameRequired" }
+        "409":
+          description: "`cannot_arm` (card not owned or a talisman already armed)"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /api/talisman/cancel:
+    post:
+      summary: Disarm the talisman and return the card
+      responses:
+        "200":
+          description: Disarmed (both fields empty)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  talismanTier: { type: string }
+                  talismanRarity: { type: string }
+        "403": { $ref: "#/components/responses/NicknameRequired" }
+        "409":
+          description: "`nothing_armed`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /api/fuse:
+    post:
+      summary: Fuse copies into one card of the next rarity
+      requestBody: { $ref: "#/components/requestBodies/CardRef" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400":
+          description: "`bad_json` or `cannot_fuse` (top rarity)"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/NicknameRequired" }
+        "409":
+          description: "`cannot_fuse` (not enough copies)"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /api/defuse:
+    post:
+      summary: Break a card into copies of the rarity below
+      requestBody: { $ref: "#/components/requestBodies/CardRef" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400":
+          description: "`bad_json` or `cannot_defuse` (bottom rarity)"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/NicknameRequired" }
+        "409":
+          description: "`cannot_defuse` (card not owned)"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /api/card/sell:
+    post:
+      summary: Sell one copy of a card
+      requestBody: { $ref: "#/components/requestBodies/CardRef" }
+      responses:
+        "200":
+          description: Sold
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  coins: { type: integer }
+                  gained: { type: integer }
+        "400":
+          description: "`bad_json` or `cannot_sell` (unknown card)"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/NicknameRequired" }
+        "409":
+          description: "`cannot_sell` (no copy owned)"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /api/buy:
+    post:
+      summary: Buy the next level of a skill
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [skill]
+              properties:
+                skill:
+                  type: string
+                  enum: [charm, headstart, stamina, magnet, golden]
+      responses:
+        "200":
+          description: New wallet and skill levels
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  coins: { type: integer }
+                  charmLevel: { type: integer }
+                  headstartLevel: { type: integer }
+                  staminaLevel: { type: integer }
+                  magnetLevel: { type: integer }
+                  goldenLevel: { type: integer }
+                  quota: { type: integer }
+        "400":
+          description: "`bad_json` or `bad_skill`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/NicknameRequired" }
+        "409": { $ref: "#/components/responses/CannotBuy" }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /api/link/new:
+    post:
+      summary: Mint a device-link code
+      description: The code hands this session to another device via `/api/link/claim`.
+      responses:
+        "200":
+          description: Claimable code (expires after the configured TTL)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: string }
+        "403": { $ref: "#/components/responses/NicknameRequired" }
+        "500":
+          description: "`rand`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /api/link/claim:
+    post:
+      summary: Claim a device-link code
+      description: Swaps this device's session cookie for the linked player's.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400":
+          description: "`bad_json`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: "`bad_code` (unknown or expired)"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429":
+          description: "`slow_down` (too many failed claims this minute)"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /api/leaderboard:
+    get:
+      summary: Top players
+      security: []
+      responses:
+        "200":
+          description: Ranked list, size capped by config
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    nickname: { type: string }
+                    stars: { type: integer }
+                    bestStars: { type: integer }
+                    tier: { type: string }
+                    prestige: { type: integer }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /api/cards:
+    get:
+      summary: Owned cards
+      responses:
+        "200":
+          description: Collection with counts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    tier: { type: string }
+                    rarity: { type: string }
+                    count: { type: integer }
+        "500": { $ref: "#/components/responses/ServerError" }
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: bt_token
+      description: Minted automatically on first contact; HttpOnly, 1-year.
+  requestBodies:
+    CardRef:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/CardRef" }
+  responses:
+    Ok:
+      description: Done
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              ok: { type: boolean }
+    NicknameRequired:
+      description: "`nickname_required` — set a nickname first"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    CannotBuy:
+      description: "`cannot_buy` (coins short or maxed out)"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    BadCard:
+      description: "`bad_json` or `bad_card`"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    ServerError:
+      description: "`db` / `session` — storage or session failure"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Machine-readable code, e.g. `quota_exceeded`, `cannot_buy`.
+    CardRef:
+      type: object
+      required: [tier, rarity]
+      properties:
+        tier:
+          type: string
+          enum: [unrank, bronze, silver, gold, platinum, diamond]
+        rarity:
+          type: string
+          enum: [common, rare, holo, prismatic]
+    State:
+      type: object
+      properties:
+        stars: { type: integer }
+        bestStars: { type: integer }
+        tier: { type: string }
+        chance: { type: integer, description: "Success % of the next click at risk 0" }
+        maxStars: { type: integer, description: "Win cap for this prestige level" }
+        quotaLeft: { type: integer }
+        quota: { type: integer }
+        nickname: { type: string }
+        win: { type: boolean }
+        coins: { type: integer }
+        charmLevel: { type: integer }
+        headstartLevel: { type: integer }
+        staminaLevel: { type: integer }
+        magnetLevel: { type: integer }
+        goldenLevel: { type: integer }
+        prestige: { type: integer }
+        talismanTier: { type: string, description: "Empty when nothing armed" }
+        talismanRarity: { type: string }
+        refillsLeft: { type: integer }
+        refillIn: { type: integer, description: "Seconds until the quota hour rolls over" }
+        devMode: { type: boolean }
+    ClickResult:
+      type: object
+      properties:
+        success: { type: boolean }
+        stars: { type: integer }
+        gained: { type: integer }
+        tier: { type: string }
+        tierUp: { type: boolean }
+        win: { type: boolean }
+        card:
+          allOf: [{ $ref: "#/components/schemas/CardRef" }]
+          nullable: true
+          description: Card dropped by this click, if any
+        talismanUsed: { type: boolean }
+        saved: { type: boolean, description: "A guard effect kept the streak on a fail" }
+        refund: { type: boolean }
+        jackpot: { type: integer, description: "Overflow coins past the cap" }
+        chance: { type: integer }
+        quotaLeft: { type: integer }
+        bonusClicks: { type: integer }
+        talismanTier: { type: string }
+        talismanRarity: { type: string }
+        coins: { type: integer }

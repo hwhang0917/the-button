@@ -6,8 +6,8 @@
 #
 # Precedence, lowest to highest:
 #   built-in defaults  ->  this file  ->  environment variables
-# so PORT / DB_PATH / EVENTS_DIR / QUOTA / DEV_MODE still override the file and
-# docker-compose.yml keeps working without mounting anything.
+# so PORT / DB_PATH / EVENTS_DIR / QUOTA / DEV_MODE / SHOW_DOCS still override
+# the file and docker-compose.yml keeps working without mounting anything.
 #
 # Everything below is set to its default, so this file is also the answer to
 # "what is the game currently tuned to?". An invalid config is fatal at boot
@@ -23,6 +23,8 @@ server:
   db_path: ./thebutton.db
   # anonymous NDJSON gameplay events for analytics; empty disables telemetry
   events_dir: ""
+  # serve Swagger UI + the OpenAPI spec under /api/docs
+  show_docs: false
   leaderboard_size: 20
   nickname:
     min_len: 2

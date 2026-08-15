@@ -93,6 +93,10 @@ func (s *Server) Handler(dist fs.FS) http.Handler {
 	mux.HandleFunc("POST /api/link/claim", s.handleLinkClaim)
 	mux.HandleFunc("GET /api/leaderboard", s.handleLeaderboard)
 	mux.HandleFunc("GET /api/cards", s.handleCards)
+	if s.cfg.ShowDocs {
+		mux.HandleFunc("GET /api/docs", handleDocs)
+		mux.HandleFunc("GET /api/docs/openapi.yml", handleDocsSpec)
+	}
 	mux.Handle("/", CacheHeaders(GzipText(http.FileServerFS(dist))))
 	return mux
 }

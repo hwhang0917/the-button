@@ -193,3 +193,36 @@ func TestStateResponseKeys(t *testing.T) {
 		t.Errorf("state has %d fields, expected exactly %d: %v", len(got), len(want), got)
 	}
 }
+
+// TestDocs pins the SHOW_DOCS gate: the docs routes exist only when enabled.
+func TestDocs(t *testing.T) {
+	get := func(srv *Server, path string) *http.Response {
+		ts := httptest.NewServer(srv.Handler(fstest.MapFS{}))
+		defer ts.Close()
+		res, err := http.Get(ts.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return res
+	}
+	off := testServer(t)
+	if res := get(off, "/api/docs"); res.StatusCode != http.StatusNotFound {
+		t.Fatalf("docs with flag off = %d, want 404", res.StatusCode)
+	}
+
+	on := testServer(t)
+	on.cfg.ShowDocs = true
+	if res := get(on, "/api/docs"); res.StatusCode != http.StatusOK ||
+		!strings.HasPrefix(res.Header.Get("Content-Type"), "text/html") {
+		t.Fatalf("docs page = %d %s, want 200 text/html", res.StatusCode, res.Header.Get("Content-Type"))
+	}
+	res := get(on, "/api/docs/openapi.yml")
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("spec = %d, want 200", res.StatusCode)
+	}
+	body := make([]byte, 8)
+	res.Body.Read(body)
+	if !strings.HasPrefix(string(body), "openapi:") {
+		t.Fatalf("spec body starts with %q, want openapi:", body)
+	}
+}
