@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { cfg } from '../config'
+import { t } from '../i18n'
 
 const props = withDefaults(defineProps<{ stars: number; prestige?: number; max: number }>(), {
   prestige: 0,
@@ -76,6 +77,13 @@ const restBundles = computed(() =>
       >
         {{ d }}
       </span>
+    </span>
+    <!-- bundles hide the raw count, so spell out the distance to prestige -->
+    <span
+      class="ml-1 font-mono text-xs text-slate-400"
+      :title="t('toPrestige').replace('{n}', String(Math.max(0, max - stars)))"
+    >
+      {{ stars }}/{{ max }}
     </span>
   </div>
 </template>

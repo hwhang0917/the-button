@@ -58,6 +58,7 @@ const dict = {
     itemShop: '아이템 상점',
     skillShop: '스킬 상점',
     menuTutorial: '튜토리얼',
+    toPrestige: '프리스티지까지 ★{n}',
     // the tutorial's closing keycap sheet — [key, what it does]
     keyGuide: [
       ['Space', '강화 · 프리스티지 · 팝업 확인'],
@@ -282,6 +283,7 @@ const dict = {
     itemShop: 'Item shop',
     skillShop: 'Skill shop',
     menuTutorial: 'Tutorial',
+    toPrestige: '★{n} more to prestige',
     keyGuide: [
       ['Space', 'enchant · prestige · confirm popups'],
       ['S', 'sell streak'],
