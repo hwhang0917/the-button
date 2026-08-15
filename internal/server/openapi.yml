@@ -1,7 +1,7 @@
 openapi: "3.0.3"
 info:
   title: The Button API
-  version: "1.10.0"
+  version: "1.11.0"
   description: |
     RNG enchant-clicker backend. Sessions ride on the HttpOnly `bt_token`
     cookie: any request without one is silently given a fresh anonymous
