@@ -397,7 +397,7 @@ const displayGain = computed(() => {
   if (!s) return 1
   const e = armedEffect.value
   const payRisk = e.maxRisk ? cfg().maxRisk : risk.value
-  const base = e.guarantee ? 1 : gainFor(effChance(s.chance, payRisk, s.charmLevel), payRisk)
+  const base = e.guarantee ? 1 : gainFor(s.chance, payRisk, cfg().charm.bonusPct * s.charmLevel)
   return base * Math.max(1, e.mult ?? 0) + (e.bonus ?? 0)
 })
 // the clicks-left counter drains toward a warning: the last 30% goes orange,

@@ -120,10 +120,11 @@ export async function loadCards() {
   cards.value = await (await fetch('/api/cards')).json()
 }
 
-/** Stars won on success — round(100/chance), matching GainFor in game/resolve.go. */
-export function gainFor(chance: number, risk: number): number {
-  if (risk <= 0 || chance <= 0) return 1
-  return Math.max(1, Math.round(100 / chance))
+/** Stars won on success, from the TRUE un-clamped odds — mirrors GainFor in
+ * game/resolve.go, so risk levels whose roll clamps to 1% still pay apart. */
+export function gainFor(base: number, risk: number, charmPct: number): number {
+  if (risk <= 0 || base <= 0) return 1
+  return Math.max(1, Math.round((100 * (risk + 1)) / (base + charmPct * (risk + 1))))
 }
 
 /** Roll chance after risk division and charm bonus. Mirrors EffChanceFor,

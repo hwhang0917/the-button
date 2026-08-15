@@ -1,19 +1,26 @@
 package game
 
-// ChanceFor is the success % for the next click at the given star count. Past
-// the table (prestige-raised caps) the difficulty keeps tightening: one point
-// per prestige-lap worth of stars, floored at 1% so no star is unwinnable —
-// which is also why the risk division clamps to 1 instead of rounding to 0.
-func (r Rules) ChanceFor(stars, risk, cap int) int {
-	if stars >= cap {
-		return 0
-	}
+// baseChance is the pre-risk success % at a star count. Past the table
+// (prestige-raised caps) the difficulty keeps tightening: one point per
+// prestige-lap worth of stars, floored at 1% so no star is unwinnable.
+func (r Rules) baseChance(stars int) int {
 	last := len(r.ChanceTable) - 1
 	base := r.ChanceTable[min(stars, last)]
 	if stars > last {
 		base = max(1, base-(stars-last)/max(1, r.PrestigeStarBonus))
 	}
-	return max(1, base/(risk+1))
+	return base
+}
+
+// ChanceFor is the success % for the next click at the given star count. The
+// risk division clamps to 1 instead of rounding to 0, so no risk level is
+// ever a guaranteed loss — GainFor pays the TRUE odds, so the clamped levels
+// stay distinct through their payouts.
+func (r Rules) ChanceFor(stars, risk, cap int) int {
+	if stars >= cap {
+		return 0
+	}
+	return max(1, r.baseChance(stars)/(risk+1))
 }
 
 // EffChanceFor is the roll chance after risk division and the charm bonus.
@@ -39,13 +46,17 @@ func (r Rules) roll(pct int) bool {
 }
 
 // GainFor is the stars won on a successful click: safe mode always steps one
-// star; risk mode pays the odds back — round(100/chance) — so the longer the
-// shot, the bigger the payout, and the expected gain per click stays flat.
-func GainFor(chance, risk int) int {
-	if risk <= 0 || chance <= 0 {
+// star; risk mode pays the TRUE odds back — round(100 / (base/(risk+1) +
+// charm)) — so the longer the shot, the bigger the payout, and the expected
+// gain per click stays flat. Computed from the un-clamped ratio in integer
+// math, so risk levels whose roll clamps to the same 1% still pay apart
+// (3% base: 🔥🔥 pays 100, 🔥🔥🔥 pays 133).
+func GainFor(base, risk, charmPct int) int {
+	if risk <= 0 || base <= 0 {
 		return 1
 	}
-	return max(1, (100+chance/2)/chance)
+	den := base + charmPct*(risk+1)
+	return max(1, (100*(risk+1)+den/2)/den)
 }
 
 func tri(n int) int { return n * (n + 1) / 2 }
@@ -147,7 +158,6 @@ func (r Rules) Resolve(c Click) Result {
 	if e.MaxRisk {
 		payRisk = r.MaxRisk
 	}
-	payChance := r.EffChanceFor(c.Stars, payRisk, c.Charm, c.Cap)
 	chance := min(100, r.EffChanceFor(c.Stars, c.Risk, c.Charm, c.Cap)+e.Chance)
 
 	success := e.Guarantee || r.roll(chance)
@@ -180,7 +190,7 @@ func (r Rules) Resolve(c Click) Result {
 	// a guaranteed win settles at the safe-mode rate — see DefaultCards
 	gain := 1
 	if !e.Guarantee {
-		gain = GainFor(payChance, payRisk)
+		gain = GainFor(r.baseChance(c.Stars), payRisk, r.Charm.BonusPct*c.Charm)
 	}
 	gain *= max(1, e.Mult)
 	gain += e.Bonus
