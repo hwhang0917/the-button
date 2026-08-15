@@ -626,7 +626,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div :class="{ shake: shaking }" class="min-h-screen text-slate-200">
+  <!-- flex column so the footer hugs the viewport bottom on short pages -->
+  <div :class="{ shake: shaking }" class="flex min-h-screen flex-col text-slate-200">
     <div v-if="flashing" class="flash-red pointer-events-none fixed inset-0 z-30 bg-rose-600"></div>
 
     <div
@@ -667,7 +668,7 @@ onMounted(async () => {
     </header>
 
     <!-- the ☰ drawer: player account actions and utilities on every size,
-         plus the panel/shop entries that only phones lack inline -->
+         plus the rank/collection panels that only phones lack inline -->
     <div v-if="navOpen" class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" @click="navOpen = false">
       <nav
         class="nav-in absolute right-0 top-0 flex h-full w-64 flex-col gap-1.5 overflow-y-auto border-l border-slate-700 bg-slate-900 p-5"
@@ -699,8 +700,6 @@ onMounted(async () => {
         <div class="contents lg:hidden">
           <button class="nav-item" @click="navTo(() => (panel = 'rank'))">🏆 {{ t('leaderboard') }}</button>
           <button class="nav-item" @click="navTo(() => (panel = 'collection'))">🃏 {{ t('collection') }}</button>
-          <button class="nav-item" @click="navTo(() => (showShop = 'items'))">🎁 {{ t('itemShop') }}</button>
-          <button class="nav-item" @click="navTo(() => (showShop = 'skills'))">📈 {{ t('skillShop') }}</button>
           <hr class="my-2 border-slate-700/60" />
         </div>
         <button class="nav-item" @click="navTo(startTutorial)">❓ {{ t('menuTutorial') }}</button>
@@ -717,7 +716,7 @@ onMounted(async () => {
       </nav>
     </div>
 
-    <div v-if="!ready" class="flex flex-col items-center justify-center gap-4 py-32">
+    <div v-if="!ready" class="flex flex-1 flex-col items-center justify-center gap-4 py-32">
       <p class="animate-pulse text-4xl">🔘</p>
       <div class="h-2 w-48 overflow-hidden rounded-full bg-slate-800">
         <div
@@ -728,7 +727,7 @@ onMounted(async () => {
       <p class="text-xs tracking-widest text-slate-500">{{ t('loading') }}</p>
     </div>
 
-    <main v-else class="mx-auto grid max-w-6xl gap-4 px-4 pb-2 sm:gap-6 sm:pb-12 lg:grid-cols-[280px_1fr_280px]">
+    <main v-else class="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 pb-2 sm:gap-6 sm:pb-12 lg:grid-cols-[280px_1fr_280px]">
       <!-- one shared backdrop for whichever drawer is open -->
       <div
         v-if="panel"
@@ -879,16 +878,14 @@ onMounted(async () => {
               >
                 ⭐ {{ t('sellStreak') }} +{{ streakSellValue }}💰
               </button>
-<!-- phones reach the shops through the hamburger; keeping the pills too
-                   was one row of clutter more than the core loop needs -->
               <button
-                class="hidden rounded-full border border-violet-500/40 bg-violet-500/10 px-3 py-1 text-sm font-bold text-violet-300 hover:bg-violet-500/20 light:text-violet-700 lg:block"
+                class="rounded-full border border-violet-500/40 bg-violet-500/10 px-3 py-1 text-sm font-bold text-violet-300 hover:bg-violet-500/20 light:text-violet-700"
                 @click="showShop = 'items'; play('switch')"
               >
                 🎁 {{ t('itemShop') }}
               </button>
               <button
-                class="hidden rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 light:text-emerald-700 lg:block"
+                class="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 light:text-emerald-700"
                 @click="showShop = 'skills'; play('switch')"
               >
                 📈 {{ t('skillShop') }}
@@ -910,7 +907,7 @@ onMounted(async () => {
             <p class="text-xs text-slate-500">{{ t('best') }}: ★{{ state.bestStars }}</p>
           </div>
 
-          <!-- phones: rankings/collection/shops all live behind the ☰ drawer;
+          <!-- phones: rankings/collection live behind the ☰ drawer;
                lg lays the panels out as grid columns instead -->
         </template>
       </div>
