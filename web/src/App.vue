@@ -492,9 +492,10 @@ setInterval(() => {
 }, TIP_MS)
 
 // keyboard shortcuts for the base screen: Space enchants, S opens the streak
-// sale, I/K the item and skill shops, 1-4 pick the risk level, Esc backs out
-// of what a shortcut opened. Ignored whenever another overlay could own the
-// key instead: modals, main-screen confirms, the tutorial, or a form control.
+// sale, I/K the item and skill shops, L/C/R buy lottery/pack/refill, 1-4 pick
+// the risk level, Esc backs out of what a shortcut opened. Ignored whenever
+// another overlay could own the key instead: modals, main-screen confirms,
+// the tutorial, or a form control.
 function onKey(e: KeyboardEvent) {
   if (e.repeat || e.altKey || e.ctrlKey || e.metaKey) return
   if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
@@ -529,6 +530,16 @@ function onKey(e: KeyboardEvent) {
     if (e.code === 'KeyT' && showTalismanPick.value) {
       showTalismanPick.value = false
       play('switch')
+      return
+    }
+    // L/C/R buy right away, from the base screen or inside the item shop:
+    // open the shop if needed and press that row's own buy button, so the
+    // row's disabled logic (coins, allowance) stays in charge
+    const buyRow = ({ KeyL: 'tut-shop-lottery', KeyC: 'tut-shop-pack', KeyR: 'tut-shop-refill' } as
+      Record<string, string>)[e.code]
+    if (buyRow && (showShop.value === 'items' || (!modalOpen.value && !cancelTalismanAsk.value))) {
+      showShop.value = 'items'
+      nextTick(() => document.getElementById(buyRow)?.querySelector('button')?.click())
       return
     }
   }
