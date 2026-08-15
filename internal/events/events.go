@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"log"
+	"maps"
 	"os"
 	"path/filepath"
 	"time"
@@ -63,9 +64,7 @@ func (l *Logger) Log(typ, pid string, fields map[string]any) {
 		return
 	}
 	e := map[string]any{"ts": time.Now().Format(time.RFC3339), "type": typ, "pid": pid}
-	for k, v := range fields {
-		e[k] = v
-	}
+	maps.Copy(e, fields)
 	select {
 	case l.ch <- e:
 	default: // queue full: drop telemetry, never stall gameplay
