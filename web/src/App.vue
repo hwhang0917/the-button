@@ -421,7 +421,7 @@ const displayCoins = computed(() => {
 })
 
 function setRisk(lvl: number) {
-  if (state.value?.win) return // the 1-4 keybind routes here too
+  if (state.value?.win) return // the 1·2 keybind routes here too
   risk.value = lvl
   play('switch')
   vibrate(4 + lvl * 6) // buzz escalates with the risk you're signing up for
@@ -585,13 +585,11 @@ function onKey(e: KeyboardEvent) {
       }
       break
     case 'Digit1':
-    case 'Digit2':
-    case 'Digit3':
-    case 'Digit4': {
-      const lvl = Number(e.code.slice(5)) - 1
-      if (lvl <= cfg().maxRisk) setRisk(lvl)
+      setRisk(0)
       break
-    }
+    case 'Digit2':
+      setRisk(cfg().maxRisk)
+      break
   }
 }
 
@@ -870,21 +868,25 @@ onMounted(async () => {
                 🔥 {{ t('riskIt') }}
               </span>
 <!-- nothing to roll at max stars, so the risk picker rests too -->
+<!-- one gamble, on or off: the divisor is max_risk+1 from config -->
               <div class="flex overflow-hidden rounded-full border border-slate-700" :class="{ 'opacity-40': state.win }">
                 <button
-                  v-for="lvl in cfg().maxRisk + 1"
-                  :key="lvl - 1"
                   class="px-2.5 py-1 text-xs font-bold transition-colors sm:px-3"
-                  :class="
-                    risk === lvl - 1
-                      ? lvl === 1 ? 'bg-slate-600 text-white' : 'bg-rose-600 text-white'
-                      : 'text-slate-400 hover:bg-slate-800'
-                  "
+                  :class="risk === 0 ? 'bg-slate-600 text-white' : 'text-slate-400 hover:bg-slate-800'"
                   :disabled="state.win"
-                  :title="lvl === 1 ? 'OFF' : `${t('chance')} 1/${lvl}`"
-                  @click="setRisk(lvl - 1)"
+                  title="OFF"
+                  @click="setRisk(0)"
                 >
-                  {{ lvl === 1 ? 'OFF' : '🔥'.repeat(lvl - 1) }}
+                  OFF
+                </button>
+                <button
+                  class="px-2.5 py-1 text-xs font-bold transition-colors sm:px-3"
+                  :class="risk > 0 ? 'bg-rose-600 text-white' : 'text-slate-400 hover:bg-slate-800'"
+                  :disabled="state.win"
+                  :title="`${t('chance')} 1/${cfg().maxRisk + 1}`"
+                  @click="setRisk(cfg().maxRisk)"
+                >
+                  🔥
                 </button>
               </div>
             </div>
