@@ -26,5 +26,7 @@ matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
 export function toggleTheme() {
   const t: Theme = theme.value === 'dark' ? 'light' : 'dark'
   localStorage.setItem('theme', t)
-  apply(t)
+  // crossfade the whole page where the View Transitions API exists
+  if (document.startViewTransition) document.startViewTransition(() => apply(t))
+  else apply(t)
 }
