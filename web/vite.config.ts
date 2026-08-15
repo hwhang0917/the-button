@@ -9,8 +9,8 @@ const tex = (s: string) => katex.renderToString(s, { displayMode: true, throwOnE
 
 const oddsMath = {
   chance: tex(String.raw`P = \min\!\left(100,\; \left\lfloor \tfrac{\mathrm{base}(s)}{r+1} \right\rfloor + \gamma c\right)`),
-  roll: tex(String.raw`\text{success} \iff U < \min(100,\ P + T),\qquad U \sim \mathcal{U}\{0,\dots,99\}`),
-  gain: tex(String.raw`\text{bonus} = \begin{cases} 0 & r = 0 \text{, or guaranteed-success card} \\ \operatorname{round}\!\bigl(100/P\bigr)\ \text{coins} & r \ge 1 \end{cases}`),
+  roll: tex(String.raw`\text{success} \iff U < \min(100,\ P + T),\quad U \in \{0,\dots,99\}`),
+  gain: tex(String.raw`\text{bonus} = \begin{cases} 0 & \text{safe or guaranteed} \\ \operatorname{round}\!\bigl(100/P\bigr)\ \text{coins} & r \ge 1 \end{cases}`),
   // the cap stays symbolic: its numbers are config, and the popup's table and
   // bullets read the live values from /api/config
   next: tex(String.raw`\mathrm{gain} = M + B \ \text{stars}, \qquad s' = \min(s + \mathrm{gain},\ \mathrm{cap})`),

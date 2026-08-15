@@ -18,14 +18,14 @@ const { chance: eqChance, roll: eqRoll, gain: eqGain, next: eqNext, jackpot: eqJ
     class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
     @click.self="$emit('close')"
   >
-    <div class="flex max-h-[85vh] w-full max-w-md flex-col gap-3 overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 p-6">
+    <div class="hidebar flex max-h-[85vh] w-full max-w-md flex-col gap-3 overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 p-6">
       <h2 class="text-center text-lg font-bold text-slate-100">🎲 {{ t('oddsTitle') }}</h2>
 
       <ul class="flex flex-col gap-1.5 text-sm text-slate-300">
         <li v-for="(line, i) in t('oddsSimple')" :key="i">{{ line }}</li>
       </ul>
 
-      <div class="overflow-x-auto rounded-lg bg-slate-800/60 p-2">
+      <div class="hidebar overflow-x-auto rounded-lg bg-slate-800/60 p-2">
         <table class="mx-auto text-center font-mono text-[10px] text-slate-300">
           <tr>
             <td class="pr-2 text-slate-500">★s</td>
@@ -77,10 +77,21 @@ const { chance: eqChance, roll: eqRoll, gain: eqGain, next: eqNext, jackpot: eqJ
 <style scoped>
 .odds-math {
   overflow-x: auto;
+  /* sized so the widest equation fits the modal without a scrollbar */
+  font-size: 0.85rem;
   /* the slate ladder flips with the theme; a raw hex would vanish in light mode */
   color: var(--color-slate-200);
 }
 .odds-math :deep(.katex-display) {
   margin: 0.25rem 0;
+}
+/* scroll areas stay wheel/touch-scrollable, just without the bar chrome */
+.hidebar,
+.odds-math {
+  scrollbar-width: none;
+}
+.hidebar::-webkit-scrollbar,
+.odds-math::-webkit-scrollbar {
+  display: none;
 }
 </style>
