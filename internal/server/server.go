@@ -132,6 +132,10 @@ type gzipWriter struct {
 func (w gzipWriter) WriteHeader(code int) {
 	// ServeContent sets the uncompressed length; ours differs, so drop it
 	w.Header().Del("Content-Length")
+	// the file server's error path strips Content-Encoding (fs.go serveError,
+	// Go 1.23+), but the body still runs through gz — re-assert it or 404s
+	// render as raw gzip bytes
+	w.Header().Set("Content-Encoding", "gzip")
 	w.ResponseWriter.WriteHeader(code)
 }
 

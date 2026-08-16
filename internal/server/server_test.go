@@ -1,7 +1,9 @@
 package server
 
 import (
+	"compress/gzip"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -46,6 +48,35 @@ func TestCacheHeaders(t *testing.T) {
 		if got := rec.Header().Get("Cache-Control"); got != want {
 			t.Errorf("%s: Cache-Control = %q, want %q", path, got, want)
 		}
+	}
+}
+
+// TestGzip404StaysDecodable pins the fix for garbled 404 pages: the file
+// server's error path strips Content-Encoding (Go 1.23+) while the body still
+// flows through the gzip writer, so the header must be re-asserted.
+func TestGzip404StaysDecodable(t *testing.T) {
+	h := GzipText(http.FileServerFS(fstest.MapFS{}))
+	req := httptest.NewRequest("GET", "/kdjfksdj", nil)
+	req.Header.Set("Accept-Encoding", "gzip")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", rec.Code)
+	}
+	if got := rec.Header().Get("Content-Encoding"); got != "gzip" {
+		t.Fatalf("Content-Encoding = %q, want gzip (body is compressed)", got)
+	}
+	gr, err := gzip.NewReader(rec.Body)
+	if err != nil {
+		t.Fatalf("body is not valid gzip: %v", err)
+	}
+	body, err := io.ReadAll(gr)
+	if err != nil {
+		t.Fatalf("gunzip: %v", err)
+	}
+	if !strings.Contains(string(body), "404") {
+		t.Errorf("decoded body = %q, want a 404 message", body)
 	}
 }
 
