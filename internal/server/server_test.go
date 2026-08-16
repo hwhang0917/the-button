@@ -80,6 +80,34 @@ func TestGzip404StaysDecodable(t *testing.T) {
 	}
 }
 
+// TestStyled404 pins the designated 404 page: unknown paths serve dist's
+// 404.html with a 404 status, and known files are untouched.
+func TestStyled404(t *testing.T) {
+	dist := fstest.MapFS{
+		"index.html": {Data: []byte("<title>The Button</title>")},
+		"404.html":   {Data: []byte("<h1>404</h1>")},
+	}
+	h := fileServerWith404(dist)
+
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("GET", "/kdjfksdj", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", rec.Code)
+	}
+	if got := rec.Header().Get("Content-Type"); !strings.HasPrefix(got, "text/html") {
+		t.Errorf("Content-Type = %q, want text/html", got)
+	}
+	if !strings.Contains(rec.Body.String(), "<h1>404</h1>") {
+		t.Errorf("body = %q, want the styled page", rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "The Button") {
+		t.Errorf("index: status = %d body = %q, want the app shell", rec.Code, rec.Body.String())
+	}
+}
+
 func TestNicknameRule(t *testing.T) {
 	re := testServer(t).nicknameRe
 	ok := []string{"철수", "김밥왕", "Hero_1", "버튼장인_99", "ab"}

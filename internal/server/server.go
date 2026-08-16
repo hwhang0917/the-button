@@ -97,8 +97,34 @@ func (s *Server) Handler(dist fs.FS) http.Handler {
 		mux.HandleFunc("GET /api/docs", handleDocs)
 		mux.HandleFunc("GET /api/docs/openapi.yml", handleDocsSpec)
 	}
-	mux.Handle("/", CacheHeaders(GzipText(http.FileServerFS(dist))))
+	mux.Handle("/", CacheHeaders(GzipText(fileServerWith404(dist))))
 	return mux
+}
+
+// fileServerWith404 serves dist/404.html for paths missing from the build, so
+// junk URLs get a styled page instead of the stdlib's plain-text 404.
+func fileServerWith404(dist fs.FS) http.Handler {
+	files := http.FileServerFS(dist)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		name := strings.TrimPrefix(path.Clean(r.URL.Path), "/")
+		if name == "" {
+			name = "index.html"
+		}
+		if _, err := fs.Stat(dist, name); err != nil {
+			body, err := fs.ReadFile(dist, "404.html")
+			// unknown /api/ paths fall through to this catch-all too, and an
+			// API client should get a plain 404, not a styled HTML page
+			if err != nil || strings.HasPrefix(r.URL.Path, "/api/") {
+				http.NotFound(w, r)
+				return
+			}
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusNotFound)
+			w.Write(body)
+			return
+		}
+		files.ServeHTTP(w, r)
+	})
 }
 
 const (

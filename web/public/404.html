@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <!-- same theme boot as index.html: explicit choice beats OS preference,
+         resolved before first paint so the wrong theme never flashes -->
+    <script>
+      document.documentElement.dataset.theme =
+        localStorage.getItem('theme') ||
+        (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+    </script>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>404 — The Button</title>
+    <style>
+      /* public/ isn't processed by vite, so the slate mirror from style.css is
+         inlined here as the small subset this page uses */
+      :root {
+        --page-bg: #060814;
+        --wall-tint: 6, 8, 20;
+        --slate-100: #f1f5f9;
+        --slate-400: #94a3b8;
+        --slate-500: #64748b;
+        --slate-700: #334155;
+        --slate-950: #020617;
+      }
+      [data-theme='light'] {
+        --page-bg: #eef2f7;
+        --wall-tint: 238, 242, 247;
+        --slate-100: #0f172a;
+        --slate-400: #475569;
+        --slate-500: #64748b;
+        --slate-700: #cbd5e1;
+        --slate-950: #f8fafc;
+      }
+      * {
+        margin: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        background: var(--page-bg);
+      }
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        color: var(--slate-100);
+        display: grid;
+        place-items: center;
+        padding: 1rem;
+      }
+      body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        background:
+          linear-gradient(rgba(var(--wall-tint), 0.82), rgba(var(--wall-tint), 0.92)),
+          url('/wallpaper.jpg') center / cover no-repeat;
+      }
+      main {
+        text-align: center;
+        border: 1px solid var(--slate-700);
+        border-radius: 1rem;
+        background: color-mix(in srgb, var(--slate-950) 75%, transparent);
+        padding: 2.5rem 2rem;
+        max-width: 24rem;
+      }
+      img {
+        height: 4rem;
+        filter: grayscale(1);
+        opacity: 0.4;
+      }
+      h1 {
+        font-family: ui-monospace, monospace;
+        font-size: 3.5rem;
+        line-height: 1.2;
+      }
+      p {
+        color: var(--slate-400);
+        font-size: 0.875rem;
+        line-height: 1.5;
+      }
+      .en {
+        color: var(--slate-500);
+        font-size: 0.75rem;
+        margin-top: 0.375rem;
+      }
+      a {
+        display: inline-block;
+        margin-top: 1.5rem;
+        border-radius: 0.75rem;
+        background: #facc15;
+        color: #1c1917;
+        font-weight: 700;
+        font-size: 0.875rem;
+        text-decoration: none;
+        padding: 0.625rem 1.25rem;
+      }
+      a:hover {
+        background: #fde047;
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        img {
+          animation: drift 3s ease-in-out infinite alternate;
+        }
+        @keyframes drift {
+          to {
+            transform: translateY(-0.375rem) rotate(8deg);
+          }
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/star.png" alt="" />
+      <h1>404</h1>
+      <p>존재하지 않는 페이지에요.</p>
+      <p class="en">This page does not exist.</p>
+      <a href="/">버튼으로 돌아가기</a>
+    </main>
+  </body>
+</html>
