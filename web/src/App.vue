@@ -159,6 +159,7 @@ function startTutorial() {
   goto(0, () => d.drive())()
 }
 
+const RISK_KEY = 'risk'
 const risk = ref(0)
 const busy = ref(false)
 const shaking = ref(false)
@@ -450,8 +451,16 @@ const displayCoins = computed(() => {
 function setRisk(lvl: number) {
   if (state.value?.win || !staked.value) return // the F keybind routes here too
   risk.value = lvl
+  localStorage.setItem(RISK_KEY, String(lvl)) // remembered across reloads
   play('switch')
   vibrate(4 + lvl * 6) // buzz escalates with the risk you're signing up for
+}
+
+// re-arm the remembered gamble on load — only an explicit toggle updates the
+// stored choice, so the stake-loss auto-rest above never erases it
+function restoreRisk() {
+  const saved = Math.min(Number(localStorage.getItem(RISK_KEY)) || 0, cfg().maxRisk)
+  if (saved && staked.value && !state.value?.win) risk.value = saved
 }
 
 // `busy` already covers the whole in-flight request, so this is only a short
@@ -643,6 +652,7 @@ onMounted(async () => {
     loadState().then(() => {
       step()
       if (state.value && !state.value.nickname) showNickname.value = true
+      restoreRisk()
     }),
     loadLeaderboard().then(step),
     loadCards().then(step),
